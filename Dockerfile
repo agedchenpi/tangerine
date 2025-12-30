@@ -6,4 +6,4 @@ COPY . /app
 
 RUN pip install --no-cache-dir psycopg2-binary  # Add more deps as needed, e.g., for AI agents
 
-CMD ["python", "some_main_script.py"]  # Placeholder; update later
+CMD ["python", "common/db_utils.py"]  # Updated to run the DB utils for testing
