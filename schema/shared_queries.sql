@@ -1,0 +1,3 @@
+-- Add common queries here, e.g.:
+-- SELECT * FROM dba.tdataset WHERE isactive = TRUE;
+-- (Populate as ETL logic develops)

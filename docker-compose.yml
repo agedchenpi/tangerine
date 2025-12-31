@@ -5,10 +5,14 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      ETL_USER_PASSWORD: ${ETL_USER_PASSWORD}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}      
     ports:
       - "5432:5432"
-    volumes:
+    volumes:      
       - db_data:/var/lib/postgresql
+      - ./schema/init.sh:/docker-entrypoint-initdb.d/init.sh
+      - ./schema:/app/schema
   tangerine:
     build: .
     depends_on:
