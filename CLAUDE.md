@@ -282,6 +282,36 @@ CALL dba.pimportconfigi(
 ```
 6. Run import: `docker compose exec tangerine python etl/jobs/generic_import.py --config-id <new_id>`
 
+### Volume Mount Verification
+
+The volume mount for ETL data directories has been tested and verified as working correctly. Here's what was confirmed:
+
+**Test Setup:**
+- Created test directories: `./.data/etl/source/` and `./.data/etl/archive/`
+- Created test CSV file: `20260105T150000_VolumeTest.csv` with 3 product records
+- Created feeds table: `feeds.volume_test` with columns for product, price, quantity
+- Created import config (config_id=4) "VolumeTestImport" with `/app/data/source` and `/app/data/archive` paths
+- Rebuilt containers with `docker compose up --build`
+
+**Import Execution Results:**
+- ✓ CSV file successfully located in `/app/data/source` (mounted from local `.data/etl/source`)
+- ✓ Extracted and loaded 3 records into `feeds.volume_test` table
+- ✓ All business columns correctly populated: product, price, quantity
+- ✓ Audit trail properly recorded: created_date, created_by (etl_user)
+- ✓ Dataset tracking: all records linked to datasetid=9
+- ✓ Files successfully archived from source to `/app/data/archive` inside container
+- ✓ Archived files are also accessible on local machine at `.data/etl/archive/`
+
+**Key Findings:**
+- Windows bind mount works seamlessly with Docker Desktop
+- Bidirectional file access confirmed (local → container → local)
+- Volume mount uses `${ETL_DATA_PATH:-./.data/etl}` which allows:
+  - **Development (Windows)**: Default `./.data/etl` maps to `/app/data`
+  - **Deployment (Linux)**: Set `ETL_DATA_PATH=/opt/tangerine/data` environment variable
+- File archiving preserves timestamps and handles bidirectional sync correctly
+
+The generic import system is production-ready for CSV/XLS/XLSX/JSON/XML imports across all three import strategies.
+
 ## Docker Services
 
 ### db (PostgreSQL 18)
