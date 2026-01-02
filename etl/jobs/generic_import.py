@@ -242,6 +242,159 @@ class SchemaManager:
             sanitized = 'col_' + sanitized
         return sanitized
 
+    def _infer_column_type(self, values: List[Any]) -> str:
+        """
+        Infer PostgreSQL column type from sample values.
+
+        Analyzes multiple values to determine the most appropriate type.
+        Returns TEXT as fallback for mixed or unknown types.
+        """
+        # Filter out None values
+        non_null_values = [v for v in values if v is not None and v != '']
+
+        if not non_null_values:
+            return 'TEXT'
+
+        # Track type observations
+        has_int = False
+        has_float = False
+        has_bool = False
+        max_length = 0
+
+        for value in non_null_values:
+            # Convert to string to check actual value
+            str_value = str(value).strip()
+            max_length = max(max_length, len(str_value))
+
+            # Check for boolean
+            if isinstance(value, bool) or str_value.lower() in ('true', 'false', 't', 'f'):
+                has_bool = True
+                continue
+
+            # Check for numeric types
+            try:
+                if isinstance(value, (int, float)):
+                    num_value = value
+                else:
+                    num_value = float(str_value)
+
+                # Check if it's actually an integer
+                if isinstance(value, int) or (isinstance(num_value, float) and num_value.is_integer()):
+                    has_int = True
+                else:
+                    has_float = True
+            except (ValueError, TypeError):
+                # Not a number, will default to text
+                pass
+
+        # Determine best type based on observations
+        if has_bool and not has_int and not has_float:
+            return 'BOOLEAN'
+        elif has_float:
+            return 'NUMERIC(12,2)'
+        elif has_int:
+            # Check max value to determine if we need BIGINT
+            max_val = max([abs(int(v)) for v in non_null_values if str(v).lstrip('-').isdigit()], default=0)
+            if max_val > 2147483647:  # Max INT value
+                return 'BIGINT'
+            return 'INTEGER'
+        else:
+            # Text type - determine appropriate length
+            if max_length <= 50:
+                return 'VARCHAR(50)'
+            elif max_length <= 100:
+                return 'VARCHAR(100)'
+            elif max_length <= 255:
+                return 'VARCHAR(255)'
+            else:
+                return 'TEXT'
+
+    def create_table_from_records(
+        self,
+        schema: str,
+        table: str,
+        sample_records: List[Dict[str, Any]],
+        max_samples: int = 5
+    ):
+        """
+        Create a new table dynamically based on sample records.
+
+        Analyzes up to max_samples records to infer column names and types.
+        Creates table following feeds schema conventions:
+        - {table}id SERIAL PRIMARY KEY
+        - datasetid INT FK to dba.tdataset
+        - Business columns (inferred from data)
+        - created_date TIMESTAMP
+        - created_by VARCHAR(50)
+
+        Args:
+            schema: Schema name (e.g., 'feeds')
+            table: Table name (e.g., 'products')
+            sample_records: List of sample records to analyze
+            max_samples: Number of records to analyze (default 5)
+        """
+        if not sample_records:
+            raise ImportValidationError("Cannot create table from empty record set")
+
+        # Analyze first N records
+        samples_to_analyze = sample_records[:max_samples]
+
+        # Collect all column names across samples
+        all_columns = set()
+        for record in samples_to_analyze:
+            all_columns.update(record.keys())
+
+        # Remove system/metadata columns that shouldn't be in table
+        excluded_columns = {
+            'datasetid', 'created_date', 'created_by', 'modified_date', 'modified_by',
+            'source_file', 'metadata_label', 'file_date'
+        }
+        business_columns = sorted(all_columns - excluded_columns)
+
+        # Gather sample values for each column
+        column_samples = {col: [] for col in business_columns}
+        for record in samples_to_analyze:
+            for col in business_columns:
+                if col in record:
+                    column_samples[col].append(record[col])
+
+        # Infer types for each column
+        column_definitions = []
+        for col in business_columns:
+            safe_col = self._sanitize_identifier(col)
+            col_type = self._infer_column_type(column_samples[col])
+            column_definitions.append(f'    {safe_col} {col_type}')
+
+        # Build CREATE TABLE statement
+        pk_column = f'{table}id'
+        column_lines = ',\n'.join(column_definitions)
+        create_sql = f"""
+CREATE TABLE {schema}.{table} (
+    {pk_column} SERIAL PRIMARY KEY,
+    datasetid INT REFERENCES dba.tdataset(datasetid),
+{column_lines},
+    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(50)
+);
+"""
+
+        # Execute table creation
+        with db_transaction() as cursor:
+            cursor.execute(create_sql)
+
+        self.logger.info(f"Created table {schema}.{table} with {len(business_columns)} business columns")
+
+        # Grant permissions
+        grant_sql = f"""
+GRANT SELECT, INSERT, UPDATE, DELETE ON {schema}.{table} TO app_rw;
+GRANT SELECT ON {schema}.{table} TO app_ro;
+GRANT USAGE, SELECT ON SEQUENCE {schema}.{pk_column}_seq TO app_rw;
+"""
+        with db_transaction() as cursor:
+            cursor.execute(grant_sql)
+
+        self.logger.info(f"Granted permissions on {schema}.{table}")
+
 
 class GenericImportJob(BaseETLJob):
     """
@@ -565,6 +718,67 @@ class GenericImportJob(BaseETLJob):
 
         return records
 
+    def _ensure_reference_data(self):
+        """
+        Ensure datasource and datasettype exist in reference tables.
+
+        Creates them automatically if they don't exist to support modular configuration.
+        """
+        try:
+            # Ensure datasource exists
+            self.logger.debug(f"Checking if datasource '{self.import_config.datasource}' exists...")
+            check_source_query = "SELECT COUNT(*) as count FROM dba.tdatasource WHERE sourcename = %s"
+            source_result = fetch_dict(check_source_query, (self.import_config.datasource,))
+            self.logger.debug(f"Datasource query result: {source_result}")
+
+            if source_result[0]['count'] == 0:
+                self.logger.info(f"Datasource '{self.import_config.datasource}' does not exist - creating...")
+                insert_source_query = """
+                    INSERT INTO dba.tdatasource (sourcename, description, createdby)
+                    VALUES (%s, %s, %s)
+                """
+                with db_transaction() as cursor:
+                    cursor.execute(
+                        insert_source_query,
+                        (
+                            self.import_config.datasource,
+                            f'Auto-created for import config: {self.import_config.config_name}',
+                            self.username
+                        )
+                    )
+                self.logger.info(f"Created datasource: {self.import_config.datasource}")
+            else:
+                self.logger.debug(f"Datasource '{self.import_config.datasource}' already exists")
+
+            # Ensure datasettype exists
+            self.logger.debug(f"Checking if datasettype '{self.import_config.datasettype}' exists...")
+            check_type_query = "SELECT COUNT(*) as count FROM dba.tdatasettype WHERE typename = %s"
+            type_result = fetch_dict(check_type_query, (self.import_config.datasettype,))
+            self.logger.debug(f"Datasettype query result: {type_result}")
+
+            if type_result[0]['count'] == 0:
+                self.logger.info(f"Datasettype '{self.import_config.datasettype}' does not exist - creating...")
+                insert_type_query = """
+                    INSERT INTO dba.tdatasettype (typename, description, createdby)
+                    VALUES (%s, %s, %s)
+                """
+                with db_transaction() as cursor:
+                    cursor.execute(
+                        insert_type_query,
+                        (
+                            self.import_config.datasettype,
+                            f'Auto-created for import config: {self.import_config.config_name}',
+                            self.username
+                        )
+                    )
+                self.logger.info(f"Created datasettype: {self.import_config.datasettype}")
+            else:
+                self.logger.debug(f"Datasettype '{self.import_config.datasettype}' already exists")
+
+        except Exception as e:
+            self.logger.error(f"Error ensuring reference data: {e}", exc_info=True)
+            raise
+
     def setup(self):
         """Set up resources and validate configuration."""
         self.logger.info(
@@ -637,7 +851,14 @@ class GenericImportJob(BaseETLJob):
             existing_columns = self.schema_manager.get_table_columns(schema, table)
             transformed = self._apply_import_strategy(transformed, existing_columns)
         else:
-            self.logger.warning(f"Target table {schema}.{table} does not exist")
+            # Table doesn't exist - create it dynamically from sample records
+            self.logger.info(f"Target table {schema}.{table} does not exist - creating dynamically")
+            self.schema_manager.create_table_from_records(schema, table, transformed, max_samples=5)
+            self.logger.info(f"Successfully created table {schema}.{table}")
+
+            # Now get the columns and apply import strategy
+            existing_columns = self.schema_manager.get_table_columns(schema, table)
+            transformed = self._apply_import_strategy(transformed, existing_columns)
 
         return transformed
 
@@ -700,6 +921,62 @@ class GenericImportJob(BaseETLJob):
             self.logger.warning(f"Failed to update last_modified_at: {e}")
 
         self.logger.info("Cleanup complete")
+
+    def run(self):
+        """
+        Override run() to ensure reference data exists before parent's run().
+
+        The parent run() calls _create_dataset_record() which requires
+        datasource and datasettype to exist in reference tables.
+        """
+        # Use temp logger since self.logger isn't initialized yet
+        temp_logger = get_logger(f'{self.__class__.__name__}.{self.run_uuid[:8]}')
+
+        try:
+            # Ensure datasource and datasettype exist before creating dataset record
+            temp_logger.info("Ensuring reference data exists...")
+
+            # Manually check and create since we don't have self.logger yet
+            check_source_query = "SELECT COUNT(*) as count FROM dba.tdatasource WHERE sourcename = %s"
+            source_result = fetch_dict(check_source_query, (self.import_config.datasource,))
+
+            if source_result[0]['count'] == 0:
+                temp_logger.info(f"Creating datasource: {self.import_config.datasource}")
+                insert_source_query = "INSERT INTO dba.tdatasource (sourcename, description, createdby) VALUES (%s, %s, %s)"
+                with db_transaction() as cursor:
+                    cursor.execute(
+                        insert_source_query,
+                        (
+                            self.import_config.datasource,
+                            f'Auto-created for import config: {self.import_config.config_name}',
+                            self.username
+                        )
+                    )
+
+            check_type_query = "SELECT COUNT(*) as count FROM dba.tdatasettype WHERE typename = %s"
+            type_result = fetch_dict(check_type_query, (self.import_config.datasettype,))
+
+            if type_result[0]['count'] == 0:
+                temp_logger.info(f"Creating datasettype: {self.import_config.datasettype}")
+                insert_type_query = "INSERT INTO dba.tdatasettype (typename, description, createdby) VALUES (%s, %s, %s)"
+                with db_transaction() as cursor:
+                    cursor.execute(
+                        insert_type_query,
+                        (
+                            self.import_config.datasettype,
+                            f'Auto-created for import config: {self.import_config.config_name}',
+                            self.username
+                        )
+                    )
+
+            temp_logger.info("Reference data check complete")
+
+        except Exception as e:
+            temp_logger.error(f"Error ensuring reference data: {e}", exc_info=True)
+            raise
+
+        # Now call parent run() which will create dataset record
+        super().run()
 
 
 def main():
