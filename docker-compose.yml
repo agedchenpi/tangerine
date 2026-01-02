@@ -32,6 +32,7 @@ services:
       ETL_ENABLE_FILE_LOGGING: ${ETL_ENABLE_FILE_LOGGING:-true}
     volumes:
       - etl_logs:/app/logs
+      - ${ETL_DATA_PATH:-./.data/etl}:/app/data
 
 volumes:
   db_data:

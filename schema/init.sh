@@ -25,9 +25,12 @@ $PSQL -f /app/schema/dba/tables/tholidays.sql
 $PSQL -f /app/schema/dba/tables/tcalendardays.sql
 $PSQL -f /app/schema/dba/tables/tddllogs.sql
 $PSQL -f /app/schema/dba/tables/tlogentry.sql
+$PSQL -f /app/schema/dba/tables/timportstrategy.sql
+$PSQL -f /app/schema/dba/tables/timportconfig.sql
 $PSQL -f /app/schema/dba/functions/fenforcesingleactivedataset.sql
 $PSQL -f /app/schema/dba/functions/f_dataset_iu.sql
 $PSQL -f /app/schema/dba/functions/flogddlchanges.sql
+$PSQL -f /app/schema/dba/procedures/pimportconfig_iu.sql
 $PSQL -f /app/schema/dba/indexes/idx_tdataset_datasetdate.sql
 $PSQL -f /app/schema/dba/indexes/idx_tdataset_isactive.sql
 $PSQL -f /app/schema/dba/indexes/idx_tcalendardays_fulldate.sql
@@ -38,6 +41,7 @@ $PSQL -f /app/schema/dba/triggers/ttriggerenforcesingleactivedataset.sql
 $PSQL -f /app/schema/dba/triggers/logddl_event_trigger.sql
 $PSQL -f /app/schema/dba/data/tdatasettype_inserts.sql
 $PSQL -f /app/schema/dba/data/tdatastatus_inserts.sql
+$PSQL -f /app/schema/dba/data/timportstrategy_inserts.sql
 $PSQL -f /app/schema/dba/data/tholidays_inserts.sql
 $PSQL -f /app/schema/dba/data/tcalendardays_population.sql
 $PSQL -f /app/schema/dba/data/example_reference_data.sql

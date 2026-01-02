@@ -53,6 +53,18 @@ docker compose exec tangerine python common/db_utils.py
 docker compose exec tangerine python <path/to/script.py>
 ```
 
+### Running Generic Import
+```bash
+# Run import using config_id from dba.timportconfig
+docker compose exec tangerine python etl/jobs/generic_import.py --config-id <id>
+
+# Dry run (no database writes)
+docker compose exec tangerine python etl/jobs/generic_import.py --config-id <id> --dry-run
+
+# With specific date
+docker compose exec tangerine python etl/jobs/generic_import.py --config-id <id> --date 2026-01-15
+```
+
 ## Architecture
 
 ### Vertical Slice Architecture
@@ -97,6 +109,54 @@ Each SQL file uses `DO $$ ... END $$` blocks with `IF NOT EXISTS` checks to ensu
 - **tcalendardays**: Calendar dimension with business day tracking
 - **tholidays**: Holiday definitions
 - **tddllogs**: DDL change tracking via event triggers
+- **timportstrategy**: Reference table for import strategies (how to handle column mismatches)
+- **timportconfig**: Configuration table for generic file imports (CSV, XLS, XLSX, JSON, XML)
+
+### Import Configuration Tables
+
+#### timportstrategy
+Defines how to handle column mismatches during imports:
+| ID | Strategy | Behavior |
+|----|----------|----------|
+| 1 | Import and create new columns if needed | ALTER TABLE to add new columns from source file |
+| 2 | Import only (ignores new columns) | Silently ignores columns not in target table |
+| 3 | Import or fail if columns missing | Raises error if source has columns not in target table |
+
+#### timportconfig
+Configuration-driven import settings:
+- `config_id`: Primary key used to run imports
+- `config_name`: Unique descriptive name
+- `datasource`/`datasettype`: Must exist in tdatasource/tdatasettype
+- `source_directory`/`archive_directory`: Absolute paths for file processing
+- `file_pattern`: Regex pattern to match files (e.g., `.*\.csv`)
+- `file_type`: CSV, XLS, XLSX, JSON, or XML
+- `metadata_label_source`: Extract label from `filename`, `file_content`, or `static`
+- `dateconfig`/`datelocation`/`dateformat`: Date extraction configuration
+- `delimiter`: Delimiter for parsing filenames (e.g., `_`)
+- `target_table`: Target table in `schema.table` format
+- `importstrategyid`: FK to timportstrategy
+
+#### Stored Procedures
+- `dba.pimportconfigi`: Insert new import configuration
+- `dba.pimportconfigu`: Update existing configuration (partial updates supported)
+
+### Feeds Schema Table Conventions
+Tables in the `feeds` schema for raw data storage must follow these conventions:
+- **Primary key**: Named `{tablename}id` (e.g., `dynamic_importid` for table `dynamic_import`)
+- **Second column**: `datasetid` as FK to `dba.tdataset(datasetid)`
+- **Remaining columns**: Business data columns
+- **Audit columns** (optional): `created_date`, `created_by`, `modified_date`, `modified_by`
+
+Example:
+```sql
+CREATE TABLE feeds.my_import (
+    my_importid SERIAL PRIMARY KEY,
+    datasetid INT REFERENCES dba.tdataset(datasetid),
+    -- business columns here
+    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(50)
+);
+```
 
 ### Database Permissions Model
 - **admin**: Full superuser access to all schemas
@@ -109,6 +169,15 @@ Each SQL file uses `DO $$ ... END $$` blocks with `IF NOT EXISTS` checks to ensu
 - **common/db_utils.py**: Database connection helper using psycopg2 and environment variables
   - `connect_db(db_url)`: Returns psycopg2 connection object or None on error
   - Reads `DB_URL` from environment when run as main script
+
+### Generic Import System
+- **etl/jobs/generic_import.py**: Configuration-driven file import job
+  - Reads import settings from `dba.timportconfig`
+  - Supports CSV, XLS, XLSX, JSON, XML file formats
+  - Implements all 3 import strategies for column handling
+  - Extracts metadata/dates from filename, file content, or static values
+  - Archives files after successful processing
+  - Integrates with ETL framework (BaseETLJob, dataset tracking, logging)
 
 ## Adding New Features
 
@@ -127,10 +196,91 @@ Each SQL file uses `DO $$ ... END $$` blocks with `IF NOT EXISTS` checks to ensu
 5. Test locally before pushing to server
 
 ### Adding Dependencies
-Edit `Dockerfile` to add pip packages:
-```dockerfile
-RUN pip install --no-cache-dir psycopg2-binary <new-package>
+Edit `requirements/base.txt` to add pip packages:
 ```
+# File format handling
+openpyxl==3.1.2
+xlrd==2.0.1
+lxml==5.1.0
+```
+
+### Adding a New Import Configuration
+
+#### Directory Path Setup
+The `source_directory` and `archive_directory` paths in `timportconfig` are **inside the Docker container** at `/app/data`. This path is mounted from your local machine via the volume configuration in `docker-compose.yml`:
+
+```yaml
+volumes:
+  - ${ETL_DATA_PATH:-./.data/etl}:/app/data
+```
+
+This means:
+- **Default path (local machine):** `./.data/etl` (relative to docker-compose.yml)
+- **Inside container:** `/app/data`
+- **Override path:** Set `ETL_DATA_PATH` environment variable
+
+**Windows Development Setup:**
+1. Create data directories (relative to docker-compose.yml):
+```bash
+mkdir -p ./.data/etl/source
+mkdir -p ./.data/etl/archive
+```
+Actual Windows path: `C:\Users\...\tangerine\.data\etl\source`
+
+2. Place your import files in `.\.data\etl\source\`
+
+3. Use these paths in your import config:
+   - `source_directory`: `/app/data/source`
+   - `archive_directory`: `/app/data/archive`
+
+Docker Desktop automatically mounts the Windows paths into the Linux container.
+
+**Linux Server Deployment:**
+Option 1: Use relative path (same as Windows):
+```bash
+mkdir -p ./.data/etl/source
+mkdir -p ./.data/etl/archive
+docker compose up --build
+```
+
+Option 2: Use custom path (recommended for production):
+```bash
+# Set environment variable before running docker compose
+export ETL_DATA_PATH=/opt/tangerine/data
+mkdir -p /opt/tangerine/data/source
+mkdir -p /opt/tangerine/data/archive
+docker compose up --build
+```
+
+Both approaches use the same `/app/data` paths inside the container.
+
+#### Create Configuration
+1. Ensure `datasource` exists in `dba.tdatasource`
+2. Ensure `datasettype` exists in `dba.tdatasettype`
+3. Create target table in `feeds` schema following naming conventions
+4. Ensure source and archive directories exist in container (or are mounted from local machine)
+5. Insert configuration into `dba.timportconfig`:
+```sql
+CALL dba.pimportconfigi(
+    'MyImportConfig',           -- config_name
+    'MyDataSource',             -- datasource (must exist in tdatasource)
+    'MyDataType',               -- datasettype (must exist in tdatasettype)
+    '/app/data/source',         -- source_directory (mounted via volume)
+    '/app/data/archive',        -- archive_directory (mounted via volume)
+    '.*MyPattern\\.csv',        -- file_pattern (regex)
+    'CSV',                      -- file_type (CSV, XLS, XLSX, JSON, XML)
+    'static',                   -- metadata_label_source (filename, file_content, static)
+    'MyLabel',                  -- metadata_label_location
+    'filename',                 -- dateconfig (filename, file_content, static)
+    '0',                        -- datelocation (position index for filename)
+    'yyyyMMddTHHmmss',          -- dateformat
+    '_',                        -- delimiter (for parsing filenames)
+    'feeds.my_table',           -- target_table
+    1,                          -- importstrategyid (1=add cols, 2=ignore, 3=fail)
+    TRUE                        -- is_active
+);
+```
+6. Run import: `docker compose exec tangerine python etl/jobs/generic_import.py --config-id <new_id>`
 
 ## Docker Services
 
