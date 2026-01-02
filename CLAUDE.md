@@ -65,6 +65,188 @@ docker compose exec tangerine python etl/jobs/generic_import.py --config-id <id>
 docker compose exec tangerine python etl/jobs/generic_import.py --config-id <id> --date 2026-01-15
 ```
 
+## Data Flow: Docker to Database
+
+Here's the complete workflow from Docker Compose startup to data persisted in the database:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        DOCKER COMPOSE PHASE                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  $ docker compose up --build                                                │
+│                                                                              │
+│  ┌──────────────────────────────────┐    ┌──────────────────────────────┐   │
+│  │  db (PostgreSQL 18)              │    │  tangerine (Python 3.11)     │   │
+│  │  ├─ Starts PostgreSQL            │    │  ├─ Builds Docker image      │   │
+│  │  ├─ Mounts schema/ directory     │    │  ├─ Mounts .data/etl → /app  │   │
+│  │  └─ Prepares for init scripts    │    │  └─ Ready for commands       │   │
+│  └──────────────────────────────────┘    └──────────────────────────────┘   │
+│                           ↓                                                  │
+│              Volume Mount: ./.data/etl ↔ /app/data                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    DATABASE INITIALIZATION                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  PostgreSQL executes /docker-entrypoint-initdb.d/init.sh                    │
+│                                                                              │
+│  1. Creates users: etl_user, admin                                          │
+│  2. Creates group roles: app_rw, app_ro                                     │
+│  3. Creates dba schema                                                      │
+│     ├─ dba.tdataset (tracks dataset loads)                                  │
+│     ├─ dba.tdatasettype (reference)                                        │
+│     ├─ dba.tdatasource (reference)                                         │
+│     ├─ dba.timportstrategy (import strategies 1, 2, 3)                     │
+│     └─ dba.timportconfig (import configurations)                           │
+│  4. Creates feeds schema                                                    │
+│     └─ feeds.* (target tables for raw data)                                │
+│  5. Creates procedures for configuration management                         │
+│  6. Creates logging & audit tables                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│               IMPORT CONFIGURATION SETUP (User Action)                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Step 1: Create Target Table (Local)                                        │
+│  ┌────────────────────────────────────────────────────────────────┐         │
+│  │ CREATE TABLE feeds.my_import (                                │         │
+│  │     my_importid SERIAL PRIMARY KEY,                           │         │
+│  │     datasetid INT REFERENCES dba.tdataset,                    │         │
+│  │     -- business columns                                       │         │
+│  │     created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP          │         │
+│  │ );                                                             │         │
+│  └────────────────────────────────────────────────────────────────┘         │
+│                                                                              │
+│  Step 2: Place Data Files (Local Machine)                                   │
+│  ┌────────────────────────────────────────────────────────────────┐         │
+│  │ ./.data/etl/source/                                            │         │
+│  │   ├─ 20260105T150000_VolumeTest.csv ←─────┐                   │         │
+│  │   ├─ data_file_*.xlsx                      │ (volume synced)   │         │
+│  │   └─ another_import.json                   │ → /app/data/      │         │
+│  └────────────────────────────────────────────────────────────────┘         │
+│                                                                              │
+│  Step 3: Create Import Configuration                                        │
+│  ┌────────────────────────────────────────────────────────────────┐         │
+│  │ CALL dba.pimportconfigi(                                       │         │
+│  │     'MyImportConfig',                                          │         │
+│  │     'MyDataSource',                                            │         │
+│  │     'MyDataType',                                              │         │
+│  │     '/app/data/source',       ← mounted path                  │         │
+│  │     '/app/data/archive',      ← mounted path                  │         │
+│  │     '.*MyPattern\\.csv',      ← file pattern                  │         │
+│  │     'CSV',                                                     │         │
+│  │     'filename',               ← metadata source               │         │
+│  │     'Label1',                 ← metadata value                │         │
+│  │     'filename',               ← date source                   │         │
+│  │     '0',                      ← position in filename           │         │
+│  │     'yyyyMMddTHHmmss',        ← date format                   │         │
+│  │     '_',                      ← filename delimiter            │         │
+│  │     'feeds.my_import',        ← target table                  │         │
+│  │     1,                        ← strategy ID                   │         │
+│  │     TRUE                                                       │         │
+│  │ );                                                             │         │
+│  └────────────────────────────────────────────────────────────────┘         │
+│                            ↓ (inserts config_id)                            │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│              IMPORT JOB EXECUTION (Triggered by User)                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  $ docker compose exec tangerine python etl/jobs/generic_import.py \        │
+│      --config-id 1                                                          │
+│                                                                              │
+│                        ↓↓↓ INSIDE CONTAINER ↓↓↓                            │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────┐            │
+│  │ PHASE 1: SETUP                                              │            │
+│  ├─────────────────────────────────────────────────────────────┤            │
+│  │ ✓ Fetch config_id from dba.timportconfig                   │            │
+│  │ ✓ Validate config exists                                   │            │
+│  │ ✓ Load import strategy from dba.timportstrategy            │            │
+│  │ ✓ Create dataset record in dba.tdataset                    │            │
+│  │ Result: run_uuid, dataset_id                               │            │
+│  └─────────────────────────────────────────────────────────────┘            │
+│                           ↓                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐            │
+│  │ PHASE 2: EXTRACT                                            │            │
+│  ├─────────────────────────────────────────────────────────────┤            │
+│  │ ✓ Scan /app/data/source/ for matching files               │            │
+│  │ ✓ For each file:                                           │            │
+│  │   ├─ CSV: Read with csv.DictReader                        │            │
+│  │   ├─ XLS/XLSX: Parse with openpyxl/xlrd                   │            │
+│  │   ├─ JSON: Load as dict or array                          │            │
+│  │   └─ XML: Parse as blob or structure                      │            │
+│  │ ✓ Extract metadata_label (from filename/content/static)   │            │
+│  │ ✓ Extract date (using dateformat parser)                  │            │
+│  │ Result: raw_records list with source file info            │            │
+│  └─────────────────────────────────────────────────────────────┘            │
+│                           ↓                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐            │
+│  │ PHASE 3: TRANSFORM                                          │            │
+│  ├─────────────────────────────────────────────────────────────┤            │
+│  │ ✓ Normalize column names (lowercase, spaces→underscores)   │            │
+│  │ ✓ Add audit fields (created_date, created_by=etl_user)     │            │
+│  │ ✓ Apply import strategy:                                   │            │
+│  │   ├─ Strategy 1: Identify new columns, exclude metadata   │            │
+│  │   ├─ Strategy 2: Filter to existing columns only          │            │
+│  │   └─ Strategy 3: Validate all columns exist or FAIL        │            │
+│  │ ✓ For JSON/XML: wrap in {raw_data: blob}                  │            │
+│  │ Result: transformed_records list ready for load           │            │
+│  └─────────────────────────────────────────────────────────────┘            │
+│                           ↓                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐            │
+│  │ PHASE 4: LOAD                                               │            │
+│  ├─────────────────────────────────────────────────────────────┤            │
+│  │ ✓ Check target table exists in feeds schema                │            │
+│  │ ✓ Based on import strategy:                                │            │
+│  │   ├─ Strategy 1: ALTER TABLE ADD COLUMN (new ones)        │            │
+│  │   ├─ Strategy 2: Pass through to loader as-is             │            │
+│  │   └─ Strategy 3: Already validated all columns exist       │            │
+│  │ ✓ Filter out metadata columns before insert                │            │
+│  │ ✓ Bulk insert via PostgresLoader (includes dataset_id FK)  │            │
+│  │ ✓ Update dba.tdataset status to 'Active'                  │            │
+│  │ Result: records inserted, dataset_id FK links created     │            │
+│  └─────────────────────────────────────────────────────────────┘            │
+│                           ↓                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐            │
+│  │ PHASE 5: CLEANUP                                            │            │
+│  ├─────────────────────────────────────────────────────────────┤            │
+│  │ ✓ Archive processed files:                                 │            │
+│  │   /app/data/source/* → /app/data/archive/*                │            │
+│  │ ✓ Update timportconfig last_modified_at timestamp          │            │
+│  │ ✓ Log all metrics (files, records, run_uuid)              │            │
+│  │ Result: files accessible at ./.data/etl/archive/ (local)   │            │
+│  └─────────────────────────────────────────────────────────────┘            │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         DATA AT REST                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  PostgreSQL Database (tangerine_db)                                         │
+│  ├─ dba.tdataset                                                            │
+│  │  └─ [dataset_id=9, status='Active', created_at=..., ...]               │
+│  │                                                                          │
+│  ├─ dba.tlogentry                                                           │
+│  │  └─ [run_uuid='55e5ff8c...', job_name='GenericImportJob', ...]         │
+│  │                                                                          │
+│  └─ feeds.my_import                                                        │
+│     ├─ [my_importid=1, datasetid=9, product='Laptop', price=999.99, ...]  │
+│     ├─ [my_importid=2, datasetid=9, product='Mouse', price=19.99, ...]    │
+│     └─ [my_importid=3, datasetid=9, product='Keyboard', price=79.99, ...] │
+│                                                                              │
+│  Local File System (Archived)                                              │
+│  └─ ./.data/etl/archive/                                                   │
+│     ├─ 20260105T150000_VolumeTest.csv ✓ synced via volume                  │
+│     └─ (timestamp preserved, bidirectional sync maintained)                │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
 ## Architecture
 
 ### Vertical Slice Architecture
