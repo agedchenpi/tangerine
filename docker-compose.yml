@@ -6,19 +6,33 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       ETL_USER_PASSWORD: ${ETL_USER_PASSWORD}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD}      
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
     ports:
       - "5432:5432"
-    volumes:      
+    volumes:
       - db_data:/var/lib/postgresql
       - ./schema/init.sh:/docker-entrypoint-initdb.d/init.sh
       - ./schema:/app/schema
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   tangerine:
     build: .
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       DB_URL: ${DB_URL}
+      ETL_LOG_LEVEL: ${ETL_LOG_LEVEL:-INFO}
+      ETL_LOG_DIR: /app/logs
+      ETL_ENABLE_DB_LOGGING: ${ETL_ENABLE_DB_LOGGING:-true}
+      ETL_ENABLE_FILE_LOGGING: ${ETL_ENABLE_FILE_LOGGING:-true}
+    volumes:
+      - etl_logs:/app/logs
 
 volumes:
   db_data:
+  etl_logs:

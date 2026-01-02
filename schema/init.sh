@@ -40,9 +40,14 @@ $PSQL -f /app/schema/dba/data/tdatasettype_inserts.sql
 $PSQL -f /app/schema/dba/data/tdatastatus_inserts.sql
 $PSQL -f /app/schema/dba/data/tholidays_inserts.sql
 $PSQL -f /app/schema/dba/data/tcalendardays_population.sql
+$PSQL -f /app/schema/dba/data/example_reference_data.sql
+
+# Execute DBA views (after data is loaded)
+$PSQL -f /app/schema/dba/views/vdataset.sql
 
 # Execute feeds schema files in order
 $PSQL -f /app/schema/feeds/schema.sql
+$PSQL -f /app/schema/feeds/tables/example_products.sql
 
 # Optional: Execute shared_queries.sql last
 $PSQL -f /app/schema/shared_queries.sql
