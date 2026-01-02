@@ -1,8 +1,9 @@
-DO $$  
+DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'dba') AND proname = 'fenforcesingleactivedataset') THEN
         CREATE FUNCTION dba.fenforcesingleactivedataset()
-        RETURNS TRIGGER AS   $$BEGIN
+        RETURNS TRIGGER AS $BODY$
+        BEGIN
             IF NEW.isactive = TRUE THEN
                 UPDATE dba.tdataset
                 SET isactive = FALSE,
@@ -16,7 +17,8 @@ BEGIN
             END IF;
             RETURN NEW;
         END;
-        $$   LANGUAGE plpgsql;
+        $BODY$ LANGUAGE plpgsql;
+
+        GRANT EXECUTE ON FUNCTION dba.fenforcesingleactivedataset() TO app_rw, app_ro;
     END IF;
-END   $$;
-GRANT EXECUTE ON FUNCTION dba.fenforcesingleactivedataset() TO app_rw, app_ro;
+END $$;

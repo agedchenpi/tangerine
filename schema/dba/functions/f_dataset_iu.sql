@@ -1,4 +1,4 @@
-DO $$  
+DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'dba') AND proname = 'f_dataset_iu') THEN
         CREATE FUNCTION dba.f_dataset_iu(
@@ -11,7 +11,8 @@ BEGIN
             p_createduser VARCHAR
         ) RETURNS INT
         LANGUAGE plpgsql
-        AS   $$DECLARE
+        AS $INNER$
+        DECLARE
             v_datasettypeid INT;
             v_datasourceid INT;
             v_datastatusid INT;
@@ -57,8 +58,9 @@ BEGIN
             END IF;
             RETURN v_datasetid;
         END;
-        $$  ;
+        $INNER$;
+
         COMMENT ON FUNCTION dba.f_dataset_iu IS 'Inserts or updates a dataset in tdataset, resolving type, source, and status IDs, and managing active status.';
+        GRANT EXECUTE ON FUNCTION dba.f_dataset_iu(INT, DATE, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR) TO app_rw, app_ro;
     END IF;
-END   $$;
-GRANT EXECUTE ON FUNCTION dba.f_dataset_iu(INT, DATE, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR) TO app_rw, app_ro;
+END $$;

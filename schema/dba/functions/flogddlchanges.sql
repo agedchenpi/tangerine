@@ -1,4 +1,4 @@
-DO $$  
+DO $$
 BEGIN
     IF NOT EXISTS (
         SELECT 1
@@ -7,7 +7,7 @@ BEGIN
         AND proname = 'flogddlchanges'
     ) THEN
         CREATE FUNCTION dba.flogddlchanges()
-        RETURNS EVENT_TRIGGER AS $$  
+        RETURNS EVENT_TRIGGER AS $BODY$
         DECLARE
             r RECORD;
         BEGIN
@@ -16,7 +16,8 @@ BEGIN
                 VALUES (CURRENT_TIMESTAMP, r.command_tag, COALESCE(r.schema_name, 'dba'), r.object_identity, r.object_type, r.command_tag);
             END LOOP;
         END;
-        $$ LANGUAGE plpgsql;
+        $BODY$ LANGUAGE plpgsql;
+
+        GRANT EXECUTE ON FUNCTION dba.flogddlchanges() TO app_rw, app_ro;
     END IF;
 END $$;
-GRANT EXECUTE ON FUNCTION dba.flogddlchanges() TO app_rw, app_ro;
