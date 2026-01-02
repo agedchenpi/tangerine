@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(cat:*)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(docker exec:*)",
+      "Bash(docker logs:*)",
+      "Bash(timeout 15 docker exec:*)",
+      "Bash(timeout 20 docker exec:*)",
+      "Bash(tee:*)"
     ]
   }
 }
