@@ -39,7 +39,8 @@ CALL dba.pimportconfigi(
     '_',
     'feeds.rt_csv_strategy1_products',
     1,
-    TRUE
+    TRUE,
+    FALSE
 );
 
 -- Test 2: CSV Strategy 2 - Ignore extra columns (uses same table as Strategy 1)
@@ -59,7 +60,8 @@ CALL dba.pimportconfigi(
     '_',
     'feeds.rt_csv_strategy1_products',
     2,
-    TRUE
+    TRUE,
+    FALSE
 );
 
 -- Test 3: CSV Strategy 3 - Strict validation
@@ -79,7 +81,8 @@ CALL dba.pimportconfigi(
     '_',
     'feeds.rt_csv_strategy3_orders',
     3,
-    TRUE
+    TRUE,
+    FALSE
 );
 
 -- Test 4: CSV Metadata from filename
@@ -99,7 +102,8 @@ CALL dba.pimportconfigi(
     '_',
     'feeds.rt_csv_metadata',
     1,
-    TRUE
+    TRUE,
+    FALSE
 );
 
 -- Test 5: CSV Empty file
@@ -119,7 +123,8 @@ CALL dba.pimportconfigi(
     '_',
     'feeds.rt_csv_empty',
     1,
-    TRUE
+    TRUE,
+    FALSE
 );
 
 -- Test 6: CSV Malformed data
@@ -139,7 +144,8 @@ CALL dba.pimportconfigi(
     '_',
     'feeds.rt_csv_malformed',
     2,
-    TRUE
+    TRUE,
+    FALSE
 );
 
 -- =============================================================================
@@ -163,7 +169,8 @@ CALL dba.pimportconfigi(
     '_',
     'feeds.rt_xls_strategy1_inventory',
     1,
-    TRUE
+    TRUE,
+    FALSE
 );
 
 -- Test 8: XLS Metadata from content
@@ -183,7 +190,8 @@ CALL dba.pimportconfigi(
     '_',
     'feeds.rt_xls_metadata',
     2,
-    TRUE
+    TRUE,
+    FALSE
 );
 
 -- Test 9: XLS Multiple sheets
@@ -203,7 +211,8 @@ CALL dba.pimportconfigi(
     '_',
     'feeds.rt_xls_multisheet',
     1,
-    TRUE
+    TRUE,
+    FALSE
 );
 
 -- =============================================================================
@@ -227,7 +236,8 @@ CALL dba.pimportconfigi(
     '_',
     'feeds.rt_xlsx_strategy2_sales',
     2,
-    TRUE
+    TRUE,
+    FALSE
 );
 
 -- Test 11: XLSX Date from content
@@ -247,7 +257,8 @@ CALL dba.pimportconfigi(
     '_',
     'feeds.rt_xlsx_datecontent',
     1,
-    TRUE
+    TRUE,
+    FALSE
 );
 
 -- Test 12: XLSX Large file
@@ -267,7 +278,8 @@ CALL dba.pimportconfigi(
     '_',
     'feeds.rt_xlsx_large',
     1,
-    TRUE
+    TRUE,
+    FALSE
 );
 
 -- =============================================================================
@@ -291,7 +303,8 @@ CALL dba.pimportconfigi(
     '_',
     'feeds.rt_json_array',
     1,
-    TRUE
+    TRUE,
+    FALSE
 );
 
 -- Test 14: JSON Object format
@@ -311,6 +324,7 @@ CALL dba.pimportconfigi(
     '_',
     'feeds.rt_json_object',
     1,
+    TRUE,
     TRUE
 );
 
@@ -331,6 +345,7 @@ CALL dba.pimportconfigi(
     '_',
     'feeds.rt_json_nested',
     1,
+    TRUE,
     TRUE
 );
 
@@ -355,7 +370,8 @@ CALL dba.pimportconfigi(
     '_',
     'feeds.rt_xml_structured',
     1,
-    TRUE
+    TRUE,
+    FALSE
 );
 
 -- Test 17: XML Blob format
@@ -375,5 +391,6 @@ CALL dba.pimportconfigi(
     '_',
     'feeds.rt_xml_blob',
     1,
+    TRUE,
     TRUE
 );

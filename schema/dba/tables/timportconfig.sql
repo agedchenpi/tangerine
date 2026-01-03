@@ -19,6 +19,7 @@ BEGIN
             target_table VARCHAR(100) NOT NULL,
             importstrategyid INT NOT NULL DEFAULT 1,
             is_active BOOLEAN DEFAULT TRUE,
+            is_blob BOOLEAN DEFAULT FALSE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             CONSTRAINT fk_importstrategyid FOREIGN KEY (importstrategyid) REFERENCES dba.timportstrategy(importstrategyid),
@@ -51,6 +52,7 @@ BEGIN
         COMMENT ON COLUMN dba.timportconfig.target_table IS 'Target database table for the imported data (schema.table format).';
         COMMENT ON COLUMN dba.timportconfig.importstrategyid IS 'Foreign key to timportstrategy, defining how to handle column mismatches.';
         COMMENT ON COLUMN dba.timportconfig.is_active IS 'Flag indicating whether the configuration is active.';
+        COMMENT ON COLUMN dba.timportconfig.is_blob IS 'Flag indicating whether JSON/XML files should be stored as blobs (TRUE) or parsed as relational data (FALSE). Only applies to JSON and XML file types.';
         COMMENT ON COLUMN dba.timportconfig.created_at IS 'Timestamp when the configuration was created.';
         COMMENT ON COLUMN dba.timportconfig.last_modified_at IS 'Timestamp when the configuration was last modified.';
     END IF;

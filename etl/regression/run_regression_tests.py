@@ -155,7 +155,7 @@ class RegressionTestRunner:
             'JSON_ObjectFormat': 1,
             'JSON_NestedObjects': 1,
             'XML_StructuredFormat': 3,
-            'XML_BlobFormat': 2,
+            'XML_BlobFormat': 1,
         }
         return expected_map.get(test_name, 0)
 

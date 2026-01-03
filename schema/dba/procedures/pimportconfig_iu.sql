@@ -22,7 +22,8 @@ BEGIN
             p_delimiter VARCHAR,
             p_target_table VARCHAR,
             p_importstrategyid INT DEFAULT 1,
-            p_is_active BOOLEAN DEFAULT TRUE
+            p_is_active BOOLEAN DEFAULT TRUE,
+            p_is_blob BOOLEAN DEFAULT FALSE
         )
         LANGUAGE plpgsql
         AS $PROC$
@@ -44,6 +45,7 @@ BEGIN
                 target_table,
                 importstrategyid,
                 is_active,
+                is_blob,
                 created_at,
                 last_modified_at
             ) VALUES (
@@ -63,6 +65,7 @@ BEGIN
                 p_target_table,
                 p_importstrategyid,
                 p_is_active,
+                p_is_blob,
                 CURRENT_TIMESTAMP,
                 CURRENT_TIMESTAMP
             ) ON CONFLICT (config_name) DO NOTHING;
@@ -98,7 +101,8 @@ BEGIN
             p_delimiter VARCHAR DEFAULT NULL,
             p_target_table VARCHAR DEFAULT NULL,
             p_importstrategyid INT DEFAULT NULL,
-            p_is_active BOOLEAN DEFAULT NULL
+            p_is_active BOOLEAN DEFAULT NULL,
+            p_is_blob BOOLEAN DEFAULT NULL
         )
         LANGUAGE plpgsql
         AS $PROC$
@@ -121,6 +125,7 @@ BEGIN
                 target_table = COALESCE(p_target_table, target_table),
                 importstrategyid = COALESCE(p_importstrategyid, importstrategyid),
                 is_active = COALESCE(p_is_active, is_active),
+                is_blob = COALESCE(p_is_blob, is_blob),
                 last_modified_at = CURRENT_TIMESTAMP
             WHERE config_id = p_config_id;
 

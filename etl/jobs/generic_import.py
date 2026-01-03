@@ -57,6 +57,7 @@ class ImportConfig:
     target_table: str
     importstrategyid: int
     is_active: bool
+    is_blob: bool
 
 
 @dataclass
@@ -157,14 +158,21 @@ class ExcelExtractor(FileExtractor):
 class JSONExtractor(FileExtractor):
     """Extract data from JSON files."""
 
+    def __init__(self, is_blob: bool = False):
+        self.is_blob = is_blob
+
     def extract(self, file_path: Path) -> List[Dict[str, Any]]:
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
+        # Blob mode: always wrap entire content
+        if self.is_blob:
+            json_str = json.dumps(data) if not isinstance(data, str) else data
+            return [{'raw_data': json_str, 'source_file': file_path.name}]
+
+        # Relational mode: arrays as-is, objects wrapped
         if isinstance(data, list):
             return data
-        elif isinstance(data, dict):
-            return [{'raw_data': json.dumps(data), 'source_file': file_path.name}]
         else:
             return [{'raw_data': json.dumps(data), 'source_file': file_path.name}]
 
@@ -172,10 +180,18 @@ class JSONExtractor(FileExtractor):
 class XMLExtractor(FileExtractor):
     """Extract data from XML files."""
 
+    def __init__(self, is_blob: bool = False):
+        self.is_blob = is_blob
+
     def extract(self, file_path: Path) -> List[Dict[str, Any]]:
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
 
+        # Blob mode: skip parsing
+        if self.is_blob:
+            return [{'raw_data': content, 'source_file': file_path.name}]
+
+        # Relational mode: try parsing
         try:
             root = ElementTree.fromstring(content)
             records = self._parse_element(root)
@@ -184,6 +200,7 @@ class XMLExtractor(FileExtractor):
         except ElementTree.ParseError:
             pass
 
+        # Fallback to blob
         return [{'raw_data': content, 'source_file': file_path.name}]
 
     def _parse_element(self, element) -> List[Dict[str, Any]]:
@@ -344,6 +361,60 @@ class SchemaManager:
         for record in samples_to_analyze:
             all_columns.update(record.keys())
 
+        # Detect blob mode (only raw_data + metadata columns added by extract method)
+        # Note: Column names are normalized (underscores stripped) before this point
+        metadata_cols = {'source_file', 'metadata_label', 'file_date', 'created_date', 'created_by'}
+        business_cols = all_columns - metadata_cols
+        if len(business_cols) == 1 and 'raw_data' in business_cols:
+            # Determine PostgreSQL type from content
+            first_record = samples_to_analyze[0]
+            raw_value = first_record.get('raw_data', '')
+            blob_type = 'TEXT'
+
+            # Detect JSONB
+            if isinstance(raw_value, str) and raw_value.strip().startswith(('{', '[')):
+                try:
+                    json.loads(raw_value)
+                    blob_type = 'JSONB'
+                except json.JSONDecodeError:
+                    pass
+
+            # Detect XML
+            if blob_type == 'TEXT' and isinstance(raw_value, str) and raw_value.strip().startswith('<?xml'):
+                try:
+                    ElementTree.fromstring(raw_value)
+                    blob_type = 'XML'
+                except ElementTree.ParseError:
+                    pass
+
+            # Create blob table
+            pk_column = f'{table}id'
+            create_sql = f"""
+CREATE TABLE {schema}.{table} (
+    {pk_column} SERIAL PRIMARY KEY,
+    datasetid INT REFERENCES dba.tdataset(datasetid),
+    raw_data {blob_type},
+    source_file VARCHAR(255),
+    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(50)
+);
+"""
+            with db_transaction() as cursor:
+                cursor.execute(create_sql)
+
+            self.logger.info(f"Created blob table {schema}.{table} with raw_data type {blob_type}")
+
+            # Grant permissions
+            grant_sql = f"""
+GRANT SELECT, INSERT, UPDATE, DELETE ON {schema}.{table} TO app_rw;
+GRANT SELECT ON {schema}.{table} TO app_ro;
+GRANT USAGE, SELECT ON SEQUENCE {schema}.{table}_{pk_column}_seq TO app_rw;
+"""
+            with db_transaction() as cursor:
+                cursor.execute(grant_sql)
+
+            return  # Exit early
+
         # Remove system/metadata columns that shouldn't be in table
         excluded_columns = {
             'datasetid', 'created_date', 'created_by', 'modified_date', 'modified_by',
@@ -457,7 +528,7 @@ class GenericImportJob(BaseETLJob):
                 source_directory, archive_directory, file_pattern, file_type,
                 metadata_label_source, metadata_label_location,
                 dateconfig, datelocation, dateformat, delimiter,
-                target_table, importstrategyid, is_active
+                target_table, importstrategyid, is_active, is_blob
             FROM dba.timportconfig
             WHERE config_id = %s AND is_active = TRUE
         """
@@ -483,7 +554,8 @@ class GenericImportJob(BaseETLJob):
             delimiter=row['delimiter'],
             target_table=row['target_table'],
             importstrategyid=row['importstrategyid'],
-            is_active=row['is_active']
+            is_active=row['is_active'],
+            is_blob=row['is_blob']
         )
 
     def _load_strategy(self, strategy_id: int) -> ImportStrategy:
@@ -530,9 +602,9 @@ class GenericImportJob(BaseETLJob):
         elif file_type in ('XLS', 'XLSX'):
             return ExcelExtractor(file_type=file_type)
         elif file_type == 'JSON':
-            return JSONExtractor()
+            return JSONExtractor(is_blob=self.import_config.is_blob)
         elif file_type == 'XML':
-            return XMLExtractor()
+            return XMLExtractor(is_blob=self.import_config.is_blob)
         else:
             raise ValueError(f"Unsupported file type: {file_type}")
 
