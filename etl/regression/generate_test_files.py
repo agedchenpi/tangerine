@@ -1,10 +1,12 @@
 """
 Generate test data files for regression testing.
 
-Creates CSV, XLS, and XLSX files for all 17 regression test configurations.
+Creates CSV, XLS, XLSX, JSON, and XML files for all 17 regression test configurations.
+Always overwrites existing files to ensure fresh test data.
 """
 
 import csv
+import json
 import os
 from datetime import datetime
 from pathlib import Path
@@ -22,11 +24,15 @@ class TestFileGenerator:
         self.csv_dir = self.base_dir / "csv"
         self.xls_dir = self.base_dir / "xls"
         self.xlsx_dir = self.base_dir / "xlsx"
+        self.json_dir = self.base_dir / "json"
+        self.xml_dir = self.base_dir / "xml"
 
         # Create directories if they don't exist
         self.csv_dir.mkdir(parents=True, exist_ok=True)
         self.xls_dir.mkdir(parents=True, exist_ok=True)
         self.xlsx_dir.mkdir(parents=True, exist_ok=True)
+        self.json_dir.mkdir(parents=True, exist_ok=True)
+        self.xml_dir.mkdir(parents=True, exist_ok=True)
 
     def generate_csv_files(self):
         """Generate missing CSV test files."""
@@ -73,12 +79,34 @@ class TestFileGenerator:
             ])
         print(f"  Created: {orders_strategy3_file}")
 
+        # Test 4: MetadataFilename (2 records - label extracted from filename)
+        metadata_filename_file = self.csv_dir / "MetadataFilename_20260101T150000.csv"
+        with open(metadata_filename_file, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=['item', 'value'])
+            writer.writeheader()
+            writer.writerows([
+                {'item': 'Widget', 'value': '100'},
+                {'item': 'Gadget', 'value': '200'},
+            ])
+        print(f"  Created: {metadata_filename_file}")
+
         # Test 5: EmptyFile (headers only)
         empty_file = self.csv_dir / "EmptyFile_20260101T160000.csv"
         with open(empty_file, 'w', newline='', encoding='utf-8') as f:
             writer = csv.DictWriter(f, fieldnames=['field1', 'field2', 'field3'])
             writer.writeheader()
         print(f"  Created: {empty_file}")
+
+        # Test 6: MalformedData (2 records with some odd data)
+        malformed_file = self.csv_dir / "MalformedData_20260101T170000.csv"
+        with open(malformed_file, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=['field_a', 'field_b'])
+            writer.writeheader()
+            writer.writerows([
+                {'field_a': 'Value1', 'field_b': '123'},
+                {'field_a': 'Value2', 'field_b': '456'},
+            ])
+        print(f"  Created: {malformed_file}")
 
     def generate_xls_files(self):
         """Generate XLS test files using xlwt."""
@@ -232,6 +260,99 @@ class TestFileGenerator:
         wb.save(str(large_file))
         print(f"  Created: {large_file}")
 
+    def generate_json_files(self):
+        """Generate JSON test files."""
+        print("Generating JSON files...")
+
+        # Test 13: JSON Array format (6 records in array)
+        array_file = self.json_dir / "ArrayFormat_20260104T120000.json"
+        array_data = [
+            {"product_id": 1, "name": "Product A", "price": 19.99},
+            {"product_id": 2, "name": "Product B", "price": 29.99},
+            {"product_id": 3, "name": "Product C", "price": 39.99},
+            {"product_id": 4, "name": "Product D", "price": 49.99},
+            {"product_id": 5, "name": "Product E", "price": 59.99},
+            {"product_id": 6, "name": "Product F", "price": 69.99},
+        ]
+        with open(array_file, 'w', encoding='utf-8') as f:
+            json.dump(array_data, f, indent=2)
+        print(f"  Created: {array_file}")
+
+        # Test 14: JSON Object format (1 record)
+        object_file = self.json_dir / "ObjectFormat_20260104T130000.json"
+        object_data = {
+            "transaction_id": "TXN-12345",
+            "customer": "John Doe",
+            "amount": 150.75,
+            "currency": "USD"
+        }
+        with open(object_file, 'w', encoding='utf-8') as f:
+            json.dump(object_data, f, indent=2)
+        print(f"  Created: {object_file}")
+
+        # Test 15: JSON Nested Objects (1 record with nested structure)
+        nested_file = self.json_dir / "NestedObjects_20260104T140000.json"
+        nested_data = {
+            "order_id": "ORD-999",
+            "customer": {
+                "name": "Jane Smith",
+                "email": "jane@example.com"
+            },
+            "items": ["Item1", "Item2", "Item3"]
+        }
+        with open(nested_file, 'w', encoding='utf-8') as f:
+            json.dump(nested_data, f, indent=2)
+        print(f"  Created: {nested_file}")
+
+    def generate_xml_files(self):
+        """Generate XML test files."""
+        print("Generating XML files...")
+
+        # Test 16: XML Structured format (3 records)
+        structured_file = self.xml_dir / "StructuredXML_20260105T120000.xml"
+        structured_xml = '''<?xml version="1.0"?>
+<products>
+  <product>
+    <id>101</id>
+    <name>Widget Pro</name>
+    <category>Tools</category>
+  </product>
+  <product>
+    <id>102</id>
+    <name>Gadget Max</name>
+    <category>Electronics</category>
+  </product>
+  <product>
+    <id>103</id>
+    <name>Tool Supreme</name>
+    <category>Hardware</category>
+  </product>
+</products>'''
+        with open(structured_file, 'w', encoding='utf-8') as f:
+            f.write(structured_xml)
+        print(f"  Created: {structured_file}")
+
+        # Test 17: XML Blob format (2 records - complex nested structure)
+        blob_file = self.xml_dir / "BlobXML_20260105T130000.xml"
+        blob_xml = '''<?xml version="1.0"?>
+<complex_document>
+  <header>
+    <title>Quarterly Report</title>
+    <date>2026-01-05</date>
+  </header>
+  <body>
+    <section id="1">
+      <paragraph>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</paragraph>
+      <chart type="bar">
+        <data points="10,20,30,40,50"/>
+      </chart>
+    </section>
+  </body>
+</complex_document>'''
+        with open(blob_file, 'w', encoding='utf-8') as f:
+            f.write(blob_xml)
+        print(f"  Created: {blob_file}")
+
     def generate_all(self):
         """Generate all test files."""
         print("\n" + "=" * 60)
@@ -245,6 +366,10 @@ class TestFileGenerator:
         self.generate_xls_files()
         print()
         self.generate_xlsx_files()
+        print()
+        self.generate_json_files()
+        print()
+        self.generate_xml_files()
 
         print()
         print("=" * 60)
@@ -252,13 +377,14 @@ class TestFileGenerator:
         print("=" * 60)
         print()
         print("Summary:")
-        print(f"  CSV files:  4 created in {self.csv_dir}")
+        print(f"  CSV files:  6 created in {self.csv_dir}")
         print(f"  XLS files:  3 created in {self.xls_dir}")
         print(f"  XLSX files: 3 created in {self.xlsx_dir}")
-        print(f"  Total:      10 new test files created")
+        print(f"  JSON files: 3 created in {self.json_dir}")
+        print(f"  XML files:  2 created in {self.xml_dir}")
+        print(f"  Total:      17 test files created")
         print()
-        print("Note: JSON (3) and XML (2) test files already exist")
-        print("      Total test files: 17")
+        print("All test files have been generated/overwritten successfully!")
         print()
 
 
