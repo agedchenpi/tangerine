@@ -1,8 +1,0 @@
-[
-  {"transaction_id": "T001", "amount": 100.50, "status": "completed"},
-  {"transaction_id": "T002", "amount": 250.00, "status": "pending"},
-  {"transaction_id": "T003", "amount": 75.25, "status": "completed"},
-  {"transaction_id": "T004", "amount": 150.00, "status": "failed"},
-  {"transaction_id": "T005", "amount": 300.75, "status": "completed"},
-  {"transaction_id": "T006", "amount": 50.00, "status": "pending"}
-]

@@ -1,9 +1,0 @@
-{
-  "report_id": "R2026-01-04",
-  "generated_at": "2026-01-04T12:30:00Z",
-  "summary": {
-    "total_sales": 50000,
-    "total_orders": 150,
-    "average_order_value": 333.33
-  }
-}

@@ -388,7 +388,7 @@ CREATE TABLE {schema}.{table} (
         grant_sql = f"""
 GRANT SELECT, INSERT, UPDATE, DELETE ON {schema}.{table} TO app_rw;
 GRANT SELECT ON {schema}.{table} TO app_ro;
-GRANT USAGE, SELECT ON SEQUENCE {schema}.{pk_column}_seq TO app_rw;
+GRANT USAGE, SELECT ON SEQUENCE {schema}.{table}_{pk_column}_seq TO app_rw;
 """
         with db_transaction() as cursor:
             cursor.execute(grant_sql)

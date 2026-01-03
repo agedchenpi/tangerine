@@ -16,6 +16,7 @@ from contextlib import contextmanager
 import threading
 
 from common.config import get_config
+from common.db_utils import db_transaction
 
 
 class JsonFormatter(logging.Formatter):
@@ -85,17 +86,16 @@ class DatabaseLogHandler(logging.Handler):
     - Handler shutdown
     """
 
-    def __init__(self, db_connection_func, batch_size=100, flush_interval=10):
+    def __init__(self, db_connection_func=None, batch_size=100, flush_interval=10):
         """
         Initialize database log handler.
 
         Args:
-            db_connection_func: Function that returns a database connection
+            db_connection_func: (Deprecated) Function that returns a database connection
             batch_size: Number of entries to buffer before flushing
             flush_interval: Seconds between automatic flushes
         """
         super().__init__()
-        self.db_connection_func = db_connection_func
         self.batch_size = batch_size
         self.flush_interval = flush_interval
         self.buffer: List[Dict[str, Any]] = []
@@ -149,13 +149,7 @@ class DatabaseLogHandler(logging.Handler):
 
         # Write to database
         try:
-            conn = self.db_connection_func()
-            if conn is None:
-                return
-
-            cursor = conn.cursor()
-
-            # Bulk insert
+            # Bulk insert using db_transaction context manager
             insert_sql = """
                 INSERT INTO dba.tlogentry
                 (timestamp, run_uuid, processtype, stepcounter, username, stepruntime, totalruntime, message)
@@ -163,10 +157,8 @@ class DatabaseLogHandler(logging.Handler):
                         %(username)s, %(stepruntime)s, %(totalruntime)s, %(message)s)
             """
 
-            cursor.executemany(insert_sql, entries_to_write)
-            conn.commit()
-            cursor.close()
-            conn.close()
+            with db_transaction() as cursor:
+                cursor.executemany(insert_sql, entries_to_write)
 
         except Exception as e:
             # If database write fails, log to stderr but don't raise
