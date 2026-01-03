@@ -1,0 +1,9 @@
+{
+  "data": {
+    "customers": [
+      {"id": 1, "name": "Customer A"},
+      {"id": 2, "name": "Customer B"}
+    ],
+    "metadata": {"source": "API", "version": "v2"}
+  }
+}

@@ -540,17 +540,30 @@ class GenericImportJob(BaseETLJob):
         """Find files matching the configured pattern."""
         source_dir = Path(self.import_config.source_directory)
         if not source_dir.exists():
-            self.logger.warning(f"Source directory does not exist: {source_dir}")
+            if self.logger:
+                self.logger.warning(f"Source directory does not exist: {source_dir}")
             return []
 
         pattern = self.import_config.file_pattern
+        if self.logger:
+            self.logger.debug(f"Scanning directory: {source_dir}")
+            self.logger.debug(f"Using pattern: {pattern}")
         matched = []
 
         for file_path in source_dir.iterdir():
+            if self.logger:
+                self.logger.debug(f"Checking file: {file_path.name} (is_file: {file_path.is_file()})")
             if file_path.is_file():
-                if re.match(pattern, file_path.name):
+                match_result = re.match(pattern, file_path.name)
+                if self.logger:
+                    self.logger.debug(f"  Pattern match result: {match_result}")
+                if match_result:
                     matched.append(file_path)
+                    if self.logger:
+                        self.logger.debug(f"  MATCHED: {file_path.name}")
 
+        if self.logger:
+            self.logger.debug(f"Total matched files: {len(matched)}")
         return sorted(matched)
 
     def _extract_metadata_label(self, file_path: Path, records: List[Dict]) -> str:
@@ -922,6 +935,56 @@ class GenericImportJob(BaseETLJob):
 
         self.logger.info("Cleanup complete")
 
+    def _extract_label_early(self) -> Optional[str]:
+        """
+        Extract dataset label early (before full extraction) based on import config.
+
+        This is needed because dataset record is created before extract() is called,
+        but we need the label from the import configuration.
+
+        Returns:
+            Extracted label or None if no files found
+        """
+        # Find matching files
+        files = self._find_matching_files()
+        if not files:
+            return None
+
+        # Use first file for label extraction
+        file_path = files[0]
+        source = self.import_config.metadata_label_source
+        location = self.import_config.metadata_label_location
+
+        # Handle static label
+        if source == 'static':
+            return location or 'Unknown'
+
+        # Handle filename-based label
+        elif source == 'filename':
+            if self.import_config.delimiter and location:
+                parts = file_path.stem.split(self.import_config.delimiter)
+                try:
+                    index = int(location)
+                    if 0 <= index < len(parts):
+                        return parts[index]
+                except (ValueError, IndexError):
+                    pass
+            return file_path.stem
+
+        # Handle file_content-based label (requires reading first record)
+        elif source == 'file_content':
+            if location:
+                try:
+                    extractor = self._get_extractor()
+                    records = extractor.extract(file_path)
+                    if records and location in records[0]:
+                        return str(records[0][location])
+                except Exception:
+                    pass  # Fall back to filename
+            return file_path.stem
+
+        return file_path.stem
+
     def run(self):
         """
         Override run() to ensure reference data exists before parent's run().
@@ -970,6 +1033,15 @@ class GenericImportJob(BaseETLJob):
                     )
 
             temp_logger.info("Reference data check complete")
+
+            # Extract dataset label early based on import configuration
+            temp_logger.info("Extracting dataset label from import configuration...")
+            dataset_label = self._extract_label_early()
+            if dataset_label:
+                self.dataset_label = dataset_label
+                temp_logger.info(f"Using dataset label: {dataset_label}")
+            else:
+                temp_logger.warning("No files found to extract label from - using default label pattern")
 
         except Exception as e:
             temp_logger.error(f"Error ensuring reference data: {e}", exc_info=True)

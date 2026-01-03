@@ -7,7 +7,17 @@
       "Bash(docker logs:*)",
       "Bash(timeout 15 docker exec:*)",
       "Bash(timeout 20 docker exec:*)",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "Bash(timeout /t 5 /nobreak)",
+      "Bash(docker version:*)",
+      "Bash(timeout /t 10 /nobreak)",
+      "Bash(dir:*)",
+      "Bash(ls:*)",
+      "Bash(for i in {1..17})",
+      "Bash(do:*)",
+      "Bash(done)",
+      "Bash(timeout 120 tail:*)",
+      "Bash(findstr:*)"
     ]
   }
 }

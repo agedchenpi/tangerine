@@ -52,7 +52,8 @@ class BaseETLJob(ABC):
         data_source: str,
         username: Optional[str] = None,
         run_uuid: Optional[str] = None,
-        dry_run: bool = False
+        dry_run: bool = False,
+        dataset_label: Optional[str] = None
     ):
         """
         Initialize ETL job.
@@ -64,6 +65,7 @@ class BaseETLJob(ABC):
             username: User executing the job (defaults to 'etl_user')
             run_uuid: Optional run UUID (generates new if not provided)
             dry_run: If True, run extraction and transformation but don't load to DB
+            dataset_label: Optional custom label for dataset (defaults to auto-generated)
         """
         self.run_date = run_date
         self.dataset_type = dataset_type
@@ -71,6 +73,7 @@ class BaseETLJob(ABC):
         self.username = username or 'etl_user'
         self.run_uuid = run_uuid or str(uuid.uuid4())
         self.dry_run = dry_run
+        self.dataset_label = dataset_label  # Custom label if provided
 
         self.dataset_id: Optional[int] = None
         self.start_time: Optional[float] = None
@@ -188,7 +191,8 @@ class BaseETLJob(ABC):
     def _create_dataset_record(self):
         """Create a record in dba.tdataset using f_dataset_iu function."""
         try:
-            label = f"{self.dataset_type}_{self.run_date}_{self.run_uuid[:8]}"
+            # Use custom label if provided, otherwise use default pattern
+            label = self.dataset_label or f"{self.dataset_type}_{self.run_date}_{self.run_uuid[:8]}"
 
             # Call f_dataset_iu function to create dataset
             with db_transaction() as cursor:
@@ -214,7 +218,7 @@ class BaseETLJob(ABC):
 
             self.logger.info(f"Created dataset record: {self.dataset_id}", extra={
                 'stepcounter': 'setup',
-                'metadata': {'dataset_id': self.dataset_id}
+                'metadata': {'dataset_id': self.dataset_id, 'label': label}
             })
 
         except Exception as e:
@@ -232,7 +236,8 @@ class BaseETLJob(ABC):
             return
 
         try:
-            label = f"{self.dataset_type}_{self.run_date}_{self.run_uuid[:8]}"
+            # Use custom label if provided, otherwise use default pattern
+            label = self.dataset_label or f"{self.dataset_type}_{self.run_date}_{self.run_uuid[:8]}"
 
             # Call f_dataset_iu to update status
             with db_transaction() as cursor:

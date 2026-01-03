@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<records>
+  <record>
+    <employee_id>E001</employee_id>
+    <name>Alice Johnson</name>
+    <department>Engineering</department>
+  </record>
+  <record>
+    <employee_id>E002</employee_id>
+    <name>Bob Smith</name>
+    <department>Sales</department>
+  </record>
+  <record>
+    <employee_id>E003</employee_id>
+    <name>Carol Davis</name>
+    <department>Marketing</department>
+  </record>
+</records>

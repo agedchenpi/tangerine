@@ -65,6 +65,21 @@ docker compose exec tangerine python etl/jobs/generic_import.py --config-id <id>
 docker compose exec tangerine python etl/jobs/generic_import.py --config-id <id> --date 2026-01-15
 ```
 
+### Running Regression Tests
+```bash
+# Run all regression tests
+docker compose exec tangerine python etl/regression/run_regression_tests.py
+
+# Run with verbose output
+docker compose exec tangerine python etl/regression/run_regression_tests.py --verbose
+
+# Run specific category
+docker compose exec tangerine python etl/regression/run_regression_tests.py --category csv
+
+# Generate test data files
+docker compose exec tangerine python etl/regression/generate_test_files.py
+```
+
 ## Data Flow: Docker to Database
 
 Here's the complete workflow from Docker Compose startup to data persisted in the database:
@@ -383,8 +398,106 @@ Edit `requirements/base.txt` to add pip packages:
 # File format handling
 openpyxl==3.1.2
 xlrd==2.0.1
+xlwt==1.3.0
 lxml==5.1.0
 ```
+
+## Recent Improvements
+
+### Dataset Label Extraction (2026-01-02)
+The ETL framework now correctly extracts dataset labels from import configuration settings instead of using hardcoded patterns.
+
+**Previous Behavior:**
+- Labels were hardcoded as: `{dataset_type}_{run_date}_{run_uuid[:8]}`
+- Example: `RegressionTest_2026-01-02_f2909ee9`
+
+**Current Behavior:**
+- Labels extracted from `metadata_label_source` configuration in `dba.timportconfig`
+- Supports three extraction modes:
+  - `filename`: Extract from filename using delimiter and position
+  - `file_content`: Extract from first record's specified column
+  - `static`: Use provided static value
+- Example labels: `Strategy1`, `MetadataFilename`, `EmptyTest`
+
+**Implementation:**
+- Modified `BaseETLJob` to accept optional `dataset_label` parameter
+- Added `_extract_label_early()` method in `GenericImportJob`
+- Label extracted before dataset record creation
+- Consistent label used in both dataset creation and status updates
+
+**Files Modified:**
+- `etl/base/etl_job.py` - Added dataset_label parameter support
+- `etl/jobs/generic_import.py` - Early label extraction logic
+
+### Regression Testing Framework
+Comprehensive regression test suite for the generic import system with 17 test configurations.
+
+**Test Coverage:**
+- **CSV Tests (6):** Strategy 1, 2, 3, metadata extraction, empty files, malformed data
+- **XLS Tests (3):** Strategy 1, metadata from content, multiple sheets
+- **XLSX Tests (3):** Strategy 2, date from content, large files (1000 records)
+- **JSON Tests (3):** Array format, object format, nested objects
+- **XML Tests (2):** Structured format, blob format
+
+**Key Files:**
+- `etl/regression/run_regression_tests.py` - Automated test runner
+- `etl/regression/generate_test_files.py` - Test data generator (CSV, XLS, XLSX)
+- `schema/dba/data/regression_test_configs.sql` - 17 test configurations
+- `schema/dba/tables/tregressiontest.sql` - Test results tracking table
+- `schema/dba/views/vregressiontest_summary.sql` - Test summary view
+
+**Test Design Principles:**
+1. **Consistent delimiters:** All configs use `_` delimiter
+2. **Focused testing:** Each test validates ONE feature at a time
+3. **Strategy 2 validation:** Uses same target table as Strategy 1 to test column ignoring
+4. **Proper column structure:** Strategy 2 files have all Strategy 1 columns + extras
+
+**Running Tests:**
+```bash
+# Run all regression tests
+docker compose exec tangerine python etl/regression/run_regression_tests.py --verbose
+
+# Run specific category
+docker compose exec tangerine python etl/regression/run_regression_tests.py --category csv
+
+# Generate test files
+docker compose exec tangerine python etl/regression/generate_test_files.py
+```
+
+**Test Results Storage:**
+- Individual test results: `dba.tregressiontest`
+- Aggregated summaries: `dba.vregressiontest_summary`
+- Linked to dataset records via `datasetid` and `run_uuid`
+
+**Test Data Files Location:**
+Regression test data files are stored in `./.data/etl/regression/` and are version-controlled in the repository:
+```
+./.data/etl/regression/
+├── csv/
+│   ├── Strategy1_Products_20260101T120000.csv       (5 records)
+│   ├── Strategy2_Products_20260101T130000.csv       (3 records, extra columns)
+│   ├── Strategy3_Orders_20260101T140000.csv         (4 records)
+│   ├── MetadataFilename_20260101T150000.csv         (2 records)
+│   ├── EmptyFile_20260101T160000.csv                (0 records, headers only)
+│   └── MalformedData_20260101T170000.csv            (2 records)
+├── xls/
+│   ├── Strategy1_Inventory_20260101T110000.xls      (7 records)
+│   ├── MetadataContent_20260101T120000.xls          (4 records)
+│   └── MultipleSheets_20260101T130000.xls           (3 records)
+├── xlsx/
+│   ├── Strategy2_Sales_20260101T140000.xlsx         (10 records)
+│   ├── DateContent_20260101T150000.xlsx             (5 records)
+│   └── LargeFile_20260101T160000.xlsx               (1000 records)
+├── json/
+│   ├── ArrayFormat_20260104T120000.json
+│   ├── ObjectFormat_20260104T130000.json
+│   └── NestedObjects_20260104T140000.json
+└── xml/
+    ├── StructuredXML_20260105T120000.xml
+    └── BlobXML_20260105T130000.xml
+```
+
+These files are automatically generated by `etl/regression/generate_test_files.py` and can be regenerated at any time. The files map to the 17 test configurations defined in `schema/dba/data/regression_test_configs.sql`.
 
 ### Adding a New Import Configuration
 
