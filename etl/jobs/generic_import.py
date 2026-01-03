@@ -945,22 +945,23 @@ class GenericImportJob(BaseETLJob):
         Returns:
             Extracted label or None if no files found
         """
-        # Find matching files
+        source = self.import_config.metadata_label_source
+        location = self.import_config.metadata_label_location
+
+        # Handle static label - doesn't require files to exist
+        if source == 'static':
+            return location or 'Unknown'
+
+        # Find matching files for filename/file_content based labels
         files = self._find_matching_files()
         if not files:
             return None
 
         # Use first file for label extraction
         file_path = files[0]
-        source = self.import_config.metadata_label_source
-        location = self.import_config.metadata_label_location
-
-        # Handle static label
-        if source == 'static':
-            return location or 'Unknown'
 
         # Handle filename-based label
-        elif source == 'filename':
+        if source == 'filename':
             if self.import_config.delimiter and location:
                 parts = file_path.stem.split(self.import_config.delimiter)
                 try:
