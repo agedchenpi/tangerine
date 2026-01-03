@@ -18,6 +18,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - tangerine_network
 
   tangerine:
     build: .
@@ -33,6 +35,30 @@ services:
     volumes:
       - etl_logs:/app/logs
       - ${ETL_DATA_PATH:-./.data/etl}:/app/data
+    networks:
+      - tangerine_network
+
+  admin:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8501:8501"
+    environment:
+      DB_URL: ${DB_URL}
+      ETL_LOG_LEVEL: ${ETL_LOG_LEVEL:-INFO}
+    volumes:
+      - ${ETL_DATA_PATH:-./.data/etl}:/app/data
+    networks:
+      - tangerine_network
+    restart: unless-stopped
+
+networks:
+  tangerine_network:
+    driver: bridge
 
 volumes:
   db_data:

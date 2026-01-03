@@ -19,7 +19,12 @@
       "Bash(timeout 120 tail:*)",
       "Bash(findstr:*)",
       "Bash(find:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(tree:*)",
+      "Bash(docker network:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker inspect:*)",
+      "Bash(curl:*)"
     ]
   }
 }

@@ -80,6 +80,335 @@ docker compose exec tangerine python etl/regression/run_regression_tests.py --ca
 docker compose exec tangerine python etl/regression/generate_test_files.py
 ```
 
+## Streamlit Admin Interface
+
+The Tangerine ETL pipeline includes a web-based administration interface built with Streamlit. This interface allows end users to manage ETL configurations, execute jobs, and monitor pipeline health without needing to write SQL commands or use the command line.
+
+### Accessing the Admin Interface
+
+**Local Development (Windows):**
+```
+http://localhost:8501
+```
+
+**Server Deployment (Ubuntu):**
+```
+http://<server-ip>:8501
+```
+
+Example: If your server IP is `192.168.1.100`, access at `http://192.168.1.100:8501`
+
+**Network Configuration:**
+- The admin service binds to `0.0.0.0:8501` and is accessible from any machine on the local network
+- No authentication is required (trust local network security)
+- For production, consider using firewall rules to restrict access:
+  ```bash
+  # Ubuntu server - allow port 8501 from local subnet only
+  sudo ufw allow from 192.168.1.0/24 to any port 8501
+  sudo ufw reload
+  ```
+
+### Starting the Admin Service
+
+The admin service is part of the Docker Compose stack and starts automatically:
+
+```bash
+# Start all services including admin
+docker compose up --build
+
+# Start in detached mode
+docker compose up -d
+
+# View admin service logs
+docker compose logs -f admin
+
+# Restart just the admin service
+docker compose restart admin
+
+# Stop all services
+docker compose down
+```
+
+### Admin Features (Current Implementation: Phase 1)
+
+**✓ Phase 1: Basic Infrastructure (Complete)**
+- Landing page with system overview
+- Database connection status indicator
+- Navigation sidebar with feature descriptions
+- Responsive layout with wide mode enabled
+
+**⏳ Phase 2-7: Full Functionality (Pending)**
+
+The following features are planned and will be added in subsequent phases:
+
+**Phase 2: Core Framework**
+- Enhanced dashboard with live metrics
+- Notification system (success/error/warning messages)
+- Input validation utilities
+
+**Phase 3: Import Configuration Management** 📋
+- Create, view, edit, and delete import configurations
+- Form-based interface for all 19 `timportconfig` fields
+- Dropdown selection for datasource, datasettype, and import strategy
+- Real-time validation (directory paths, regex patterns, table names)
+- Support for all file types: CSV, XLS, XLSX, JSON, XML
+
+**Phase 4: Reference Data Management** 📚
+- Manage data sources (`dba.tdatasource`)
+- Manage dataset types (`dba.tdatasettype`)
+- View import strategies (read-only display of 3 predefined strategies)
+
+**Phase 5: Job Execution** ▶️
+- Select active import configuration from dropdown
+- Trigger `generic_import.py` from the UI
+- Real-time job output display (stdout/stderr)
+- Job parameters: run date, dry-run mode
+- 5-minute timeout protection
+- Recent job history for selected configuration
+
+**Phase 6: System Monitoring** 📊
+- **Logs Tab**: View recent ETL logs from `dba.tlogentry`
+  - Filters: time range, process type, run UUID, max results
+  - Export logs to CSV
+- **Datasets Tab**: Browse dataset records from `dba.tdataset`
+  - Filters: datasource, datasettype, date range
+  - Display status and metadata
+- **Statistics Tab**: System metrics and charts
+  - Metrics: total logs (24h), unique processes, avg runtime, datasets (30d)
+  - Charts: jobs per day, process type distribution
+
+**Phase 7: Polish & Production Ready**
+- Custom CSS styling and branding
+- Loading spinners for long operations
+- Comprehensive error handling
+- Updated documentation
+
+### Architecture Overview
+
+**Directory Structure:**
+```
+/opt/tangerine/
+├── admin/                          # Streamlit admin interface
+│   ├── app.py                      # Main entry point (landing page)
+│   ├── pages/                      # Multi-page app (auto-discovered)
+│   │   ├── 1_Import_Configs.py     # Import config CRUD
+│   │   ├── 2_Reference_Data.py     # Manage datasource/datasettype
+│   │   ├── 3_Run_Jobs.py           # Execute generic_import.py
+│   │   └── 4_Monitoring.py         # View logs and datasets
+│   ├── components/                 # Reusable UI components
+│   │   ├── forms.py                # Form builders with validation
+│   │   ├── tables.py               # Data display tables
+│   │   ├── validators.py           # Input validation
+│   │   └── notifications.py        # Success/error messages
+│   ├── services/                   # Business logic layer
+│   │   ├── import_config_service.py    # Config CRUD operations
+│   │   ├── reference_service.py        # Reference data operations
+│   │   ├── job_service.py              # Job execution logic
+│   │   └── monitoring_service.py       # Logs and dataset queries
+│   └── utils/                      # Admin utilities
+│       ├── db_helpers.py           # Database query wrappers
+│       └── formatters.py           # Display formatting
+├── Dockerfile.streamlit            # Admin container build
+└── requirements/
+    └── admin.txt                   # Streamlit dependencies
+```
+
+**Design Pattern:** Vertical Slice Architecture with service layer pattern
+- `pages/`: One page per feature (Streamlit auto-discovers files)
+- `components/`: Reusable UI elements (DRY principle)
+- `services/`: Database operations, business logic (testable, reusable)
+- `utils/`: Helper functions for formatting and validation
+
+**Docker Services:**
+- **db**: PostgreSQL 18 database
+- **tangerine**: ETL job execution container
+- **admin**: Streamlit web interface (port 8501)
+
+All services communicate via the `tangerine_network` bridge network.
+
+### Database Integration
+
+The admin interface leverages existing database utilities:
+- **Connection Pooling**: Reuses `common/db_utils.py` connection pool (max 10 connections)
+- **Stored Procedures**: Calls `dba.pimportconfigi` and `dba.pimportconfigu` for config management
+- **Parameterized Queries**: All queries use parameterized statements (SQL injection protection)
+- **Transaction Management**: Uses `db_transaction()` context manager for atomicity
+
+**Tables Used:**
+- `dba.timportconfig`: Import configurations (CRUD operations)
+- `dba.tdatasource`: Data source reference (dropdown population)
+- `dba.tdatasettype`: Dataset type reference (dropdown population)
+- `dba.timportstrategy`: Import strategies (read-only, 3 predefined)
+- `dba.tlogentry`: ETL process logs (monitoring)
+- `dba.tdataset`: Dataset records (monitoring)
+
+**No Schema Changes Required** - All functionality uses existing tables and procedures.
+
+### Security Considerations
+
+**Current Design (Phase 1):**
+- No authentication/authorization
+- Trust local network security
+- Firewall restricts port 8501 to local subnet
+- Suitable for small teams on private networks
+
+**SQL Injection Protection:**
+- All queries use parameterized statements
+- Never use string concatenation for dynamic SQL
+- Form validation prevents malicious input
+
+**Future Enhancements (Optional):**
+1. Basic Auth via nginx reverse proxy
+2. VPN-only access (bind to localhost, expose via VPN tunnel)
+3. Streamlit custom authentication with session state
+4. Role-based access control (admin vs viewer roles)
+
+### Adding New Admin Features
+
+The architecture supports easy addition of new admin tools (e.g., cron scheduler, report manager):
+
+1. **Create new page file:** `admin/pages/5_Cron_Scheduler.py`
+2. **Create service:** `admin/services/scheduler_service.py`
+3. **Reuse components:** Import from `components/forms.py`, `components/tables.py`, etc.
+4. **Add database table:** `schema/dba/tables/tscheduledjobs.sql` (if needed)
+5. **Streamlit auto-discovers** new page and adds to sidebar navigation
+
+**Example: Adding Cron Scheduler**
+```python
+# admin/pages/5_Cron_Scheduler.py
+import streamlit as st
+from services.scheduler_service import create_schedule, list_schedules
+from components.forms import render_cron_form
+from components.tables import render_schedule_table
+
+st.title("⏰ Cron Scheduler")
+
+# Create schedule form
+schedule_data = render_cron_form()
+if st.button("Create Schedule"):
+    create_schedule(schedule_data)
+    st.success("Schedule created!")
+
+# Display existing schedules
+schedules = list_schedules()
+render_schedule_table(schedules)
+```
+
+### Troubleshooting Admin Interface
+
+**Admin service won't start:**
+```bash
+# Check admin service logs
+docker compose logs admin
+
+# Common issues:
+# 1. Port 8501 already in use
+#    Solution: Stop other services using port 8501
+# 2. Database not healthy
+#    Solution: Wait for db service to pass healthcheck
+# 3. Missing dependencies
+#    Solution: Rebuild with docker compose up --build
+```
+
+**Cannot access from another machine:**
+```bash
+# Check firewall rules (Ubuntu server)
+sudo ufw status
+
+# Allow port 8501 from local network
+sudo ufw allow from 192.168.1.0/24 to any port 8501
+sudo ufw reload
+
+# Check admin service is listening on 0.0.0.0
+docker compose logs admin | grep "URL:"
+# Should show: URL: http://0.0.0.0:8501
+```
+
+**Database connection shows "Disconnected":**
+```bash
+# Test database connection from admin container
+docker compose exec admin python -c "from common.db_utils import test_connection; print(test_connection())"
+
+# Check DB_URL environment variable
+docker compose exec admin env | grep DB_URL
+
+# Verify DB_URL matches format: postgresql://user:password@db:5432/tangerine_db
+```
+
+**Streamlit showing errors:**
+```bash
+# Restart admin service
+docker compose restart admin
+
+# View detailed error logs
+docker compose logs -f admin
+
+# Check Python dependencies installed correctly
+docker compose exec admin pip list | grep streamlit
+```
+
+### Development Workflow
+
+**Testing Changes Locally:**
+```bash
+# Make changes to admin/*.py files
+# Streamlit auto-reloads on file changes (development mode)
+
+# If you modify requirements/admin.txt or Dockerfile.streamlit:
+docker compose down
+docker compose up --build admin
+
+# View real-time logs during development
+docker compose logs -f admin
+```
+
+**Deploying to Server:**
+```bash
+# On local machine
+git add admin/ Dockerfile.streamlit docker-compose.yml requirements/admin.txt CLAUDE.md
+git commit -m "Add Streamlit admin interface Phase 1"
+git push origin main
+
+# On Ubuntu server
+ssh user@server-ip
+cd /opt/tangerine
+git pull
+docker compose down
+docker compose up --build -d
+
+# Verify services
+docker compose ps
+docker compose logs -f admin
+
+# Access from browser: http://<server-ip>:8501
+```
+
+### Implementation Status
+
+**✅ Completed:**
+- Docker infrastructure (Dockerfile.streamlit, docker-compose.yml updates)
+- Admin directory structure with Python packages
+- Dependencies (requirements/admin.txt)
+- Basic landing page (admin/app.py) with database status
+- Deployment tested and verified
+
+**📋 Next Steps (Phases 2-7):**
+1. Enhanced dashboard with live metrics (Phase 2)
+2. Import config CRUD interface (Phase 3)
+3. Reference data management (Phase 4)
+4. Job execution interface (Phase 5)
+5. Monitoring dashboard with charts (Phase 6)
+6. UI polish and production hardening (Phase 7)
+
+**Estimated Timeline:**
+- Phase 2: 2-3 hours (core framework, components)
+- Phase 3: 4-6 hours (import config CRUD - most complex)
+- Phase 4: 2-3 hours (reference data management)
+- Phase 5: 3-4 hours (job execution)
+- Phase 6: 3-4 hours (monitoring dashboard)
+- Phase 7: 2-3 hours (polish and testing)
+- **Total: 18-26 hours** (~3-4 working days)
+
 ## Data Flow: Docker to Database
 
 Here's the complete workflow from Docker Compose startup to data persisted in the database:

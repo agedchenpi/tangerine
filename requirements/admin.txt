@@ -1,0 +1,10 @@
+# Streamlit web framework (includes pandas, numpy)
+streamlit==1.39.0
+
+# Optional UI enhancements
+streamlit-aggrid==0.3.4.post3  # Advanced data grids
+plotly==5.18.0                  # Interactive charts
+
+# Utilities
+python-dateutil==2.8.2         # Date parsing
+validators==0.22.0              # Input validation

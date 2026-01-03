@@ -1,0 +1,60 @@
+FROM python:3.11-slim
+
+# Environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONPATH=/app \
+    STREAMLIT_SERVER_PORT=8501 \
+    STREAMLIT_SERVER_ADDRESS=0.0.0.0 \
+    STREAMLIT_SERVER_HEADLESS=true \
+    STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+
+WORKDIR /app
+
+# Install curl for healthcheck
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install dependencies
+COPY requirements/base.txt /app/requirements/base.txt
+COPY requirements/admin.txt /app/requirements/admin.txt
+RUN pip install --no-cache-dir -r requirements/base.txt && \
+    pip install --no-cache-dir -r requirements/admin.txt
+
+# Copy application code
+COPY common/ /app/common/
+COPY admin/ /app/admin/
+COPY etl/ /app/etl/
+
+# Streamlit configuration directory
+RUN mkdir -p /root/.streamlit
+
+# Create Streamlit config file
+RUN echo '[server]\n\
+port = 8501\n\
+address = "0.0.0.0"\n\
+headless = true\n\
+enableCORS = false\n\
+enableXsrfProtection = true\n\
+\n\
+[browser]\n\
+gatherUsageStats = false\n\
+\n\
+[theme]\n\
+primaryColor = "#FF6B35"\n\
+backgroundColor = "#FFFFFF"\n\
+secondaryBackgroundColor = "#F0F2F6"\n\
+textColor = "#262730"\n\
+font = "sans serif"\n\
+' > /root/.streamlit/config.toml
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl --fail http://localhost:8501/_stcore/health || exit 1
+
+# Run Streamlit
+CMD ["streamlit", "run", "admin/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
