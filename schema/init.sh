@@ -54,7 +54,6 @@ $PSQL -f /app/schema/dba/views/vregressiontest_summary.sql
 
 # Execute feeds schema files in order
 $PSQL -f /app/schema/feeds/schema.sql
-$PSQL -f /app/schema/feeds/tables/example_products.sql
 
 # Optional: Execute shared_queries.sql last
 $PSQL -f /app/schema/shared_queries.sql

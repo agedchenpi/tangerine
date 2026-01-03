@@ -47,5 +47,17 @@ logs/
 .DS_Store
 Thumbs.db
 
-#claude
+# Claude Code
+.claude/settings.local.json
 2026-01-01-command-messageinitcommand-message.txt
+
+# Test outputs
+regression_test_output.txt
+regression_output.log
+
+# ETL archived files
+.data/etl/archive/
+.data/etl/*/archive/
+
+# Task output files
+.data/claude/
