@@ -24,7 +24,9 @@
       "Bash(docker network:*)",
       "Bash(docker ps:*)",
       "Bash(docker inspect:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(timeout 10 docker compose:*)",
+      "Bash(timeout 5 docker compose:*)"
     ]
   }
 }
