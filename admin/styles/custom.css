@@ -1,0 +1,467 @@
+/* Tangerine Admin Interface - Custom Styling */
+
+/* ============================================================================
+   COLOR PALETTE
+   ============================================================================ */
+:root {
+    --tangerine-primary: #FF8C42;
+    --tangerine-secondary: #FFA45C;
+    --tangerine-dark: #D67130;
+    --tangerine-light: #FFE5D0;
+    --success-green: #28A745;
+    --warning-yellow: #FFC107;
+    --error-red: #DC3545;
+    --info-blue: #17A2B8;
+    --text-dark: #2C3E50;
+    --text-light: #6C757D;
+    --bg-light: #F8F9FA;
+    --border-color: #DEE2E6;
+}
+
+/* ============================================================================
+   GLOBAL STYLES
+   ============================================================================ */
+.main {
+    background-color: var(--bg-light);
+}
+
+/* Headers */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text-dark);
+    font-weight: 600;
+}
+
+h1 {
+    border-bottom: 3px solid var(--tangerine-primary);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* ============================================================================
+   BUTTONS
+   ============================================================================ */
+.stButton > button {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.stButton > button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Primary buttons */
+.stButton > button[kind="primary"] {
+    background-color: var(--tangerine-primary);
+    border: none;
+}
+
+.stButton > button[kind="primary"]:hover {
+    background-color: var(--tangerine-dark);
+}
+
+/* Secondary buttons */
+.stButton > button[kind="secondary"] {
+    background-color: var(--bg-light);
+    border: 2px solid var(--tangerine-primary);
+    color: var(--tangerine-dark);
+}
+
+.stButton > button[kind="secondary"]:hover {
+    background-color: var(--tangerine-light);
+}
+
+/* ============================================================================
+   FORMS & INPUTS
+   ============================================================================ */
+.stTextInput > div > div > input,
+.stTextArea > div > div > textarea,
+.stSelectbox > div > div > select,
+.stNumberInput > div > div > input,
+.stDateInput > div > div > input {
+    border-radius: 6px;
+    border: 2px solid var(--border-color);
+    transition: border-color 0.3s ease;
+}
+
+.stTextInput > div > div > input:focus,
+.stTextArea > div > div > textarea:focus,
+.stSelectbox > div > div > select:focus,
+.stNumberInput > div > div > input:focus,
+.stDateInput > div > div > input:focus {
+    border-color: var(--tangerine-primary);
+    box-shadow: 0 0 0 3px rgba(255, 140, 66, 0.1);
+}
+
+/* Form labels */
+label {
+    color: var(--text-dark);
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+/* ============================================================================
+   CARDS & CONTAINERS
+   ============================================================================ */
+.element-container {
+    transition: all 0.3s ease;
+}
+
+/* Metric cards */
+[data-testid="stMetric"] {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-left: 4px solid var(--tangerine-primary);
+    transition: all 0.3s ease;
+}
+
+[data-testid="stMetric"]:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+/* Metric label */
+[data-testid="stMetric"] > div:first-child {
+    color: var(--text-light);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+/* Metric value */
+[data-testid="stMetric"] > div:last-child {
+    color: var(--tangerine-primary);
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+/* ============================================================================
+   TABLES & DATAFRAMES
+   ============================================================================ */
+.stDataFrame {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* Table headers */
+.stDataFrame thead tr th {
+    background-color: var(--tangerine-primary) !important;
+    color: white !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.875rem;
+    padding: 1rem 0.75rem;
+}
+
+/* Table rows */
+.stDataFrame tbody tr:nth-child(even) {
+    background-color: var(--bg-light);
+}
+
+.stDataFrame tbody tr:hover {
+    background-color: var(--tangerine-light);
+    transition: background-color 0.2s ease;
+}
+
+/* ============================================================================
+   TABS
+   ============================================================================ */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 8px;
+    background-color: white;
+    padding: 0.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.stTabs [data-baseweb="tab"] {
+    border-radius: 6px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.stTabs [aria-selected="true"] {
+    background-color: var(--tangerine-primary);
+    color: white;
+}
+
+.stTabs [data-baseweb="tab"]:hover {
+    background-color: var(--tangerine-light);
+}
+
+/* ============================================================================
+   EXPANDERS
+   ============================================================================ */
+.streamlit-expanderHeader {
+    background-color: white;
+    border-radius: 8px;
+    border: 2px solid var(--border-color);
+    font-weight: 600;
+    color: var(--text-dark);
+    transition: all 0.3s ease;
+}
+
+.streamlit-expanderHeader:hover {
+    border-color: var(--tangerine-primary);
+    background-color: var(--tangerine-light);
+}
+
+/* ============================================================================
+   ALERTS & NOTIFICATIONS
+   ============================================================================ */
+.stAlert {
+    border-radius: 8px;
+    border-left: 4px solid;
+    padding: 1rem 1.25rem;
+    margin: 1rem 0;
+}
+
+/* Success alerts */
+[data-baseweb="notification"][kind="success"],
+.stSuccess {
+    border-left-color: var(--success-green);
+    background-color: #D4EDDA;
+}
+
+/* Error alerts */
+[data-baseweb="notification"][kind="error"],
+.stError {
+    border-left-color: var(--error-red);
+    background-color: #F8D7DA;
+}
+
+/* Warning alerts */
+[data-baseweb="notification"][kind="warning"],
+.stWarning {
+    border-left-color: var(--warning-yellow);
+    background-color: #FFF3CD;
+}
+
+/* Info alerts */
+[data-baseweb="notification"][kind="info"],
+.stInfo {
+    border-left-color: var(--info-blue);
+    background-color: #D1ECF1;
+}
+
+/* ============================================================================
+   SIDEBAR
+   ============================================================================ */
+[data-testid="stSidebar"] {
+    background-color: white;
+    border-right: 1px solid var(--border-color);
+}
+
+[data-testid="stSidebar"] .css-1d391kg {
+    padding: 2rem 1rem;
+}
+
+/* Sidebar navigation links */
+[data-testid="stSidebar"] a {
+    color: var(--text-dark);
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+[data-testid="stSidebar"] a:hover {
+    color: var(--tangerine-primary);
+    padding-left: 0.5rem;
+}
+
+/* ============================================================================
+   PROGRESS BARS & SPINNERS
+   ============================================================================ */
+.stProgress > div > div {
+    background-color: var(--tangerine-primary);
+}
+
+/* Spinner */
+[data-testid="stSpinner"] > div {
+    border-top-color: var(--tangerine-primary) !important;
+}
+
+/* ============================================================================
+   CODE BLOCKS
+   ============================================================================ */
+.stCodeBlock {
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: #F5F5F5;
+}
+
+pre {
+    border-radius: 6px;
+    background-color: #2D2D2D;
+    padding: 1rem;
+    color: #F8F8F2;
+}
+
+code {
+    background-color: #F5F5F5;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    color: var(--tangerine-dark);
+    font-family: 'Courier New', monospace;
+}
+
+/* ============================================================================
+   DIVIDERS
+   ============================================================================ */
+hr {
+    border: none;
+    height: 2px;
+    background: linear-gradient(to right, var(--tangerine-primary), var(--tangerine-light));
+    margin: 2rem 0;
+}
+
+/* ============================================================================
+   TOOLTIPS
+   ============================================================================ */
+[data-baseweb="tooltip"] {
+    background-color: var(--text-dark);
+    color: white;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+/* ============================================================================
+   CHARTS
+   ============================================================================ */
+.stPlotlyChart {
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    padding: 1rem;
+    background-color: white;
+}
+
+/* ============================================================================
+   CHECKBOX & RADIO
+   ============================================================================ */
+.stCheckbox > label > div:first-child,
+.stRadio > label > div:first-child {
+    border-color: var(--tangerine-primary);
+}
+
+.stCheckbox > label > div:first-child[aria-checked="true"],
+.stRadio > label > div:first-child[aria-checked="true"] {
+    background-color: var(--tangerine-primary);
+}
+
+/* ============================================================================
+   DOWNLOAD BUTTON
+   ============================================================================ */
+.stDownloadButton > button {
+    background-color: var(--success-green);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.stDownloadButton > button:hover {
+    background-color: #218838;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* ============================================================================
+   FOOTER & CAPTIONS
+   ============================================================================ */
+.stCaption {
+    color: var(--text-light);
+    font-size: 0.875rem;
+    font-style: italic;
+}
+
+/* ============================================================================
+   ANIMATIONS
+   ============================================================================ */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.element-container {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* ============================================================================
+   LOADING STATES
+   ============================================================================ */
+.stSpinner {
+    text-align: center;
+    padding: 2rem;
+}
+
+.stSpinner > div {
+    display: inline-block;
+}
+
+/* ============================================================================
+   RESPONSIVE DESIGN
+   ============================================================================ */
+@media (max-width: 768px) {
+    h1 {
+        font-size: 1.75rem;
+    }
+
+    [data-testid="stMetric"] {
+        padding: 1rem;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+}
+
+/* ============================================================================
+   UTILITY CLASSES
+   ============================================================================ */
+.text-center {
+    text-align: center;
+}
+
+.text-muted {
+    color: var(--text-light);
+}
+
+.mb-1 {
+    margin-bottom: 0.5rem;
+}
+
+.mb-2 {
+    margin-bottom: 1rem;
+}
+
+.mb-3 {
+    margin-bottom: 1.5rem;
+}
+
+.mt-1 {
+    margin-top: 0.5rem;
+}
+
+.mt-2 {
+    margin-top: 1rem;
+}
+
+.mt-3 {
+    margin-top: 1.5rem;
+}

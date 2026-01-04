@@ -13,6 +13,7 @@ from services.job_execution_service import (
 )
 from utils.db_helpers import format_sql_error
 from utils.formatters import format_timestamp, format_duration
+from utils.ui_helpers import load_custom_css, add_page_header, render_empty_state
 
 # Page configuration
 st.set_page_config(
@@ -21,10 +22,15 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("▶️ Run Import Jobs")
-st.markdown("Execute ETL import jobs and monitor their progress in real-time.")
+# Load custom CSS
+load_custom_css()
 
-st.divider()
+# Page header
+add_page_header(
+    title="Run Import Jobs",
+    subtitle="Execute ETL import jobs and monitor their progress in real-time.",
+    icon="▶️"
+)
 
 # Create tabs
 tab1, tab2 = st.tabs(["▶️ Execute Job", "📜 Job History"])

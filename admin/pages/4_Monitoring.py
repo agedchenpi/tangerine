@@ -18,6 +18,7 @@ from services.monitoring_service import (
 )
 from utils.db_helpers import format_sql_error
 from utils.formatters import format_datetime, format_duration, format_boolean
+from utils.ui_helpers import load_custom_css, add_page_header, render_empty_state, with_loading
 
 # Page configuration
 st.set_page_config(
@@ -26,10 +27,15 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("📊 System Monitoring")
-st.markdown("Monitor ETL pipeline activity, view logs, browse datasets, and analyze system statistics.")
+# Load custom CSS
+load_custom_css()
 
-st.divider()
+# Page header
+add_page_header(
+    title="System Monitoring",
+    subtitle="Monitor ETL pipeline activity, view logs, browse datasets, and analyze system statistics.",
+    icon="📊"
+)
 
 # Create tabs
 tab1, tab2, tab3 = st.tabs(["📜 Logs", "📦 Datasets", "📈 Statistics"])

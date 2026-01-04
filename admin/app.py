@@ -9,6 +9,7 @@ import streamlit as st
 from datetime import datetime, timedelta
 from common.db_utils import test_connection, fetch_dict
 from utils.db_helpers import get_count
+from utils.ui_helpers import load_custom_css, add_page_header
 
 # Set page config (must be first Streamlit command)
 st.set_page_config(
@@ -18,30 +19,8 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for improved styling
-st.markdown("""
-<style>
-    .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #FF6B35;
-        margin-bottom: 1rem;
-    }
-    .feature-section {
-        background-color: #f8f9fa;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 4px solid #FF6B35;
-        margin-bottom: 1rem;
-    }
-    .metric-card {
-        background-color: white;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-</style>
-""", unsafe_allow_html=True)
+# Load custom CSS styling
+load_custom_css()
 
 # Initialize session state
 if 'db_connected' not in st.session_state:
@@ -71,12 +50,11 @@ with st.sidebar:
     st.caption(f"Last refreshed: {datetime.now().strftime('%H:%M:%S')}")
 
 # Main page content
-st.markdown('<div class="main-header">🍊 Tangerine ETL Administration</div>', unsafe_allow_html=True)
-
-st.markdown("""
-Welcome to the Tangerine ETL admin interface. This tool allows you to manage ETL configurations,
-execute jobs, and monitor pipeline health without writing SQL commands.
-""")
+add_page_header(
+    title="Tangerine ETL Administration",
+    subtitle="Manage ETL configurations, execute jobs, and monitor pipeline health without writing SQL commands.",
+    icon="🍊"
+)
 
 # System Status Metrics
 st.markdown("### 📊 System Status")
