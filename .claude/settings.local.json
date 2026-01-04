@@ -26,7 +26,8 @@
       "Bash(docker inspect:*)",
       "Bash(curl:*)",
       "Bash(timeout 10 docker compose:*)",
-      "Bash(timeout 5 docker compose:*)"
+      "Bash(timeout 5 docker compose:*)",
+      "Bash(docker cp:*)"
     ]
   }
 }

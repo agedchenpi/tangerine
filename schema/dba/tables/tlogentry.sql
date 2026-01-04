@@ -1,8 +1,8 @@
-DO $$  
+DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'dba' AND tablename = 'tlogentry') THEN
         CREATE TABLE dba.tlogentry (
-            logid SERIAL PRIMARY KEY,
+            logentryid SERIAL PRIMARY KEY,
             timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             run_uuid VARCHAR(36) NOT NULL,
             processtype VARCHAR(50) NOT NULL,
@@ -13,7 +13,7 @@ BEGIN
             message TEXT NOT NULL
         );
         COMMENT ON TABLE dba.tlogentry IS 'Stores log entries for ETL processes.';
-        COMMENT ON COLUMN dba.tlogentry.logid IS 'Primary key for the log entry.';
+        COMMENT ON COLUMN dba.tlogentry.logentryid IS 'Primary key for the log entry.';
         COMMENT ON COLUMN dba.tlogentry.timestamp IS 'Timestamp of the log entry.';
         COMMENT ON COLUMN dba.tlogentry.run_uuid IS 'Unique identifier for the ETL run.';
         COMMENT ON COLUMN dba.tlogentry.processtype IS 'Type of process (e.g., EventProcessing, FinalSave).';
@@ -27,4 +27,4 @@ END   $$;
 GRANT SELECT ON dba.tlogentry TO app_ro;
 GRANT SELECT, INSERT, UPDATE ON dba.tlogentry TO app_rw;
 GRANT ALL ON dba.tlogentry TO admin;
-GRANT USAGE, SELECT ON SEQUENCE dba.tlogentry_logid_seq TO app_rw, app_ro;
+GRANT USAGE, SELECT ON SEQUENCE dba.tlogentry_logentryid_seq TO app_rw, app_ro;
