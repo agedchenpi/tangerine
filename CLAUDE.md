@@ -39,7 +39,8 @@ Tangerine is an AI-integrated ETL pipeline built with Vertical Slice Architectur
 │   ├── pages/                      # Auto-discovered pages
 │   │   ├── 1_Import_Configs.py     # CRUD for import configs
 │   │   ├── 2_Reference_Data.py     # Manage datasources/types
-│   │   └── 3_Run_Jobs.py           # Execute imports, view history
+│   │   ├── 3_Run_Jobs.py           # Execute imports, view history
+│   │   └── 4_Monitoring.py         # View logs, datasets, statistics
 │   ├── components/                 # Reusable UI components
 │   │   ├── forms.py                # Form builders
 │   │   ├── tables.py               # Data display
@@ -48,10 +49,14 @@ Tangerine is an AI-integrated ETL pipeline built with Vertical Slice Architectur
 │   ├── services/                   # Business logic
 │   │   ├── import_config_service.py
 │   │   ├── reference_data_service.py
-│   │   └── job_execution_service.py
-│   └── utils/                      # Helper utilities
-│       ├── db_helpers.py
-│       └── formatters.py
+│   │   ├── job_execution_service.py
+│   │   └── monitoring_service.py   # Logs, datasets, statistics
+│   ├── utils/                      # Helper utilities
+│   │   ├── db_helpers.py
+│   │   ├── formatters.py
+│   │   └── ui_helpers.py           # UI functions (loading, errors, etc.)
+│   └── styles/                     # CSS styling
+│       └── custom.css              # Professional Tangerine theme
 ├── common/                         # Shared utilities
 │   ├── db_utils.py                 # Database connection pooling
 │   ├── config.py                   # Configuration management
@@ -262,6 +267,7 @@ docker compose exec admin python -c "from common.db_utils import test_connection
 - Import Configs: Create, view, edit, delete configurations
 - Reference Data: Manage datasources and dataset types
 - Run Jobs: Execute imports with real-time output
+- Monitoring: View logs, datasets, and statistics with charts
 
 ## Environment Variables
 

@@ -356,16 +356,28 @@ docker compose down
   - Archive viewing capability
   - No page refresh required during execution
 
-**⏳ Phase 6: System Monitoring (Planned)**
+**✅ Phase 6: System Monitoring (Complete)**
 - **Logs Tab**: View/filter ETL logs from `dba.tlogentry`
-  - Filters: time range, process type, run_uuid, max results
-  - Export logs to CSV
+  - Time range filters (1h, 6h, 24h, 7d, 30d, all time)
+  - Process type and run_uuid filtering
+  - Max results selection (50/100/250/500/1000)
+  - CSV export with proper quote escaping
+  - Real-time data refresh
 - **Datasets Tab**: Browse dataset records from `dba.tdataset`
-  - Filters: datasource, datasettype, date range
-  - Display status and metadata
+  - Filter by datasource and datasettype (with JOINs to reference tables)
+  - Date range selection (from/to)
+  - Max results selection (50/100/250/500)
+  - Display status, metadata, and active state
+  - Formatted timestamps and boolean indicators
 - **Statistics Tab**: System metrics and charts
-  - Metrics: total logs (24h), unique processes, avg runtime, datasets (30d)
-  - Charts: jobs per day, process type distribution, runtime trends
+  - 6 key metric cards (logs 24h, unique processes, avg runtime, datasets 30d, active datasets, active configs)
+  - Jobs per day line chart (last 30 days)
+  - Process type distribution bar chart with data table
+  - Runtime statistics table (avg/min/max by process type, last 7 days)
+- **Monitoring Service** (`admin/services/monitoring_service.py`):
+  - Complete query functions for logs, datasets, and statistics
+  - CSV export functionality for log data
+  - Optimized database queries with proper JOINs
 
 **✅ Phase 7: Polish & Production Ready (Complete)**
 - **Custom CSS Styling**: Professional Tangerine theme with enhanced UI
@@ -398,7 +410,7 @@ docker compose down
 │   │   ├── 1_Import_Configs.py     # Import config CRUD
 │   │   ├── 2_Reference_Data.py     # Manage datasource/datasettype
 │   │   ├── 3_Run_Jobs.py           # Execute generic_import.py
-│   │   └── 4_Monitoring.py         # (Planned) View logs and datasets
+│   │   └── 4_Monitoring.py         # View logs, datasets, and statistics
 │   ├── components/                 # Reusable UI components
 │   │   ├── forms.py                # Form builders with validation
 │   │   ├── tables.py               # Data display tables
@@ -408,10 +420,13 @@ docker compose down
 │   │   ├── import_config_service.py    # Config CRUD operations
 │   │   ├── reference_data_service.py   # Reference data operations
 │   │   ├── job_execution_service.py    # Job execution logic
-│   │   └── monitoring_service.py       # (Planned) Logs and dataset queries
-│   └── utils/                      # Admin utilities
-│       ├── db_helpers.py           # Database query wrappers
-│       └── formatters.py           # Display formatting
+│   │   └── monitoring_service.py       # Logs, datasets, and statistics queries
+│   ├── utils/                      # Admin utilities
+│   │   ├── db_helpers.py           # Database query wrappers
+│   │   ├── formatters.py           # Display formatting
+│   │   └── ui_helpers.py           # UI helper functions (loading, error handling, etc.)
+│   └── styles/                     # CSS styling
+│       └── custom.css              # Professional Tangerine theme
 ├── Dockerfile.streamlit            # Admin container build
 └── requirements/
     └── admin.txt                   # Streamlit dependencies
