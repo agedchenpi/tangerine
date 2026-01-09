@@ -69,6 +69,12 @@ Tangerine is an AI-integrated ETL pipeline built with Vertical Slice Architectur
 │   └── regression/
 │       ├── run_regression_tests.py
 │       └── generate_test_files.py
+├── tests/                          # Admin interface test suite
+│   ├── conftest.py                 # Test fixtures and config
+│   ├── pytest.ini                  # Pytest configuration
+│   ├── unit/                       # Unit tests (validators, utils)
+│   ├── integration/                # Integration tests (services)
+│   └── fixtures/                   # Reusable test data
 ├── schema/                         # Database definitions
 │   ├── init.sh                     # Initialization script
 │   ├── dba/                        # Pipeline schema
@@ -177,10 +183,17 @@ Tangerine is an AI-integrated ETL pipeline built with Vertical Slice Architectur
 - Dataset tracking with run_uuid
 
 ### ✅ Testing Infrastructure (Complete)
-- 17 regression tests (100% pass rate)
+**ETL Tests:**
+- 17 ETL regression tests (100% pass rate)
 - Test data generation scripts
-- Volume mount verification (bidirectional sync)
-- Connection pool bug fixes
+- Volume mount verification
+
+**Admin Tests:**
+- 137 pytest-based tests for admin interface
+- 57 unit tests for validators (100% pass rate)
+- 80 integration tests for services (CRUD, filtering, monitoring)
+- Transaction-based test isolation with automatic rollback
+- Comprehensive fixtures for test data
 
 ## What's Planned
 
@@ -243,8 +256,26 @@ docker compose exec tangerine python etl/jobs/generic_import.py --config-id 1 --
 # With specific date
 docker compose exec tangerine python etl/jobs/generic_import.py --config-id 1 --date 2026-01-15
 
-# Run regression tests
+# Run ETL regression tests
 docker compose exec tangerine python etl/regression/run_regression_tests.py --verbose
+```
+
+### Running Tests
+```bash
+# Run all admin tests
+docker compose exec tangerine pytest tests/ -v
+
+# Run unit tests only (fast, no database)
+docker compose exec tangerine pytest tests/unit/ -v -m unit
+
+# Run integration tests only (requires database)
+docker compose exec tangerine pytest tests/integration/ -v -m integration
+
+# Run specific test file
+docker compose exec tangerine pytest tests/unit/test_validators.py -v
+
+# Run with coverage report
+docker compose exec tangerine pytest tests/ --cov=admin --cov-report=html
 ```
 
 ### Database Access

@@ -1,7 +1,17 @@
-# Testing dependencies
+# Testing dependencies for Tangerine ETL and Admin interface
 -r base.txt
+
+# Core testing framework
 pytest==7.4.3
 pytest-cov==4.1.0
 pytest-mock==3.12.0
 pytest-env==1.1.3
+
+# Additional testing utilities
+pytest-xdist>=3.3.1         # Parallel test execution
+pytest-timeout>=2.1.0       # Test timeouts
+pytest-html>=3.2.0          # HTML test reports
+pytest-json-report>=1.5.0   # JSON test reports
+
+# Test data generation
 faker==22.0.0

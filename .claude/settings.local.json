@@ -27,7 +27,8 @@
       "Bash(curl:*)",
       "Bash(timeout 10 docker compose:*)",
       "Bash(timeout 5 docker compose:*)",
-      "Bash(docker cp:*)"
+      "Bash(docker cp:*)",
+      "Bash(python -m pytest:*)"
     ]
   }
 }
