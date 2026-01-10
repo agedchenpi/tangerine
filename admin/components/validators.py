@@ -206,3 +206,219 @@ def validate_max_length(value: str, max_len: int, field_name: str = "Field") -> 
         return False, f"{field_name} must be {max_len} characters or less"
 
     return True, None
+
+
+def validate_email_list(emails: str, field_name: str = "Recipients") -> Tuple[bool, Optional[str]]:
+    """
+    Validate comma-separated list of email addresses.
+
+    Args:
+        emails: Comma-separated email addresses
+        field_name: Field name for error messages
+
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    if not emails or not emails.strip():
+        return False, f"{field_name} is required"
+
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+
+    for email in emails.split(','):
+        email = email.strip()
+        if not email:
+            continue
+
+        if not re.match(email_pattern, email):
+            return False, f"Invalid email address: {email}"
+
+    return True, None
+
+
+def validate_cron_expression(
+    minute: str,
+    hour: str,
+    day: str,
+    month: str,
+    weekday: str
+) -> Tuple[bool, Optional[str]]:
+    """
+    Validate cron expression fields.
+
+    Each field can be:
+    - * (any value)
+    - */n (every n units)
+    - n (specific value)
+    - n,m,... (list of values)
+    - n-m (range)
+
+    Args:
+        minute: Minute field (0-59)
+        hour: Hour field (0-23)
+        day: Day of month field (1-31)
+        month: Month field (1-12)
+        weekday: Day of week field (0-6, where 0=Sunday)
+
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    # Try using croniter for validation if available
+    try:
+        from croniter import croniter
+        cron_expr = f"{minute} {hour} {day} {month} {weekday}"
+        croniter(cron_expr)
+        return True, None
+    except ImportError:
+        pass  # Fall through to manual validation
+    except Exception as e:
+        return False, f"Invalid cron expression: {str(e)}"
+
+    # Manual validation fallback
+    def validate_field(value: str, min_val: int, max_val: int, field_name: str) -> Optional[str]:
+        if not value:
+            return f"{field_name} is required"
+
+        if value == '*':
+            return None
+
+        # Handle */n pattern
+        if value.startswith('*/'):
+            try:
+                step = int(value[2:])
+                if step <= 0:
+                    return f"{field_name}: step must be positive"
+                return None
+            except ValueError:
+                return f"{field_name}: invalid step value"
+
+        # Handle ranges and lists
+        for part in value.split(','):
+            part = part.strip()
+            if '-' in part:
+                try:
+                    start, end = part.split('-')
+                    start, end = int(start), int(end)
+                    if start < min_val or end > max_val or start > end:
+                        return f"{field_name}: range {part} out of bounds ({min_val}-{max_val})"
+                except ValueError:
+                    return f"{field_name}: invalid range {part}"
+            else:
+                try:
+                    val = int(part)
+                    if val < min_val or val > max_val:
+                        return f"{field_name}: value {val} out of bounds ({min_val}-{max_val})"
+                except ValueError:
+                    return f"{field_name}: invalid value {part}"
+
+        return None
+
+    error = validate_field(minute, 0, 59, "Minute")
+    if error:
+        return False, error
+
+    error = validate_field(hour, 0, 23, "Hour")
+    if error:
+        return False, error
+
+    error = validate_field(day, 1, 31, "Day")
+    if error:
+        return False, error
+
+    error = validate_field(month, 1, 12, "Month")
+    if error:
+        return False, error
+
+    error = validate_field(weekday, 0, 6, "Weekday")
+    if error:
+        return False, error
+
+    return True, None
+
+
+def validate_sql_query(query: str) -> Tuple[bool, Optional[str]]:
+    """
+    Validate SQL query for report templates.
+
+    Only SELECT queries are allowed. Dangerous keywords are blocked.
+
+    Args:
+        query: SQL query string
+
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    if not query or not query.strip():
+        return False, "SQL query is required"
+
+    # Normalize whitespace and case
+    normalized = ' '.join(query.upper().split())
+
+    # Must start with SELECT
+    if not normalized.startswith('SELECT'):
+        return False, "Only SELECT queries are allowed"
+
+    # Block dangerous keywords
+    dangerous = [
+        'DROP', 'DELETE', 'UPDATE', 'INSERT', 'ALTER', 'TRUNCATE',
+        'GRANT', 'REVOKE', 'CREATE', 'EXEC', 'EXECUTE', 'CALL',
+        'INTO OUTFILE', 'INTO DUMPFILE', 'LOAD_FILE'
+    ]
+
+    for keyword in dangerous:
+        # Check for keyword as whole word
+        if re.search(rf'\b{keyword}\b', normalized):
+            return False, f"Query contains forbidden keyword: {keyword}"
+
+    # Check for suspicious patterns
+    if '--' in query or '/*' in query:
+        return False, "SQL comments are not allowed"
+
+    return True, None
+
+
+def validate_glob_pattern(pattern: str, field_name: str = "Pattern") -> Tuple[bool, Optional[str]]:
+    """
+    Validate glob/regex pattern for file matching.
+
+    Args:
+        pattern: Glob or regex pattern
+        field_name: Field name for error messages
+
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    if not pattern or not pattern.strip():
+        return False, f"{field_name} is required"
+
+    # If it looks like a glob pattern, it's valid
+    if '*' in pattern or '?' in pattern:
+        return True, None
+
+    # Otherwise try to compile as regex
+    try:
+        re.compile(pattern)
+        return True, None
+    except re.error as e:
+        return False, f"Invalid pattern: {str(e)}"
+
+
+def validate_cron_field(value: str, field_name: str = "Field") -> Tuple[bool, Optional[str]]:
+    """
+    Validate a single cron field.
+
+    Args:
+        value: Cron field value
+        field_name: Field name for error messages
+
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    if not value:
+        return False, f"{field_name} is required"
+
+    # Basic pattern check: *, */n, n, n-m, n,m,...
+    pattern = r'^(\*|(\*/\d+)|(\d+(-\d+)?(,\d+(-\d+)?)*))$'
+    if not re.match(pattern, value):
+        return False, f"Invalid {field_name.lower()} format: {value}"
+
+    return True, None

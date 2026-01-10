@@ -61,3 +61,6 @@ regression_output.log
 
 # Task output files
 .data/claude/
+
+# Gmail credentials (OAuth2)
+secrets/
