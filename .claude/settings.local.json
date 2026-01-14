@@ -28,7 +28,21 @@
       "Bash(timeout 10 docker compose:*)",
       "Bash(timeout 5 docker compose:*)",
       "Bash(docker cp:*)",
-      "Bash(python -m pytest:*)"
+      "Bash(python -m pytest:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(python3 -c \"import json; f=open\\(''/opt/tangerine/secrets/credentials.json''\\); d=json.load\\(f\\); print\\(''Valid JSON: Yes''\\); print\\(''Type:'', ''installed'' if ''installed'' in d else ''web'' if ''web'' in d else ''unknown''\\); k=d.get\\(''installed''\\) or d.get\\(''web'', {}\\); print\\(''Client ID:'', k.get\\(''client_id'', ''MISSING''\\)[:20] + ''...'' if k.get\\(''client_id''\\) else ''MISSING''\\); print\\(''Has client_secret:'', ''Yes'' if k.get\\(''client_secret''\\) else ''No''\\); print\\(''Redirect URIs:'', k.get\\(''redirect_uris'', []\\)\\)\")",
+      "Bash(source .env)",
+      "Bash(echo:*)",
+      "Bash(sudo -S apt install:*)",
+      "Bash(python3:*)",
+      "Bash(source:*)",
+      "Bash(pip install:*)",
+      "Bash(python generate_gmail_token.py:*)",
+      "Bash(ss:*)",
+      "Bash(python:*)",
+      "Bash(pkill -f \"generate_gmail_token\" fuser -k 8080/tcp sleep 2 ss -tlnp)",
+      "Bash(pkill:*)",
+      "Bash(fuser:*)"
     ]
   }
 }

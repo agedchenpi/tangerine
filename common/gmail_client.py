@@ -129,7 +129,9 @@ class GmailClient:
                 flow = InstalledAppFlow.from_client_secrets_file(
                     self.credentials_path, SCOPES
                 )
-                creds = flow.run_local_server(port=0)
+                # Use console flow for headless servers
+                # This prints a URL to visit and prompts for the authorization code
+                creds = flow.run_console()
                 logger.info("Obtained new OAuth2 token via authorization flow")
 
             # Save the credentials for future use

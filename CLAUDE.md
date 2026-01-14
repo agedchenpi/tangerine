@@ -40,7 +40,10 @@ Tangerine is an AI-integrated ETL pipeline built with Vertical Slice Architectur
 │   │   ├── 1_Import_Configs.py     # CRUD for import configs
 │   │   ├── 2_Reference_Data.py     # Manage datasources/types
 │   │   ├── 3_Run_Jobs.py           # Execute imports, view history
-│   │   └── 4_Monitoring.py         # View logs, datasets, statistics
+│   │   ├── 4_Monitoring.py         # View logs, datasets, statistics
+│   │   ├── 5_Inbox_Configs.py      # Gmail inbox processing rules
+│   │   ├── 6_Report_Manager.py     # Email report configuration
+│   │   └── 7_Scheduler.py          # Cron job management
 │   ├── components/                 # Reusable UI components
 │   │   ├── forms.py                # Form builders
 │   │   ├── tables.py               # Data display
@@ -50,7 +53,10 @@ Tangerine is an AI-integrated ETL pipeline built with Vertical Slice Architectur
 │   │   ├── import_config_service.py
 │   │   ├── reference_data_service.py
 │   │   ├── job_execution_service.py
-│   │   └── monitoring_service.py   # Logs, datasets, statistics
+│   │   ├── monitoring_service.py   # Logs, datasets, statistics
+│   │   ├── inbox_config_service.py # Gmail inbox config CRUD
+│   │   ├── report_manager_service.py # Report config CRUD
+│   │   └── scheduler_service.py    # Scheduler CRUD
 │   ├── utils/                      # Helper utilities
 │   │   ├── db_helpers.py
 │   │   ├── formatters.py
@@ -60,12 +66,16 @@ Tangerine is an AI-integrated ETL pipeline built with Vertical Slice Architectur
 ├── common/                         # Shared utilities
 │   ├── db_utils.py                 # Database connection pooling
 │   ├── config.py                   # Configuration management
-│   └── logging_utils.py            # ETL logging
+│   ├── logging_utils.py            # ETL logging
+│   └── gmail_client.py             # Gmail API wrapper (OAuth2)
 ├── etl/                            # ETL jobs and framework
 │   ├── base/
 │   │   └── etl_job.py              # Base ETL job class
 │   ├── jobs/
-│   │   └── generic_import.py       # Config-driven imports
+│   │   ├── generic_import.py       # Config-driven imports
+│   │   ├── run_gmail_inbox_processor.py  # Download email attachments
+│   │   ├── run_report_generator.py       # Generate & send reports
+│   │   └── generate_crontab.py           # Generate cron from DB
 │   └── regression/
 │       ├── run_regression_tests.py
 │       └── generate_test_files.py
@@ -79,13 +89,17 @@ Tangerine is an AI-integrated ETL pipeline built with Vertical Slice Architectur
 │   ├── init.sh                     # Initialization script
 │   ├── dba/                        # Pipeline schema
 │   │   ├── schema.sql
-│   │   ├── tables/                 # timportconfig, tdataset, etc.
-│   │   ├── procedures/             # pimportconfigi, pimportconfigu
+│   │   ├── tables/                 # timportconfig, tdataset, tinboxconfig, etc.
+│   │   ├── procedures/             # pimportconfigi, pimportconfigu, etc.
 │   │   ├── views/
 │   │   └── data/                   # Reference data inserts
 │   └── feeds/                      # Raw data schema
+├── secrets/                        # Gmail OAuth credentials (gitignored)
+│   ├── credentials.json            # OAuth client ID/secret
+│   └── token.json                  # Access/refresh tokens
 ├── .data/etl/                      # Volume mount (local)
 │   ├── source/                     # Input files
+│   │   └── inbox/                  # Email attachments landing
 │   ├── archive/                    # Processed files
 │   └── regression/                 # Test data
 ├── docker-compose.yml              # Service definitions
@@ -195,12 +209,31 @@ Tangerine is an AI-integrated ETL pipeline built with Vertical Slice Architectur
 - Transaction-based test isolation with automatic rollback
 - Comprehensive fixtures for test data
 
+### ✅ Phase 8: Email Services (Complete)
+- **Gmail Integration**: OAuth2-based Gmail API client
+  - Send emails with HTML body and attachments
+  - Read inbox and download attachments
+  - Apply/remove Gmail labels
+  - Token auto-refresh
+- **Inbox Processor**: Download email attachments based on rules
+  - Subject/sender/attachment pattern matching
+  - Date-prefixed filenames
+  - Optional .eml file export
+  - Link to import configs for auto-processing
+- **Report Generator**: SQL-based email reports
+  - `{{SQL:query}}` template syntax
+  - HTML tables inline + CSV/Excel attachments
+  - Multiple output formats
+- **Scheduler**: Database-driven cron management
+  - Configure jobs via admin UI
+  - Generate crontab from database
+- **Database Tables**: `tinboxconfig`, `treportmanager`, `tscheduler`
+- **Admin UI**: 3 new pages for email configuration
+
 ## What's Planned
 
 ### 🔮 Future Enhancements
 - **Authentication/authorization**: Session-based auth or OAuth
-- **Scheduled jobs**: Cron-like job scheduler with recurring imports
-- **Email notifications**: Alert on job failures or completion
 - **Data quality checks**: Automated validation rules and anomaly detection
 - **AI agent integration**: LLM-powered data analysis and recommendations
 - **Performance dashboard**: Real-time metrics and health monitoring
@@ -216,6 +249,11 @@ Tangerine is an AI-integrated ETL pipeline built with Vertical Slice Architectur
 - `dba.tdatasource` - Data source reference
 - `dba.tdatasettype` - Dataset type reference
 - `dba.timportstrategy` - Import strategies (3 predefined)
+
+**Email Services:**
+- `dba.tinboxconfig` - Gmail inbox processing rules (patterns, target directory, labels)
+- `dba.treportmanager` - Report configurations (recipients, SQL templates, output format)
+- `dba.tscheduler` - Cron job scheduler (job_type, cron fields, config references)
 
 **Tracking & Logging:**
 - `dba.tdataset` - Dataset metadata (datasetid, label, status, dates)
@@ -258,6 +296,25 @@ docker compose exec tangerine python etl/jobs/generic_import.py --config-id 1 --
 
 # Run ETL regression tests
 docker compose exec tangerine python etl/regression/run_regression_tests.py --verbose
+```
+
+### Email Services
+```bash
+# Process Gmail inbox (download attachments)
+docker compose exec tangerine python etl/jobs/run_gmail_inbox_processor.py --config-id 1
+
+# Generate and send report
+docker compose exec tangerine python etl/jobs/run_report_generator.py --report-id 1
+
+# Preview report without sending (dry run)
+docker compose exec tangerine python etl/jobs/run_report_generator.py --report-id 1 --dry-run
+
+# Generate crontab from database
+docker compose exec tangerine python etl/jobs/generate_crontab.py --preview
+docker compose exec tangerine python etl/jobs/generate_crontab.py --apply
+
+# Test Gmail connection
+docker compose exec tangerine python -c "from common.gmail_client import test_connection; print(test_connection())"
 ```
 
 ### Running Tests

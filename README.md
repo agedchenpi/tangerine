@@ -922,6 +922,81 @@ Also fixed:
 - Output streaming prevents memory overflow from large logs
 - Last 50 lines displayed, full output in expander
 
+## Email Services Architecture
+
+Tangerine includes Gmail integration for automated email processing and report generation.
+
+### Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         SERVER (Ubuntu)                          │
+│                                                                  │
+│  ┌─────────────────────┐     ┌─────────────────────────────┐   │
+│  │  /opt/tangerine/    │     │     Docker Containers        │   │
+│  │                     │     │                               │   │
+│  │  secrets/           │     │  ┌─────────────────────────┐ │   │
+│  │  ├─ credentials.json│────▶│  │  tangerine (ETL)        │ │   │
+│  │  └─ token.json      │     │  │  - gmail_client.py      │ │   │
+│  │                     │     │  │  - inbox_processor.py   │ │   │
+│  │                     │     │  │  - report_generator.py  │ │   │
+│  └─────────────────────┘     │  └─────────────────────────┘ │   │
+│                              │                               │   │
+│                              │  ┌─────────────────────────┐ │   │
+│                              │  │  admin (Streamlit UI)   │ │   │
+│                              │  │  - Inbox Configs page   │ │   │
+│                              │  │  - Report Manager page  │ │   │
+│                              │  │  - Scheduler page       │ │   │
+│                              │  └─────────────────────────┘ │   │
+│                              │                               │   │
+│                              │  ┌─────────────────────────┐ │   │
+│                              │  │  db (PostgreSQL)        │ │   │
+│                              │  │  - tinboxconfig         │ │   │
+│                              │  │  - treportmanager       │ │   │
+│                              │  │  - tscheduler           │ │   │
+│                              │  └─────────────────────────┘ │   │
+│                              └─────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+                            ┌───────────────┐
+                            │  Gmail API    │
+                            │  (Google)     │
+                            └───────────────┘
+```
+
+### Component Locations
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `credentials.json` | Server (`/opt/tangerine/secrets/`) | OAuth app identity |
+| `token.json` | Server (`/opt/tangerine/secrets/`) | Access token to Gmail |
+| `gmail_client.py` | Docker container (`tangerine`) | Python wrapper for Gmail API |
+| ETL jobs | Docker container (`tangerine`) | Run inbox processor & reports |
+| Config tables | Docker container (`db`) | Store rules in PostgreSQL |
+| Admin UI | Docker container (`admin`) | Manage configs via browser |
+
+### How It Works
+
+1. **Secrets stay on server** - mounted read-only into Docker via volume
+2. **Code runs in Docker** - isolated, reproducible environment
+3. **Database in Docker** - configs stored in PostgreSQL
+4. **Cron on server or Docker** - triggers scheduled jobs
+
+### Email Capabilities
+
+- **Send emails**: Reports with HTML tables and file attachments (CSV/Excel)
+- **Receive emails**: Download attachments based on configurable rules
+- **Gmail labels**: Auto-apply labels to processed/error emails
+- **OAuth2 authentication**: Secure token-based access with auto-refresh
+
+### Gmail OAuth Setup
+
+1. Create OAuth credentials in Google Cloud Console
+2. Save `credentials.json` to `/opt/tangerine/secrets/`
+3. Run token generation script (requires browser for initial auth)
+4. Token auto-refreshes - one-time setup only
+
 ## Troubleshooting
 - **Command not found (exit 127)**: Check CMD in Dockerfile points to an existing script.
 - **Auth errors with Git**: Ensure SSH keys are set up correctly.
@@ -929,4 +1004,5 @@ Also fixed:
 - **Volume/data errors on upgrade**: Run `docker compose down --volumes` to reset.
 - **Obsolete warnings in Compose**: Ensure 'version' is removed from yml.
 - **No schema subdirs in Git**: Add placeholders and commit.
+- **Gmail authentication errors**: Ensure `token.json` exists in secrets folder and hasn't expired.
 
