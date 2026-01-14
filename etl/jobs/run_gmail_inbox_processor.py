@@ -433,6 +433,27 @@ def main():
     )
 
     success = job.run()
+
+    # Emit email_received event to pubsub queue if files were downloaded
+    if success and not args.dry_run and job.downloaded_files:
+        try:
+            from admin.services.pubsub_service import create_event
+            event_data = {
+                'config_id': args.config_id,
+                'files_downloaded': len(job.downloaded_files),
+                'emails_processed': len(job.processed_message_ids),
+                'file_paths': [str(f) for f in job.downloaded_files],
+                'run_uuid': job.run_uuid
+            }
+            create_event(
+                event_type='email_received',
+                event_source=f'inbox_processor:{args.config_id}' if args.config_id else 'inbox_processor:all',
+                event_data=event_data
+            )
+            print(f"Published email_received event ({len(job.downloaded_files)} files)")
+        except Exception as e:
+            print(f"Warning: Failed to publish event: {e}")
+
     return 0 if success else 1
 
 

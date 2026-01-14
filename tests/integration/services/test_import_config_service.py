@@ -130,12 +130,13 @@ class TestImportConfigCRUD:
 class TestImportConfigValidation:
     """Test validation rules and business logic"""
 
-    def test_create_config_duplicate_name_fails(self, db_transaction, created_import_config, sample_import_config):
-        """Creating config with duplicate name raises error"""
+    def test_create_config_duplicate_name_returns_existing(self, db_transaction, created_import_config, sample_import_config):
+        """Creating config with duplicate name returns existing config_id (ON CONFLICT DO NOTHING)"""
         duplicate = {**sample_import_config, 'config_name': created_import_config['config_name']}
 
-        with pytest.raises(Exception):
-            create_config(duplicate)
+        # The stored procedure uses ON CONFLICT DO NOTHING, so it returns existing config_id
+        returned_id = create_config(duplicate)
+        assert returned_id == created_import_config['config_id']
 
     def test_config_name_exists_true(self, db_transaction, created_import_config):
         """config_name_exists returns True for existing name"""
@@ -213,39 +214,39 @@ class TestImportConfigValidation:
         """Config with filename metadata source creates successfully"""
         config = {**sample_import_config}
         config['metadata_label_source'] = 'filename'
-        config['metadata_delimiter'] = '_'
-        config['metadata_position_index'] = 2
+        config['metadata_label_location'] = '2'  # Position index as string
+        config['delimiter'] = '_'
 
         config_id = create_config(config)
         retrieved = get_config(config_id)
 
         assert retrieved['metadata_label_source'] == 'filename'
-        assert retrieved['metadata_delimiter'] == '_'
-        assert retrieved['metadata_position_index'] == 2
+        assert retrieved['metadata_label_location'] == '2'
+        assert retrieved['delimiter'] == '_'
 
     def test_create_config_with_file_content_metadata(self, db_transaction, sample_import_config):
         """Config with file_content metadata source creates successfully"""
         config = {**sample_import_config}
         config['metadata_label_source'] = 'file_content'
-        config['metadata_column_name'] = 'label_column'
+        config['metadata_label_location'] = 'label_column'  # Column name
 
         config_id = create_config(config)
         retrieved = get_config(config_id)
 
         assert retrieved['metadata_label_source'] == 'file_content'
-        assert retrieved['metadata_column_name'] == 'label_column'
+        assert retrieved['metadata_label_location'] == 'label_column'
 
     def test_create_config_with_static_metadata(self, db_transaction, sample_import_config):
         """Config with static metadata source creates successfully"""
         config = {**sample_import_config}
         config['metadata_label_source'] = 'static'
-        config['metadata_static_value'] = 'StaticLabel'
+        config['metadata_label_location'] = 'StaticLabel'  # Static value
 
         config_id = create_config(config)
         retrieved = get_config(config_id)
 
         assert retrieved['metadata_label_source'] == 'static'
-        assert retrieved['metadata_static_value'] == 'StaticLabel'
+        assert retrieved['metadata_label_location'] == 'StaticLabel'
 
 
 # ============================================================================

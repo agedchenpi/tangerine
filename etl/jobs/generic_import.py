@@ -1181,6 +1181,26 @@ def main():
             print(f"  - Loaded: {job.records_loaded} records")
             print(f"  - Run UUID: {job.run_uuid}")
             print(f"  - Dataset ID: {job.dataset_id}")
+
+            # Emit import_complete event to pubsub queue
+            try:
+                from admin.services.pubsub_service import create_event
+                event_data = {
+                    'config_id': args.config_id,
+                    'config_name': job.import_config.config_name,
+                    'files_processed': len(job.matched_files),
+                    'records_loaded': job.records_loaded,
+                    'run_uuid': job.run_uuid,
+                    'dataset_id': job.dataset_id
+                }
+                create_event(
+                    event_type='import_complete',
+                    event_source=f'generic_import:{args.config_id}',
+                    event_data=event_data
+                )
+                print(f"  - Event published: import_complete")
+            except Exception as e:
+                print(f"  - Warning: Failed to publish event: {e}")
         else:
             print("\nGeneric import failed")
             exit(1)

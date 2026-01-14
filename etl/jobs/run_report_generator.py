@@ -552,6 +552,27 @@ def main():
     )
 
     success = job.run()
+
+    # Emit report_sent event(s) to pubsub queue if not dry run
+    if success and not args.dry_run and job.generated_reports:
+        try:
+            from admin.services.pubsub_service import create_event
+            for report in job.generated_reports:
+                event_data = {
+                    'report_id': report['report_id'],
+                    'report_name': report['report_name'],
+                    'recipients': report['recipients'],
+                    'run_uuid': job.run_uuid
+                }
+                create_event(
+                    event_type='report_sent',
+                    event_source=f'report_generator:{report["report_id"]}',
+                    event_data=event_data
+                )
+            print(f"Published {len(job.generated_reports)} report_sent event(s)")
+        except Exception as e:
+            print(f"Warning: Failed to publish event(s): {e}")
+
     return 0 if success else 1
 
 

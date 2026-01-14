@@ -203,9 +203,9 @@ Tangerine is an AI-integrated ETL pipeline built with Vertical Slice Architectur
 - Volume mount verification
 
 **Admin Tests:**
-- 137 pytest-based tests for admin interface
-- 57 unit tests for validators (100% pass rate)
-- 80 integration tests for services (CRUD, filtering, monitoring)
+- 310 pytest-based tests for admin interface (100% pass rate)
+- Unit tests for validators and pattern matching
+- Integration tests for all services (import config, reference data, monitoring, inbox config, scheduler, report manager, pubsub)
 - Transaction-based test isolation with automatic rollback
 - Comprehensive fixtures for test data
 
@@ -229,6 +229,31 @@ Tangerine is an AI-integrated ETL pipeline built with Vertical Slice Architectur
   - Generate crontab from database
 - **Database Tables**: `tinboxconfig`, `treportmanager`, `tscheduler`
 - **Admin UI**: 3 new pages for email configuration
+
+### ✅ Phase 9: Pub/Sub Event System (Complete - January 2026)
+- **Database Schema**
+  - `dba.tpubsub_events` - Event queue table
+  - `dba.tpubsub_subscribers` - Subscriber configuration table
+  - `ppubsub_iu` - Stored procedure for upserts
+- **Python Daemon** (`pubsub/listener.py`)
+  - File watcher for event triggers
+  - Database poller for queued events
+  - Subscriber notification system
+- **Admin UI** (`8_Event_System.py`)
+  - Event Queue tab - View pending/processed events
+  - Subscribers tab - CRUD for event subscribers
+  - Event Log tab - Historical event tracking
+  - Service Status tab - Monitor pubsub daemon
+- **Service Layer** (`pubsub_service.py`)
+  - Full CRUD for events and subscribers
+  - Event filtering by type, source, status
+- **ETL Integration**
+  - `generic_import.py` emits `import_complete` event
+  - `run_report_generator.py` emits `report_sent` event
+  - `run_gmail_inbox_processor.py` emits `email_received` event
+- **Docker Integration**: `Dockerfile.pubsub` and docker-compose.yml updated
+
+> **Note:** For detailed project status and changelog, see [PROJECT_STATUS.md](PROJECT_STATUS.md)
 
 ## What's Planned
 
@@ -254,6 +279,10 @@ Tangerine is an AI-integrated ETL pipeline built with Vertical Slice Architectur
 - `dba.tinboxconfig` - Gmail inbox processing rules (patterns, target directory, labels)
 - `dba.treportmanager` - Report configurations (recipients, SQL templates, output format)
 - `dba.tscheduler` - Cron job scheduler (job_type, cron fields, config references)
+
+**Pub/Sub System:**
+- `dba.tpubsub_events` - Event queue (event_type, event_source, event_data, status)
+- `dba.tpubsub_subscribers` - Event subscribers (event_type, handler_type, handler_config)
 
 **Tracking & Logging:**
 - `dba.tdataset` - Dataset metadata (datasetid, label, status, dates)

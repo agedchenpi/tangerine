@@ -3,6 +3,7 @@
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from common.db_utils import fetch_dict, db_transaction
+from admin.components.validators import check_regex_match, check_glob_match, check_patterns_batch
 
 
 def list_inbox_configs(
@@ -257,3 +258,84 @@ def get_import_configs() -> List[Dict[str, Any]]:
         ORDER BY config_name
     """
     return fetch_dict(query) or []
+
+
+# =============================================================================
+# Pattern Testing Functions
+# =============================================================================
+
+def validate_subject_pattern(
+    pattern: str,
+    sample_subjects: List[str]
+) -> List[Dict[str, Any]]:
+    """
+    Validate a subject pattern (regex) against sample email subjects.
+
+    Args:
+        pattern: Regex pattern to test
+        sample_subjects: List of sample subject lines
+
+    Returns:
+        List of test results with match status and captured groups
+    """
+    return check_patterns_batch(pattern, sample_subjects, pattern_type='regex')
+
+
+def validate_sender_pattern(
+    pattern: str,
+    sample_senders: List[str]
+) -> List[Dict[str, Any]]:
+    """
+    Validate a sender pattern (regex) against sample email addresses.
+
+    Args:
+        pattern: Regex pattern to test
+        sample_senders: List of sample sender addresses
+
+    Returns:
+        List of test results with match status and captured groups
+    """
+    return check_patterns_batch(pattern, sample_senders, pattern_type='regex')
+
+
+def validate_attachment_pattern(
+    pattern: str,
+    sample_filenames: List[str]
+) -> List[Dict[str, Any]]:
+    """
+    Validate an attachment pattern (glob) against sample filenames.
+
+    Args:
+        pattern: Glob pattern to test (e.g., *.csv, report_*.xlsx)
+        sample_filenames: List of sample attachment filenames
+
+    Returns:
+        List of test results with match status
+    """
+    return check_patterns_batch(pattern, sample_filenames, pattern_type='glob')
+
+
+
+
+def get_pattern_test_summary(results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Generate a summary of pattern test results.
+
+    Args:
+        results: List of test results from test_*_pattern functions
+
+    Returns:
+        Summary dictionary with counts and status
+    """
+    total = len(results)
+    matches = sum(1 for r in results if r.get('matches', False))
+    has_error = any(r.get('error') for r in results)
+
+    return {
+        'total': total,
+        'matches': matches,
+        'non_matches': total - matches,
+        'match_rate': (matches / total * 100) if total > 0 else 0,
+        'has_error': has_error,
+        'pattern_valid': all(r.get('is_valid', False) for r in results) if results else False
+    }

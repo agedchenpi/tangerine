@@ -1,7 +1,7 @@
 """Input validation utilities for form fields"""
 
 import re
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, List, Any
 
 
 def validate_directory_path(path: str) -> Tuple[bool, Optional[str]]:
@@ -422,3 +422,115 @@ def validate_cron_field(value: str, field_name: str = "Field") -> Tuple[bool, Op
         return False, f"Invalid {field_name.lower()} format: {value}"
 
     return True, None
+
+
+def check_regex_match(pattern: str, test_input: str) -> Dict[str, Any]:
+    """
+    Test a regex pattern against an input string.
+
+    Args:
+        pattern: Regex pattern to test
+        test_input: String to test against
+
+    Returns:
+        Dictionary with:
+        - is_valid: Whether pattern compiled successfully
+        - matches: Whether pattern matched the input
+        - match_text: The matched text (if any)
+        - groups: Captured groups (if any)
+        - error: Error message if pattern is invalid
+    """
+    result = {
+        'is_valid': False,
+        'matches': False,
+        'match_text': None,
+        'groups': [],
+        'error': None
+    }
+
+    if not pattern:
+        result['error'] = "Pattern is empty"
+        return result
+
+    try:
+        compiled = re.compile(pattern)
+        result['is_valid'] = True
+
+        match = compiled.search(test_input)
+        if match:
+            result['matches'] = True
+            result['match_text'] = match.group(0)
+            result['groups'] = list(match.groups()) if match.groups() else []
+
+    except re.error as e:
+        result['error'] = f"Invalid regex: {str(e)}"
+
+    return result
+
+
+def check_glob_match(pattern: str, test_input: str) -> Dict[str, Any]:
+    """
+    Test a glob pattern against an input string (filename).
+
+    Uses fnmatch for glob-style pattern matching.
+
+    Args:
+        pattern: Glob pattern (e.g., *.csv, report_*.xlsx)
+        test_input: Filename to test against
+
+    Returns:
+        Dictionary with:
+        - is_valid: Whether pattern is valid
+        - matches: Whether pattern matched the input
+        - error: Error message if any
+    """
+    import fnmatch
+
+    result = {
+        'is_valid': True,
+        'matches': False,
+        'error': None
+    }
+
+    if not pattern:
+        result['is_valid'] = False
+        result['error'] = "Pattern is empty"
+        return result
+
+    try:
+        result['matches'] = fnmatch.fnmatch(test_input, pattern)
+    except Exception as e:
+        result['is_valid'] = False
+        result['error'] = f"Pattern error: {str(e)}"
+
+    return result
+
+
+def check_patterns_batch(
+    pattern: str,
+    test_inputs: List[str],
+    pattern_type: str = 'regex'
+) -> List[Dict[str, Any]]:
+    """
+    Test a pattern against multiple input strings.
+
+    Args:
+        pattern: Pattern to test
+        test_inputs: List of strings to test against
+        pattern_type: 'regex' or 'glob'
+
+    Returns:
+        List of result dictionaries, one per input
+    """
+    results = []
+
+    for test_input in test_inputs:
+        if pattern_type == 'glob':
+            result = check_glob_match(pattern, test_input)
+        else:
+            result = check_regex_match(pattern, test_input)
+
+        result['input'] = test_input
+        results.append(result)
+
+    return results

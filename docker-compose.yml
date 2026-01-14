@@ -59,6 +59,24 @@ services:
       - tangerine_network
     restart: unless-stopped
 
+  pubsub:
+    build:
+      context: .
+      dockerfile: Dockerfile.pubsub
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: ${DB_URL}
+      PUBSUB_POLL_INTERVAL: ${PUBSUB_POLL_INTERVAL:-5}
+      PUBSUB_WATCH_DIR: /app/data/source
+    volumes:
+      - ${ETL_DATA_PATH:-./.data/etl}:/app/data
+      - etl_logs:/app/logs
+    networks:
+      - tangerine_network
+    restart: unless-stopped
+
 networks:
   tangerine_network:
     driver: bridge

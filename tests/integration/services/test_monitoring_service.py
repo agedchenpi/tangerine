@@ -98,7 +98,8 @@ class TestGetLogs:
         with db_transaction() as cursor:
             insert_log_entries(cursor, logs)
 
-        results = get_logs(run_uuid=run_uuid, limit=100)
+        # Pass time_range_hours=None to disable time filter (since we're filtering by UUID)
+        results = get_logs(run_uuid=run_uuid, time_range_hours=None, limit=100)
         assert len(results) >= 5
         assert all(l['run_uuid'] == run_uuid for l in results)
 

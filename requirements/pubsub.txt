@@ -1,0 +1,12 @@
+# Pub-Sub Service Dependencies
+# Extends base.txt requirements
+
+# File system watching
+watchdog>=3.0.0
+
+# Database connectivity (same as base)
+psycopg2-binary>=2.9.9
+
+# Already in base.txt but listing for completeness
+# python-dotenv
+# croniter

@@ -31,6 +31,8 @@ $PSQL -f /app/schema/dba/tables/tregressiontest.sql
 $PSQL -f /app/schema/dba/tables/tscheduler.sql
 $PSQL -f /app/schema/dba/tables/tinboxconfig.sql
 $PSQL -f /app/schema/dba/tables/treportmanager.sql
+$PSQL -f /app/schema/dba/tables/tpubsub_events.sql
+$PSQL -f /app/schema/dba/tables/tpubsub_subscribers.sql
 $PSQL -f /app/schema/dba/functions/fenforcesingleactivedataset.sql
 $PSQL -f /app/schema/dba/functions/f_dataset_iu.sql
 $PSQL -f /app/schema/dba/functions/flogddlchanges.sql
@@ -38,6 +40,7 @@ $PSQL -f /app/schema/dba/procedures/pimportconfig_iu.sql
 $PSQL -f /app/schema/dba/procedures/pscheduler_iu.sql
 $PSQL -f /app/schema/dba/procedures/pinboxconfig_iu.sql
 $PSQL -f /app/schema/dba/procedures/preportmanager_iu.sql
+$PSQL -f /app/schema/dba/procedures/ppubsub_iu.sql
 $PSQL -f /app/schema/dba/indexes/idx_tdataset_datasetdate.sql
 $PSQL -f /app/schema/dba/indexes/idx_tdataset_isactive.sql
 $PSQL -f /app/schema/dba/indexes/idx_tcalendardays_fulldate.sql

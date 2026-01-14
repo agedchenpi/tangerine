@@ -82,28 +82,46 @@ def clean_test_data(db_transaction):
     """
     def cleanup():
         with db_transaction() as cursor:
+            # Clean pub-sub subscribers (Phase 2)
+            cursor.execute("""
+                DELETE FROM dba.tpubsub_subscribers
+                WHERE subscriber_name LIKE 'AdminTest_%%'
+            """)
+
+            # Clean pub-sub events (Phase 2) - clean by source pattern
+            cursor.execute("""
+                DELETE FROM dba.tpubsub_events
+                WHERE event_source LIKE '%%AdminTest%%' OR event_source LIKE '/test/%%'
+            """)
+
+            # Clean inbox configs (Phase 1)
+            cursor.execute("""
+                DELETE FROM dba.tinboxconfig
+                WHERE config_name LIKE 'AdminTest_%%'
+            """)
+
             # Clean import configs
             cursor.execute("""
                 DELETE FROM dba.timportconfig
                 WHERE config_name LIKE 'AdminTest_%%'
             """)
 
-            # Clean datasources
+            # Clean datasets FIRST (before datasources due to FK constraint)
+            cursor.execute("""
+                DELETE FROM dba.tdataset
+                WHERE label LIKE 'AdminTest_%%'
+            """)
+
+            # Clean datasources (after datasets)
             cursor.execute("""
                 DELETE FROM dba.tdatasource
                 WHERE sourcename LIKE 'AdminTest_%%'
             """)
 
-            # Clean dataset types
+            # Clean dataset types (after datasets)
             cursor.execute("""
                 DELETE FROM dba.tdatasettype
                 WHERE typename LIKE 'AdminTest_%%'
-            """)
-
-            # Clean datasets
-            cursor.execute("""
-                DELETE FROM dba.tdataset
-                WHERE label LIKE 'AdminTest_%%'
             """)
 
     # Cleanup before test
@@ -197,57 +215,37 @@ def sample_import_config(created_datasource, created_datasettype):
 
 @pytest.fixture
 def created_import_config(db_transaction, sample_import_config):
-    """Create an import config in database, auto-cleanup via rollback"""
+    """Create an import config in database, auto-cleanup via rollback
+
+    Uses actual schema which stores datasource/datasettype as VARCHAR text names,
+    not foreign key IDs. Combined location fields for metadata and date.
+    """
     with db_transaction() as cursor:
-        # Get datasource and datasettype IDs
-        cursor.execute(
-            "SELECT datasourceid FROM dba.tdatasource WHERE sourcename = %s",
-            (sample_import_config['datasource'],)
-        )
-        datasourceid = cursor.fetchone()['datasourceid']
-
-        cursor.execute(
-            "SELECT datasettypeid FROM dba.tdatasettype WHERE typename = %s",
-            (sample_import_config['datasettype'],)
-        )
-        datasettypeid = cursor.fetchone()['datasettypeid']
-
-        # Insert config
+        # Insert config using actual schema columns
         cursor.execute("""
             INSERT INTO dba.timportconfig (
-                config_name, datasourceid, datasettypeid,
+                config_name, datasource, datasettype,
                 source_directory, archive_directory, file_pattern, file_type,
                 target_table, importstrategyid,
-                metadata_label_source, metadata_delimiter, metadata_position_index,
-                metadata_column_name, metadata_static_value,
-                dateconfig, date_delimiter, date_position_index,
-                date_column_name, date_format, is_active
+                metadata_label_source, metadata_label_location,
+                dateconfig, datelocation, dateformat, delimiter,
+                is_active
             ) VALUES (
-                %(config_name)s, %(datasourceid)s, %(datasettypeid)s,
+                %(config_name)s, %(datasource)s, %(datasettype)s,
                 %(source_directory)s, %(archive_directory)s, %(file_pattern)s, %(file_type)s,
                 %(target_table)s, %(importstrategyid)s,
-                %(metadata_label_source)s, %(metadata_delimiter)s, %(metadata_position_index)s,
-                %(metadata_column_name)s, %(metadata_static_value)s,
-                %(dateconfig)s, %(date_delimiter)s, %(date_position_index)s,
-                %(date_column_name)s, %(date_format)s, %(is_active)s
+                %(metadata_label_source)s, %(metadata_label_location)s,
+                %(dateconfig)s, %(datelocation)s, %(dateformat)s, %(delimiter)s,
+                %(is_active)s
             )
             RETURNING config_id
-        """, {
-            **sample_import_config,
-            'datasourceid': datasourceid,
-            'datasettypeid': datasettypeid
-        })
+        """, sample_import_config)
         config_id = cursor.fetchone()['config_id']
 
         # Fetch complete config
         cursor.execute("""
-            SELECT
-                c.*,
-                s.sourcename as datasource,
-                t.typename as datasettype
+            SELECT c.*
             FROM dba.timportconfig c
-            JOIN dba.tdatasource s ON c.datasourceid = s.datasourceid
-            JOIN dba.tdatasettype t ON c.datasettypeid = t.datasettypeid
             WHERE c.config_id = %s
         """, (config_id,))
         result = cursor.fetchone()
@@ -278,7 +276,10 @@ def created_datasources(db_transaction):
 
 @pytest.fixture
 def created_import_configs(db_transaction, created_datasource, created_datasettype):
-    """Create multiple import configs for testing list/filter operations"""
+    """Create multiple import configs for testing list/filter operations
+
+    Uses actual schema with VARCHAR datasource/datasettype columns.
+    """
     configs = []
     file_types = ['CSV', 'XLS', 'XLSX', 'JSON', 'XML']
 
@@ -287,21 +288,25 @@ def created_import_configs(db_transaction, created_datasource, created_datasetty
             config_name = f'AdminTest_Config_{uuid.uuid4().hex[:8]}'
             cursor.execute("""
                 INSERT INTO dba.timportconfig (
-                    config_name, datasourceid, datasettypeid,
+                    config_name, datasource, datasettype,
                     source_directory, archive_directory, file_pattern, file_type,
                     target_table, importstrategyid,
-                    metadata_label_source, dateconfig, date_format, is_active
+                    metadata_label_source, metadata_label_location,
+                    dateconfig, datelocation, dateformat, delimiter,
+                    is_active
                 ) VALUES (
                     %s, %s, %s,
                     '/app/data/source', '/app/data/archive',
                     %s, %s, 'feeds.test_table', 1,
-                    'filename', 'filename', 'yyyyMMdd', %s
+                    'filename', '2',
+                    'filename', '1', 'yyyyMMdd', '_',
+                    %s
                 )
                 RETURNING config_id
             """, (
                 config_name,
-                created_datasource['datasourceid'],
-                created_datasettype['datasettypeid'],
+                created_datasource['sourcename'],
+                created_datasettype['typename'],
                 f'.*\\.{file_type.lower()}',
                 file_type,
                 i % 2 == 0  # Alternate active/inactive
@@ -310,10 +315,8 @@ def created_import_configs(db_transaction, created_datasource, created_datasetty
 
             # Fetch complete config
             cursor.execute("""
-                SELECT c.*, s.sourcename as datasource, t.typename as datasettype
+                SELECT c.*
                 FROM dba.timportconfig c
-                JOIN dba.tdatasource s ON c.datasourceid = s.datasourceid
-                JOIN dba.tdatasettype t ON c.datasettypeid = t.datasettypeid
                 WHERE c.config_id = %s
             """, (config_id,))
             configs.append(dict(cursor.fetchone()))

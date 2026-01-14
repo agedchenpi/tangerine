@@ -12,7 +12,9 @@ from components.validators import (
 from services.inbox_config_service import (
     list_inbox_configs, get_inbox_config, create_inbox_config,
     update_inbox_config, delete_inbox_config, toggle_active,
-    get_inbox_stats, config_name_exists, get_import_configs
+    get_inbox_stats, config_name_exists, get_import_configs,
+    test_subject_pattern, test_sender_pattern, test_attachment_pattern,
+    get_pattern_test_summary
 )
 from utils.db_helpers import format_sql_error
 from utils.ui_helpers import load_custom_css, add_page_header
@@ -206,11 +208,12 @@ def render_inbox_config_form(
 
 
 # Main tabs
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📋 View All",
     "➕ Create New",
     "✏️ Edit",
-    "🗑️ Delete"
+    "🗑️ Delete",
+    "🧪 Test Patterns"
 ])
 
 # ============================================================================
@@ -366,6 +369,237 @@ with tab4:
             show_info("No configurations to delete.")
     except Exception as e:
         show_error(f"Failed to load configurations: {format_sql_error(e)}")
+
+# ============================================================================
+# TAB 5: TEST PATTERNS
+# ============================================================================
+with tab5:
+    st.subheader("Test Pattern Matching")
+    st.markdown("Test your regex and glob patterns against sample inputs before creating configurations.")
+
+    # Pattern source selection
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        pattern_source = st.radio(
+            "Pattern Source",
+            ["Custom Patterns", "From Existing Config"],
+            key="pattern_source"
+        )
+
+    if pattern_source == "From Existing Config":
+        try:
+            configs = list_inbox_configs()
+            if configs:
+                config_options = {f"{c['inbox_config_id']}: {c['config_name']}": c['inbox_config_id'] for c in configs}
+                selected = st.selectbox(
+                    "Select Configuration",
+                    options=list(config_options.keys()),
+                    key="test_config_select"
+                )
+                selected_id = config_options[selected]
+                config = get_inbox_config(selected_id)
+
+                if config:
+                    test_subject = config.get('subject_pattern', '') or ''
+                    test_sender = config.get('sender_pattern', '') or ''
+                    test_attachment = config.get('attachment_pattern', '') or ''
+                else:
+                    test_subject = test_sender = test_attachment = ''
+            else:
+                show_info("No configurations found. Use custom patterns.")
+                test_subject = test_sender = test_attachment = ''
+        except Exception as e:
+            show_error(f"Failed to load configurations: {format_sql_error(e)}")
+            test_subject = test_sender = test_attachment = ''
+    else:
+        test_subject = ''
+        test_sender = ''
+        test_attachment = ''
+
+    st.divider()
+
+    # Three expandable sections for different pattern types
+    # Subject Pattern Testing
+    with st.expander("📧 Subject Pattern (Regex)", expanded=True):
+        col1, col2 = st.columns([1, 1])
+
+        with col1:
+            subject_pattern = st.text_input(
+                "Subject Pattern",
+                value=test_subject if pattern_source == "From Existing Config" else '',
+                placeholder="e.g., .*Daily Report.*",
+                help="Regex pattern to match email subjects",
+                key="test_subject_pattern"
+            )
+
+            sample_subjects = st.text_area(
+                "Sample Subjects (one per line)",
+                value="Daily Report Q1 2026\nWeekly Summary\nInvoice 2026-001\nDaily Report Q2 2026",
+                height=120,
+                help="Enter sample email subjects to test against",
+                key="sample_subjects"
+            )
+
+            test_subject_btn = st.button("🧪 Test Subject Pattern", key="test_subject_btn")
+
+        with col2:
+            if test_subject_btn and subject_pattern:
+                subjects = [s.strip() for s in sample_subjects.strip().split('\n') if s.strip()]
+                if subjects:
+                    results = test_subject_pattern(subject_pattern, subjects)
+                    summary = get_pattern_test_summary(results)
+
+                    if summary['has_error']:
+                        show_error(results[0].get('error', 'Invalid pattern'))
+                    else:
+                        st.markdown(f"**Results:** {summary['matches']}/{summary['total']} matched ({summary['match_rate']:.1f}%)")
+
+                        for r in results:
+                            if r['matches']:
+                                st.markdown(f"✅ `{r['input']}`")
+                                if r.get('groups'):
+                                    st.caption(f"   Groups: {r['groups']}")
+                            else:
+                                st.markdown(f"❌ `{r['input']}`")
+                else:
+                    show_warning("Enter at least one sample subject to test.")
+            elif test_subject_btn:
+                show_warning("Enter a pattern to test.")
+
+    # Sender Pattern Testing
+    with st.expander("👤 Sender Pattern (Regex)", expanded=False):
+        col1, col2 = st.columns([1, 1])
+
+        with col1:
+            sender_pattern = st.text_input(
+                "Sender Pattern",
+                value=test_sender if pattern_source == "From Existing Config" else '',
+                placeholder="e.g., .*@company\\.com",
+                help="Regex pattern to match sender email addresses",
+                key="test_sender_pattern"
+            )
+
+            sample_senders = st.text_area(
+                "Sample Senders (one per line)",
+                value="reports@company.com\njohn.doe@external.org\nalerts@company.com\nspam@unknown.net",
+                height=120,
+                help="Enter sample email addresses to test against",
+                key="sample_senders"
+            )
+
+            test_sender_btn = st.button("🧪 Test Sender Pattern", key="test_sender_btn")
+
+        with col2:
+            if test_sender_btn and sender_pattern:
+                senders = [s.strip() for s in sample_senders.strip().split('\n') if s.strip()]
+                if senders:
+                    results = test_sender_pattern(sender_pattern, senders)
+                    summary = get_pattern_test_summary(results)
+
+                    if summary['has_error']:
+                        show_error(results[0].get('error', 'Invalid pattern'))
+                    else:
+                        st.markdown(f"**Results:** {summary['matches']}/{summary['total']} matched ({summary['match_rate']:.1f}%)")
+
+                        for r in results:
+                            if r['matches']:
+                                st.markdown(f"✅ `{r['input']}`")
+                                if r.get('groups'):
+                                    st.caption(f"   Groups: {r['groups']}")
+                            else:
+                                st.markdown(f"❌ `{r['input']}`")
+                else:
+                    show_warning("Enter at least one sample sender to test.")
+            elif test_sender_btn:
+                show_warning("Enter a pattern to test.")
+
+    # Attachment Pattern Testing
+    with st.expander("📎 Attachment Pattern (Glob)", expanded=False):
+        col1, col2 = st.columns([1, 1])
+
+        with col1:
+            attachment_pattern = st.text_input(
+                "Attachment Pattern",
+                value=test_attachment if pattern_source == "From Existing Config" else '',
+                placeholder="e.g., *.csv or report_*.xlsx",
+                help="Glob pattern to match attachment filenames",
+                key="test_attachment_pattern"
+            )
+
+            sample_attachments = st.text_area(
+                "Sample Filenames (one per line)",
+                value="report_2026.csv\ndata.xlsx\nreport_q1.csv\nimage.png\ndaily_report.csv",
+                height=120,
+                help="Enter sample attachment filenames to test against",
+                key="sample_attachments"
+            )
+
+            test_attach_btn = st.button("🧪 Test Attachment Pattern", key="test_attach_btn")
+
+        with col2:
+            if test_attach_btn and attachment_pattern:
+                filenames = [f.strip() for f in sample_attachments.strip().split('\n') if f.strip()]
+                if filenames:
+                    results = test_attachment_pattern(attachment_pattern, filenames)
+                    summary = get_pattern_test_summary(results)
+
+                    if summary['has_error']:
+                        show_error(results[0].get('error', 'Invalid pattern'))
+                    else:
+                        st.markdown(f"**Results:** {summary['matches']}/{summary['total']} matched ({summary['match_rate']:.1f}%)")
+
+                        for r in results:
+                            if r['matches']:
+                                st.markdown(f"✅ `{r['input']}`")
+                            else:
+                                st.markdown(f"❌ `{r['input']}`")
+                else:
+                    show_warning("Enter at least one sample filename to test.")
+            elif test_attach_btn:
+                show_warning("Enter a pattern to test.")
+
+    # Pattern reference guide
+    with st.expander("📖 Pattern Reference Guide", expanded=False):
+        st.markdown("""
+        ### Regex Patterns (Subject & Sender)
+
+        | Pattern | Description | Example |
+        |---------|-------------|---------|
+        | `.*` | Match any characters | `.*Report.*` matches "Daily Report Q1" |
+        | `^` | Start of string | `^Invoice` matches "Invoice 123" |
+        | `$` | End of string | `\\.pdf$` matches "file.pdf" |
+        | `\\d` | Any digit | `Report-\\d+` matches "Report-123" |
+        | `\\w` | Word character | `\\w+@company\\.com` |
+        | `[abc]` | Character class | `[0-9]{4}` matches "2026" |
+        | `(...)` | Capture group | `Report-(\\d+)` captures "123" |
+        | `\\.` | Literal dot | `user@company\\.com` |
+
+        ### Glob Patterns (Attachments)
+
+        | Pattern | Description | Example |
+        |---------|-------------|---------|
+        | `*` | Match any characters | `*.csv` matches any CSV file |
+        | `?` | Match single character | `report_?.csv` matches "report_1.csv" |
+        | `[abc]` | Character class | `file[0-9].txt` matches "file1.txt" |
+        | `**` | Recursive match | Not typically used for filenames |
+
+        ### Common Examples
+
+        **Subject Patterns:**
+        - `.*Daily Report.*` - Contains "Daily Report"
+        - `^(Invoice|Receipt).*` - Starts with Invoice or Receipt
+        - `.*\\d{4}-\\d{2}-\\d{2}.*` - Contains a date like 2026-01-15
+
+        **Sender Patterns:**
+        - `.*@company\\.com$` - From company.com domain
+        - `(reports|alerts)@.*` - From reports or alerts address
+
+        **Attachment Patterns:**
+        - `*.csv` - Any CSV file
+        - `report_*.xlsx` - Excel files starting with "report_"
+        - `*_202[0-9].csv` - CSV files with years 2020-2029
+        """)
+
 
 # Footer
 st.divider()

@@ -1,0 +1,30 @@
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONPATH=/app
+
+WORKDIR /app
+
+# Install dependencies first (better caching)
+COPY requirements/base.txt /app/requirements/base.txt
+COPY requirements/pubsub.txt /app/requirements/pubsub.txt
+RUN pip install --no-cache-dir -r requirements/base.txt && \
+    pip install --no-cache-dir -r requirements/pubsub.txt
+
+# Copy application code
+COPY . /app
+
+# Create directories with proper permissions
+RUN mkdir -p /app/logs /app/data/source && \
+    chmod 777 /app/logs /app/data/source
+
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD python -c "import psycopg2; import os; conn = psycopg2.connect(os.getenv('DB_URL')); conn.close()" || exit 1
+
+# Run the pub-sub listener
+CMD ["python", "pubsub/listener.py"]

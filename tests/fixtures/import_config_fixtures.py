@@ -49,55 +49,48 @@ def get_valid_import_config(
     }
 
     # Add metadata fields based on source
+    # Actual schema uses combined metadata_label_location field
     if metadata_source == 'filename':
         config.update({
             'metadata_label_source': 'filename',
-            'metadata_delimiter': '_',
-            'metadata_position_index': 2,
-            'metadata_column_name': None,
-            'metadata_static_value': None
+            'metadata_label_location': '2',  # Position index as string
+            'delimiter': '_'  # Shared delimiter for filename parsing
         })
     elif metadata_source == 'file_content':
         config.update({
             'metadata_label_source': 'file_content',
-            'metadata_delimiter': None,
-            'metadata_position_index': None,
-            'metadata_column_name': 'label',
-            'metadata_static_value': None
+            'metadata_label_location': 'label',  # Column name
+            'delimiter': None
         })
     elif metadata_source == 'static':
         config.update({
             'metadata_label_source': 'static',
-            'metadata_delimiter': None,
-            'metadata_position_index': None,
-            'metadata_column_name': None,
-            'metadata_static_value': 'StaticLabel'
+            'metadata_label_location': 'StaticLabel',  # Static value
+            'delimiter': None
         })
 
     # Add date fields based on source
+    # Actual schema uses combined datelocation field
     if date_source == 'filename':
         config.update({
             'dateconfig': 'filename',
-            'date_delimiter': '_',
-            'date_position_index': 1,
-            'date_column_name': None,
-            'date_format': 'yyyyMMdd'
+            'datelocation': '1',  # Position index as string
+            'dateformat': 'yyyyMMdd'
         })
+        # Ensure delimiter is set for filename parsing
+        if 'delimiter' not in config or config['delimiter'] is None:
+            config['delimiter'] = '_'
     elif date_source == 'file_content':
         config.update({
             'dateconfig': 'file_content',
-            'date_delimiter': None,
-            'date_position_index': None,
-            'date_column_name': 'date',
-            'date_format': 'yyyy-MM-dd'
+            'datelocation': 'date',  # Column name
+            'dateformat': 'yyyy-MM-dd'
         })
     elif date_source == 'static':
         config.update({
             'dateconfig': 'static',
-            'date_delimiter': None,
-            'date_position_index': None,
-            'date_column_name': None,
-            'date_format': 'yyyy-MM-dd'
+            'datelocation': None,  # Not needed for static
+            'dateformat': 'yyyy-MM-dd'
         })
 
     return config

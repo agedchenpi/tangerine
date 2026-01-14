@@ -88,7 +88,8 @@ def get_sample_dataset(
     datasourceid: int = 1,
     datasettypeid: int = 1,
     datastatusid: int = 1,
-    isactive: bool = True
+    isactive: bool = True,
+    datasetdate: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
     Returns a sample dataset dictionary.
@@ -99,6 +100,7 @@ def get_sample_dataset(
         datasettypeid: Dataset type ID
         datastatusid: Data status ID
         isactive: Active status
+        datasetdate: Dataset date (defaults to today)
 
     Returns:
         Dictionary with dataset fields
@@ -107,11 +109,15 @@ def get_sample_dataset(
         label = f'AdminTest_Dataset_{uuid.uuid4().hex[:8]}'
 
     now = datetime.now()
+    if datasetdate is None:
+        datasetdate = now.date()
+
     return {
         'label': label,
         'datasourceid': datasourceid,
         'datasettypeid': datasettypeid,
         'datastatusid': datastatusid,
+        'datasetdate': datasetdate,
         'createddate': now,
         'efffromdate': now,
         'effthrudate': now + timedelta(days=365),
@@ -196,10 +202,10 @@ def insert_datasets(cursor, datasets: List[Dict[str, Any]]) -> List[int]:
         cursor.execute("""
             INSERT INTO dba.tdataset (
                 label, datasourceid, datasettypeid, datastatusid,
-                createddate, efffromdate, effthrudate, isactive
+                datasetdate, createddate, efffromdate, effthrudate, isactive
             ) VALUES (
                 %(label)s, %(datasourceid)s, %(datasettypeid)s, %(datastatusid)s,
-                %(createddate)s, %(efffromdate)s, %(effthrudate)s, %(isactive)s
+                %(datasetdate)s, %(createddate)s, %(efffromdate)s, %(effthrudate)s, %(isactive)s
             )
             RETURNING datasetid
         """, dataset)
