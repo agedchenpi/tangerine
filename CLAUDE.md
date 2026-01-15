@@ -19,6 +19,21 @@ If you intend to call multiple tools and there are no dependencies between the t
 **Reduce hallucinations:**
 Never speculate about code you have not opened. If the user references a specific file, you MUST read the file before answering. Make sure to investigate and read relevant files BEFORE answering questions about the codebase. Never make any claims about code before investigating unless you are certain of the correct answer - give grounded and hallucination-free answers.
 
+## Codemaps
+
+Modular architecture documentation is available in `.claude/codemaps/`. Load the relevant codemap when working on a specific area:
+
+| Codemap | When to Use |
+|---------|-------------|
+| `architecture-overview.md` | System design questions, adding new components |
+| `admin-services.md` | Service layer changes, CRUD operations |
+| `etl-framework.md` | Import jobs, extractors, file processing |
+| `database-schema.md` | Schema changes, new tables, queries |
+| `email-services.md` | Gmail integration, reports, inbox processing |
+| `pubsub-system.md` | Event system, subscribers, automation |
+
+To load a codemap, read the relevant file from `.claude/codemaps/` before starting work.
+
 ## Project Overview
 
 Tangerine is an AI-integrated ETL pipeline built with Vertical Slice Architecture (VSA). The project uses:

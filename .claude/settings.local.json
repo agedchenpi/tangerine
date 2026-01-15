@@ -42,7 +42,9 @@
       "Bash(python:*)",
       "Bash(pkill -f \"generate_gmail_token\" fuser -k 8080/tcp sleep 2 ss -tlnp)",
       "Bash(pkill:*)",
-      "Bash(fuser:*)"
+      "Bash(fuser:*)",
+      "Bash(wc:*)",
+      "Bash(grep:*)"
     ]
   }
 }
