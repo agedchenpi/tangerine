@@ -1,0 +1,65 @@
+# Pre-commit hooks for Tangerine ETL
+# Install: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # Ruff - Fast Python linter and formatter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.0
+    hooks:
+      # Linting with auto-fix
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      # Formatting
+      - id: ruff-format
+
+  # Standard pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      # Whitespace and formatting
+      - id: trailing-whitespace
+        exclude: ^\.claude/
+      - id: end-of-file-fixer
+        exclude: ^\.claude/
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+      # File checks
+      - id: check-yaml
+        exclude: ^docker-compose.*\.yml$
+      - id: check-json
+      - id: check-toml
+      - id: check-added-large-files
+        args: [--maxkb=500]
+
+      # Python-specific
+      - id: check-ast
+      - id: debug-statements
+      - id: check-docstring-first
+
+      # Security
+      - id: detect-private-key
+
+  # SQL formatting (optional - uncomment if needed)
+  # - repo: https://github.com/sqlfluff/sqlfluff
+  #   rev: 3.0.0
+  #   hooks:
+  #     - id: sqlfluff-lint
+  #       args: [--dialect, postgres]
+  #       files: ^schema/
+
+# Configuration
+default_language_version:
+  python: python3.11
+
+# Skip certain files
+exclude: |
+  (?x)^(
+    \.data/|
+    \.venv/|
+    __pycache__/|
+    \.git/|
+    node_modules/|
+    htmlcov/
+  )

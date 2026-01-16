@@ -49,6 +49,17 @@ Follow the conventions in `CODE_STYLE.md` when writing or modifying code. Key ru
 
 **Linting:** Run `ruff check` before committing. Config in `ruff.toml`.
 
+## Slash Commands
+
+Custom commands available in `.claude/commands/`:
+
+| Command | Purpose | Example |
+|---------|---------|---------|
+| `/test` | Run pytest with filters | `/test unit`, `/test services` |
+| `/run-job` | Execute ETL jobs | `/run-job import 1 --dry-run` |
+| `/logs` | View Docker service logs | `/logs admin`, `/logs tangerine` |
+| `/update-codemaps` | Refresh architecture docs | `/update-codemaps` |
+
 ## Project Overview
 
 Tangerine is an AI-integrated ETL pipeline built with Vertical Slice Architecture (VSA). The project uses:
