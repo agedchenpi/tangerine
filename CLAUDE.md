@@ -59,6 +59,86 @@ Custom commands available in `.claude/commands/`:
 | `/run-job` | Execute ETL jobs | `/run-job import 1 --dry-run` |
 | `/logs` | View Docker service logs | `/logs admin`, `/logs tangerine` |
 | `/update-codemaps` | Refresh architecture docs | `/update-codemaps` |
+| `/dev-docs` | Create task documentation | `/dev-docs` (when starting a feature) |
+| `/dev-docs-update` | Update docs before compaction | `/dev-docs-update` |
+| `/doc-feature` | Document a completed feature | `/doc-feature` (after implementation) |
+
+## Feature Documentation
+
+After implementing a feature, document it for future reference:
+
+| File | Purpose |
+|------|---------|
+| `docs/features/{name}.md` | Detailed feature documentation |
+| `docs/features/README.md` | Index of all features |
+| `CHANGELOG.md` | Running log of all changes |
+
+**Workflow:**
+1. Implement the feature
+2. Run `/doc-feature` to create documentation
+3. Add entry to `docs/features/README.md`
+4. Add entry to `CHANGELOG.md` under `[Unreleased]`
+
+The Stop hook will remind you to document after significant changes.
+
+## Skills (Auto-Activated)
+
+Skills in `.claude/skills/` provide domain-specific guidelines. They are **automatically activated** via hooks when relevant keywords or file patterns are detected.
+
+| Skill | Triggers | Purpose |
+|-------|----------|---------|
+| `etl-developer` | etl, import, extract, csv, json | ETL job patterns, extractors, schema management |
+| `service-developer` | service, crud, transaction | Service layer CRUD patterns |
+| `database-operations` | schema, table, sql, migration | **GUARDRAIL** - PostgreSQL patterns, prevents dangerous SQL |
+| `streamlit-admin` | streamlit, page, form, ui | Streamlit UI patterns |
+
+**How it works:**
+1. `UserPromptSubmit` hook analyzes your message for keywords
+2. Matching skills are identified via `.claude/skill-rules.json`
+3. A reminder is injected prompting Claude to load relevant skills
+4. Skills contain patterns, examples, and guardrails to follow
+
+**Loading a skill manually:**
+```
+Read .claude/skills/etl-developer/SKILL.md
+```
+
+## Hooks System
+
+Hooks in `.claude/hooks/` run automatically at key events:
+
+| Hook | Event | Purpose |
+|------|-------|---------|
+| `skill-activator.py` | Before prompt | Injects skill reminders based on keywords |
+| `file-validator.py` | After Edit/Write | Validates Python syntax, checks SQL patterns |
+| `build-checker.py` | After response | Runs linting, suggests `/test` |
+
+**Configuration:** `.claude/settings.json`
+
+The hooks help maintain code quality by:
+- Automatically suggesting relevant skills for the task
+- Catching syntax errors immediately after file edits
+- Warning about dangerous SQL patterns (DELETE without WHERE, etc.)
+- Running linting checks after responses
+
+## Dev Docs System
+
+For large tasks, create structured documentation in `dev/active/` to prevent context loss:
+
+```
+dev/active/{task-name}/
+├── {task-name}-plan.md     # Implementation plan
+├── {task-name}-context.md  # Current state, decisions, next steps
+└── {task-name}-tasks.md    # Task checklist
+```
+
+**Workflow:**
+1. Start task: Run `/dev-docs` to create documentation
+2. During work: Update tasks as you complete them
+3. Before compaction: Run `/dev-docs-update` to save context
+4. Resume: Read the three files to restore context
+
+This system ensures you can resume work after context compaction without losing track of decisions and progress.
 
 ## Project Overview
 

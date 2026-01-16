@@ -1,0 +1,121 @@
+{
+  "etl-developer": {
+    "type": "domain",
+    "priority": "high",
+    "description": "ETL job development patterns",
+    "promptTriggers": {
+      "keywords": [
+        "etl", "import", "extract", "transform", "load",
+        "csv", "excel", "json", "xml", "file processing",
+        "generic_import", "schema manager", "extractor"
+      ],
+      "intentPatterns": [
+        "(create|add|modify|fix).*?(import|etl|job)",
+        "(how to|best practice).*?(import|extract|load|etl)",
+        "(run|execute).*?(import|job)",
+        "file.*?(pattern|matching|discovery)"
+      ]
+    },
+    "fileTriggers": {
+      "pathPatterns": [
+        "etl/**/*.py",
+        "etl/jobs/*.py"
+      ],
+      "contentPatterns": [
+        "generic_import",
+        "SchemaManager",
+        "def extract",
+        "def load_data"
+      ]
+    }
+  },
+  "service-developer": {
+    "type": "domain",
+    "priority": "high",
+    "description": "Service layer CRUD patterns",
+    "promptTriggers": {
+      "keywords": [
+        "service", "crud", "repository", "transaction",
+        "get_all", "get_by_id", "create_", "update_", "delete_"
+      ],
+      "intentPatterns": [
+        "(create|add|modify).*?service",
+        "(how to|best practice).*?(service|crud|repository)",
+        "database.*?(operation|query|transaction)"
+      ]
+    },
+    "fileTriggers": {
+      "pathPatterns": [
+        "admin/services/*.py"
+      ],
+      "contentPatterns": [
+        "db_transaction",
+        "_service.py",
+        "def get_",
+        "def create_",
+        "def update_",
+        "def delete_"
+      ]
+    }
+  },
+  "database-operations": {
+    "type": "guardrail",
+    "priority": "critical",
+    "description": "PostgreSQL schema and SQL patterns - CRITICAL guardrail",
+    "promptTriggers": {
+      "keywords": [
+        "schema", "table", "column", "migration", "sql",
+        "procedure", "trigger", "index", "constraint",
+        "alter table", "create table", "drop"
+      ],
+      "intentPatterns": [
+        "(create|alter|drop|modify).*?(table|column|index|schema)",
+        "(add|remove).*?(column|constraint|foreign key)",
+        "database.*?(design|schema|migration)"
+      ]
+    },
+    "fileTriggers": {
+      "pathPatterns": [
+        "schema/**/*.sql",
+        "schema/dba/**/*"
+      ],
+      "contentPatterns": [
+        "CREATE TABLE",
+        "ALTER TABLE",
+        "DROP TABLE",
+        "INSERT INTO dba\\."
+      ]
+    }
+  },
+  "streamlit-admin": {
+    "type": "domain",
+    "priority": "medium",
+    "description": "Streamlit UI patterns",
+    "promptTriggers": {
+      "keywords": [
+        "streamlit", "admin", "page", "ui", "form",
+        "component", "tab", "expander", "button",
+        "session state", "st.form", "st.tabs"
+      ],
+      "intentPatterns": [
+        "(create|add|modify).*?(page|form|ui|component)",
+        "(how to|best practice).*?streamlit",
+        "admin.*?(interface|page|dashboard)"
+      ]
+    },
+    "fileTriggers": {
+      "pathPatterns": [
+        "admin/pages/*.py",
+        "admin/components/*.py",
+        "admin/app.py"
+      ],
+      "contentPatterns": [
+        "import streamlit",
+        "st\\.form",
+        "st\\.button",
+        "st\\.tabs",
+        "session_state"
+      ]
+    }
+  }
+}

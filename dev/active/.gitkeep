@@ -1,0 +1,8 @@
+# This directory holds active task documentation
+# Created by dev-docs system
+#
+# Structure for each task:
+#   dev/active/{task-name}/
+#   ├── {task-name}-plan.md     # Implementation plan
+#   ├── {task-name}-context.md  # Current state and decisions
+#   └── {task-name}-tasks.md    # Task checklist
