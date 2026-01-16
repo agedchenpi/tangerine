@@ -1,0 +1,112 @@
+# Ruff configuration for Tangerine ETL
+# https://docs.astral.sh/ruff/configuration/
+
+# Target Python 3.11 (as specified in CLAUDE.md)
+target-version = "py311"
+
+# Line length matches CODE_STYLE.md
+line-length = 120
+
+# Exclude generated and third-party code
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "*.egg-info",
+    ".eggs",
+    "build",
+    "dist",
+    "node_modules",
+    ".data",
+]
+
+[lint]
+# Enable these rule categories:
+# E: pycodestyle errors
+# F: Pyflakes (unused imports, undefined names)
+# I: isort (import sorting)
+# N: pep8-naming
+# W: pycodestyle warnings
+# UP: pyupgrade (Python version upgrades)
+# B: flake8-bugbear (common bugs)
+# SIM: flake8-simplify (code simplification)
+# RUF: Ruff-specific rules
+select = [
+    "E",      # pycodestyle errors
+    "F",      # Pyflakes
+    "I",      # isort
+    "N",      # pep8-naming
+    "W",      # pycodestyle warnings
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "SIM",    # flake8-simplify
+    "RUF",    # Ruff-specific
+]
+
+# Ignore specific rules
+ignore = [
+    "E501",   # Line too long (handled by formatter, we use 120)
+    "E731",   # Lambda assignment (sometimes useful)
+    "B008",   # Function call in default argument (needed for FastAPI/Pydantic)
+    "B905",   # zip without strict (Python 3.10+ only)
+    "SIM108", # Ternary operator (not always clearer)
+    "RUF012", # Mutable class attributes (dataclasses need this)
+]
+
+# Allow autofix for all enabled rules
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when prefixed with underscore
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[lint.per-file-ignores]
+# Tests can have unused imports (fixtures) and assertions
+"tests/**/*.py" = [
+    "F401",   # Unused imports (fixtures)
+    "F811",   # Redefinition (fixtures)
+]
+# __init__.py files often have unused imports for re-export
+"__init__.py" = ["F401"]
+# Streamlit pages have specific patterns
+"admin/pages/*.py" = [
+    "E402",   # Module level import not at top (st.set_page_config must be first)
+]
+
+[lint.isort]
+# Match import organization from CODE_STYLE.md
+known-first-party = ["admin", "common", "etl", "pubsub"]
+known-third-party = ["streamlit", "psycopg2", "pydantic", "openpyxl", "pytest"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+# Force single line imports for cleaner diffs
+force-single-line = false
+
+# Combine as imports on same line
+combine-as-imports = true
+
+# Lines between import sections
+lines-after-imports = 2
+lines-between-types = 1
+
+[lint.pep8-naming]
+# Allow these naming patterns that deviate from PEP 8
+# (for compatibility with existing codebase)
+classmethod-decorators = ["classmethod", "pydantic.validator"]
+
+[format]
+# Use double quotes (Python convention)
+quote-style = "double"
+
+# Indent with spaces
+indent-style = "space"
+
+# Respect magic trailing comma
+skip-magic-trailing-comma = false
+
+# Unix line endings
+line-ending = "lf"
+
+# Format docstrings
+docstring-code-format = true
+docstring-code-line-length = 80

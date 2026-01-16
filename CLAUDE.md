@@ -34,6 +34,21 @@ Modular architecture documentation is available in `.claude/codemaps/`. Load the
 
 To load a codemap, read the relevant file from `.claude/codemaps/` before starting work.
 
+## Code Style
+
+Follow the conventions in `CODE_STYLE.md` when writing or modifying code. Key rules:
+
+**SQL Objects:** Use type prefixes (`t` table, `p` procedure, `f` function, `v` view, `idx_` index, `fk_` foreign key)
+
+**Python:**
+- snake_case for functions/variables, PascalCase for classes
+- Type hints on all function signatures
+- Google-style docstrings
+- f-strings for formatting
+- Parameterized queries only (never f-strings with SQL)
+
+**Linting:** Run `ruff check` before committing. Config in `ruff.toml`.
+
 ## Project Overview
 
 Tangerine is an AI-integrated ETL pipeline built with Vertical Slice Architecture (VSA). The project uses:
