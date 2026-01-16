@@ -125,6 +125,8 @@ def main():
         doc_reminders.append("   • Run `/dev-docs-update` if task is done")
 
     # Only output if there are issues or reminders
+    # Note: Stop hooks don't support hookSpecificOutput, so we print to stderr
+    # for informational purposes (visible in debug mode) and optionally set stopReason
     if messages or doc_reminders:
         output_lines = [
             "",
@@ -144,13 +146,8 @@ def main():
         output_lines.append("💡 Run /test to verify changes")
         output_lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
-        output = {
-            "hookSpecificOutput": {
-                "hookEventName": "Stop",
-                "additionalContext": "\n".join(output_lines)
-            }
-        }
-        print(json.dumps(output))
+        # Print to stderr for visibility (doesn't affect JSON validation)
+        print("\n".join(output_lines), file=sys.stderr)
 
     sys.exit(0)
 

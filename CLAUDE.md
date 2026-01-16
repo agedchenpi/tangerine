@@ -19,6 +19,46 @@ If you intend to call multiple tools and there are no dependencies between the t
 **Reduce hallucinations:**
 Never speculate about code you have not opened. If the user references a specific file, you MUST read the file before answering. Make sure to investigate and read relevant files BEFORE answering questions about the codebase. Never make any claims about code before investigating unless you are certain of the correct answer - give grounded and hallucination-free answers.
 
+## R&D Framework
+
+**Reduce and Delegate** - Core principles for efficient, focused agent operation.
+
+### Reduce
+Minimize context to maximize performance:
+- Use `CLAUDE.concise.md` for quick tasks (~350 tokens vs ~3500 in full CLAUDE.md)
+- Use `CLAUDE.large.md` for deep work requiring full architectural context
+- Monitor usage with `/context` command
+- Load codemaps on-demand, not by default
+
+### Delegate
+Use sub-agents for isolated tasks:
+- Sub-agent context stays separate from primary conversation
+- Saves ~3-5k tokens per delegated task
+- Results returned without bloating context
+
+**Sub-agent templates in `.claude/agents/`:**
+| Agent | Purpose | Use For |
+|-------|---------|---------|
+| `doc_scraper.md` | Fetch web docs | Documentation URLs |
+| `code_analyzer.md` | Analyze code patterns | Multi-file analysis |
+| `researcher.md` | Web research | Topic research |
+
+**How to delegate:**
+```
+Use Task tool with subagent_type="Explore" for codebase search
+Use Task tool with subagent_type="general-purpose" for complex tasks
+
+Example prompt: "Read .claude/agents/doc_scraper.md for instructions,
+then fetch and summarize documentation from [URL]"
+```
+
+### Context Files
+| File | Size | When to Use |
+|------|------|-------------|
+| `CLAUDE.concise.md` | ~350 tokens | Quick tasks, context-limited |
+| `CLAUDE.md` | ~3500 tokens | Standard development work |
+| `CLAUDE.large.md` | ~4000 tokens | Complex features, deep work |
+
 ## Codemaps
 
 Modular architecture documentation is available in `.claude/codemaps/`. Load the relevant codemap when working on a specific area:
@@ -55,6 +95,9 @@ Custom commands available in `.claude/commands/`:
 
 | Command | Purpose | Example |
 |---------|---------|---------|
+| `/prime` | Prime codebase understanding | `/prime` (run at session start) |
+| `/prime_cc` | Prime Claude Code configuration | `/prime_cc` (understand hooks/skills) |
+| `/context` | Monitor token usage | `/context` (check context health) |
 | `/test` | Run pytest with filters | `/test unit`, `/test services` |
 | `/run-job` | Execute ETL jobs | `/run-job import 1 --dry-run` |
 | `/logs` | View Docker service logs | `/logs admin`, `/logs tangerine` |

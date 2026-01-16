@@ -81,43 +81,102 @@ Here's the complete workflow from Docker startup to data persisted in the databa
 - **3 Import Strategies**: Control how to handle column mismatches (add/ignore/fail)
 
 ## Project Structure
-The project follows a Vertical Slice Architecture (VSA) for modularity, with shared SQL schemas and utils to support AI agents in ETL workflows. Here's the directory layout:
+
+The project follows a Vertical Slice Architecture (VSA) for modularity, with shared SQL schemas and utils to support AI agents in ETL workflows.
 
 ```
-tangerine/
-├── Dockerfile
-├── docker-compose.yml
-├── schema/                     # Shared SQL definitions
-│   ├── tables/
-│   ├── views/
-│   ├── procedures/
-│   ├── functions/
-│   ├── indexes/
-│   ├── triggers/
-│   ├── sequences/
-│   ├── materialized_views/
-│   ├── types/
-│   └── extensions/
-├── common/                    # Shared utils
-│   ├── db_utils.py
-│   └── shared_queries.sql
-└── run_all.sh                 # Adapted for Docker
+/opt/tangerine/
+├── admin/                          # Streamlit web interface
+│   ├── app.py                      # Landing page
+│   ├── pages/                      # Auto-discovered pages
+│   │   ├── 1_Import_Configs.py     # CRUD for import configs
+│   │   ├── 2_Reference_Data.py     # Manage datasources/types
+│   │   ├── 3_Run_Jobs.py           # Execute imports, view history
+│   │   ├── 4_Monitoring.py         # View logs, datasets, statistics
+│   │   ├── 5_Inbox_Configs.py      # Gmail inbox processing rules
+│   │   ├── 6_Report_Manager.py     # Email report configuration
+│   │   └── 7_Scheduler.py          # Cron job management
+│   ├── components/                 # Reusable UI components
+│   │   ├── forms.py                # Form builders
+│   │   ├── tables.py               # Data display
+│   │   ├── validators.py           # Input validation
+│   │   └── notifications.py        # User messages
+│   ├── services/                   # Business logic
+│   │   ├── import_config_service.py
+│   │   ├── reference_data_service.py
+│   │   ├── job_execution_service.py
+│   │   ├── monitoring_service.py   # Logs, datasets, statistics
+│   │   ├── inbox_config_service.py # Gmail inbox config CRUD
+│   │   ├── report_manager_service.py # Report config CRUD
+│   │   └── scheduler_service.py    # Scheduler CRUD
+│   ├── utils/                      # Helper utilities
+│   │   ├── db_helpers.py
+│   │   ├── formatters.py
+│   │   └── ui_helpers.py           # UI functions (loading, errors, etc.)
+│   └── styles/                     # CSS styling
+│       └── custom.css              # Professional Tangerine theme
+├── common/                         # Shared utilities
+│   ├── db_utils.py                 # Database connection pooling
+│   ├── config.py                   # Configuration management
+│   ├── logging_utils.py            # ETL logging
+│   └── gmail_client.py             # Gmail API wrapper (OAuth2)
+├── etl/                            # ETL jobs and framework
+│   ├── base/
+│   │   └── etl_job.py              # Base ETL job class
+│   ├── jobs/
+│   │   ├── generic_import.py       # Config-driven imports
+│   │   ├── run_gmail_inbox_processor.py  # Download email attachments
+│   │   ├── run_report_generator.py       # Generate & send reports
+│   │   └── generate_crontab.py           # Generate cron from DB
+│   └── regression/
+│       ├── run_regression_tests.py
+│       └── generate_test_files.py
+├── tests/                          # Admin interface test suite
+│   ├── conftest.py                 # Test fixtures and config
+│   ├── pytest.ini                  # Pytest configuration
+│   ├── unit/                       # Unit tests (validators, utils)
+│   ├── integration/                # Integration tests (services)
+│   └── fixtures/                   # Reusable test data
+├── schema/                         # Database definitions
+│   ├── init.sh                     # Initialization script
+│   ├── dba/                        # Pipeline schema
+│   │   ├── schema.sql
+│   │   ├── tables/                 # timportconfig, tdataset, tinboxconfig, etc.
+│   │   ├── procedures/             # pimportconfigi, pimportconfigu, etc.
+│   │   ├── views/
+│   │   └── data/                   # Reference data inserts
+│   └── feeds/                      # Raw data schema
+├── secrets/                        # Gmail OAuth credentials (gitignored)
+│   ├── credentials.json            # OAuth client ID/secret
+│   └── token.json                  # Access/refresh tokens
+├── .data/etl/                      # Volume mount (local)
+│   ├── source/                     # Input files
+│   │   └── inbox/                  # Email attachments landing
+│   ├── archive/                    # Processed files
+│   └── regression/                 # Test data
+├── .claude/                        # Claude Code configuration
+│   ├── commands/                   # Slash commands
+│   ├── hooks/                      # Event hooks (Python)
+│   ├── skills/                     # Domain-specific guidelines
+│   ├── agents/                     # Sub-agent templates
+│   ├── codemaps/                   # Architecture documentation
+│   └── settings.json               # Hook configuration
+├── docker-compose.yml              # Service definitions
+├── Dockerfile                      # ETL container
+├── Dockerfile.streamlit            # Admin container
+└── requirements/
+    ├── base.txt                    # ETL dependencies
+    └── admin.txt                   # Streamlit dependencies
 ```
 
+### Key Directories
 
-After cloning the repo, you'll find:
-- **schema/**: Shared SQL definitions (e.g., tables/, views/, procedures/). Subdirectories may be empty initially; add placeholder files (e.g., README.md or empty.sql) to commit them if needed.
-- **common/**: Shared utilities.
-  - `db_utils.py`: Database connection helper using psycopg2 and environment variables.
-  - `shared_queries.sql`: Placeholder for reusable SQL queries.
-- **Dockerfile**: Builds the Python-based ETL container with dependencies like psycopg2.
-- **docker-compose.yml**: Defines services for PostgreSQL (db) and the ETL app (tangerine), using environment variables for configuration.
-- **run_all.sh**: Bash script to orchestrate Docker (build, start, run ETL processes, stop). Make executable with `chmod +x run_all.sh`.
-- **.gitignore**: Excludes temporary files, Python bytecode, logs, and .env.
-- **README.md**: This file.
-
-Future directories:
-- **features/**: For AI agent slices (e.g., agent1/main.py for specific ETL tasks with AI logic).
+- **admin/**: Streamlit web interface with pages, components, services, and utilities
+- **common/**: Shared utilities for database, logging, and Gmail integration
+- **etl/**: ETL jobs and framework for data imports and processing
+- **tests/**: Pytest test suite for admin interface
+- **schema/**: PostgreSQL schema definitions (dba and feeds schemas)
+- **.claude/**: Claude Code configuration (commands, hooks, skills, agents)
 
 ## Prerequisites
 - **Server**: Ubuntu 24.04 LTS with SSH access enabled.
@@ -996,6 +1055,121 @@ Tangerine includes Gmail integration for automated email processing and report g
 2. Save `credentials.json` to `/opt/tangerine/secrets/`
 3. Run token generation script (requires browser for initial auth)
 4. Token auto-refreshes - one-time setup only
+
+## Key Database Tables
+
+**Configuration & Reference:**
+- `dba.timportconfig` - Import job configurations (config_id, config_name, file_pattern, etc.)
+- `dba.tdatasource` - Data source reference
+- `dba.tdatasettype` - Dataset type reference
+- `dba.timportstrategy` - Import strategies (3 predefined)
+
+**Email Services:**
+- `dba.tinboxconfig` - Gmail inbox processing rules (patterns, target directory, labels)
+- `dba.treportmanager` - Report configurations (recipients, SQL templates, output format)
+- `dba.tscheduler` - Cron job scheduler (job_type, cron fields, config references)
+
+**Pub/Sub System:**
+- `dba.tpubsub_events` - Event queue (event_type, event_source, event_data, status)
+- `dba.tpubsub_subscribers` - Event subscribers (event_type, handler_type, handler_config)
+
+**Tracking & Logging:**
+- `dba.tdataset` - Dataset metadata (datasetid, label, status, dates)
+- `dba.tlogentry` - ETL execution logs (run_uuid, message, stepruntime)
+
+**Data Storage:**
+- `feeds.*` - Target tables for imported data (must have datasetid FK)
+
+## Code Style
+
+Follow these conventions when writing or modifying code:
+
+**SQL Objects:** Use type prefixes (`t` table, `p` procedure, `f` function, `v` view, `idx_` index, `fk_` foreign key)
+
+**Python:**
+- snake_case for functions/variables, PascalCase for classes
+- Type hints on all function signatures
+- Google-style docstrings
+- f-strings for formatting
+- Parameterized queries only (never f-strings with SQL)
+
+**Linting:** Run `ruff check` before committing. Config in `ruff.toml`.
+
+## Common Commands
+
+### Development
+```bash
+# Start all services
+docker compose up --build
+
+# Detached mode
+docker compose up -d
+
+# Rebuild specific service
+docker compose up --build -d admin
+
+# View logs
+docker compose logs -f admin
+docker compose logs -f tangerine
+
+# Reset database (WARNING: deletes all data)
+docker compose down --volumes && docker compose up --build
+```
+
+### Running Jobs
+```bash
+# Execute import job
+docker compose exec tangerine python etl/jobs/generic_import.py --config-id 1
+
+# Dry run mode
+docker compose exec tangerine python etl/jobs/generic_import.py --config-id 1 --dry-run
+
+# With specific date
+docker compose exec tangerine python etl/jobs/generic_import.py --config-id 1 --date 2026-01-15
+
+# Run ETL regression tests
+docker compose exec tangerine python etl/regression/run_regression_tests.py --verbose
+```
+
+### Email Services
+```bash
+# Process Gmail inbox (download attachments)
+docker compose exec tangerine python etl/jobs/run_gmail_inbox_processor.py --config-id 1
+
+# Generate and send report
+docker compose exec tangerine python etl/jobs/run_report_generator.py --report-id 1
+
+# Preview report without sending (dry run)
+docker compose exec tangerine python etl/jobs/run_report_generator.py --report-id 1 --dry-run
+
+# Generate crontab from database
+docker compose exec tangerine python etl/jobs/generate_crontab.py --preview
+docker compose exec tangerine python etl/jobs/generate_crontab.py --apply
+```
+
+### Running Tests
+```bash
+# Run all admin tests
+docker compose exec tangerine pytest tests/ -v
+
+# Run unit tests only (fast, no database)
+docker compose exec tangerine pytest tests/unit/ -v -m unit
+
+# Run integration tests only (requires database)
+docker compose exec tangerine pytest tests/integration/ -v -m integration
+
+# Run specific test file
+docker compose exec tangerine pytest tests/unit/test_validators.py -v
+```
+
+### Database Access
+```bash
+# Connect to database
+docker compose exec db psql -U tangerine_admin -d tangerine_db
+
+# Test connection from ETL container
+docker compose exec tangerine python common/db_utils.py
+```
 
 ## Troubleshooting
 - **Command not found (exit 127)**: Check CMD in Dockerfile points to an existing script.
