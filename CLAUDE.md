@@ -110,16 +110,28 @@ Hooks in `.claude/hooks/` run automatically at key events:
 | Hook | Event | Purpose |
 |------|-------|---------|
 | `skill-activator.py` | Before prompt | Injects skill reminders based on keywords |
+| `dangerous-command-blocker.py` | Before Bash execution | **BLOCKS** dangerous database/Docker commands |
 | `file-validator.py` | After Edit/Write | Validates Python syntax, checks SQL patterns |
+| `spec-generator.py` | After ExitPlanMode | Generates plan specification file |
 | `build-checker.py` | After response | Runs linting, suggests `/test` |
 
 **Configuration:** `.claude/settings.json`
 
-The hooks help maintain code quality by:
+The hooks help maintain code quality and prevent data loss by:
 - Automatically suggesting relevant skills for the task
+- **Blocking dangerous commands before execution** (DROP, DELETE without WHERE, TRUNCATE, docker compose down -v)
 - Catching syntax errors immediately after file edits
-- Warning about dangerous SQL patterns (DELETE without WHERE, etc.)
+- Warning about dangerous SQL patterns in code files
 - Running linting checks after responses
+
+**Dangerous Command Blocker:**
+The PreToolUse hook prevents unrecoverable data loss by blocking:
+- `DROP TABLE/DATABASE/SCHEMA` (without IF EXISTS)
+- `TRUNCATE`, `DELETE FROM` (without WHERE)
+- `UPDATE` (without WHERE)
+- `docker compose down --volumes/-v` (destroys database volumes)
+
+Safe alternatives like `DROP TABLE IF EXISTS` and queries with proper WHERE clauses are allowed.
 
 ## Dev Docs System
 
