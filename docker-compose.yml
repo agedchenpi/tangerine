@@ -53,8 +53,15 @@ services:
     environment:
       DB_URL: ${DB_URL}
       ETL_LOG_LEVEL: ${ETL_LOG_LEVEL:-INFO}
+      ETL_LOG_DIR: /app/logs
+      ETL_ENABLE_DB_LOGGING: "false"
+      ETL_ENABLE_FILE_LOGGING: ${ETL_ENABLE_FILE_LOGGING:-true}
+      GMAIL_CREDENTIALS_PATH: /app/secrets/credentials.json
+      GMAIL_TOKEN_PATH: /app/secrets/token.json
     volumes:
       - ${ETL_DATA_PATH:-./.data/etl}:/app/data
+      - ./secrets:/app/secrets
+      - etl_logs:/app/logs
     networks:
       - tangerine_network
     restart: unless-stopped

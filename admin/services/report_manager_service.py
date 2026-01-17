@@ -297,7 +297,6 @@ def execute_report(
         Exception: For other execution errors
     """
     cmd = [
-        "docker", "compose", "exec", "-T", "tangerine",
         "python", "etl/jobs/run_report_generator.py",
         "--report-id", str(report_id)
     ]
@@ -312,7 +311,8 @@ def execute_report(
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
-            universal_newlines=True
+            universal_newlines=True,
+            cwd="/app"
         )
 
         for line in process.stdout:
