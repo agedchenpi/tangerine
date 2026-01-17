@@ -17,13 +17,6 @@ from services.report_manager_service import (
 from utils.db_helpers import format_sql_error
 from utils.ui_helpers import load_custom_css, add_page_header
 
-# Page config
-st.set_page_config(
-    page_title="Report Manager - Tangerine Admin",
-    page_icon="📊",
-    layout="wide"
-)
-
 load_custom_css()
 add_page_header("Report Manager", "Configure automated email reports", "📊")
 
@@ -273,7 +266,7 @@ with tab2:
             else:
                 new_id = create_report(form_data)
                 show_success(f"Report created successfully! (ID: {new_id})")
-                st.balloons()
+                st.toast("Report created!", icon="✅")
         except Exception as e:
             show_error(f"Failed to create report: {format_sql_error(e)}")
 

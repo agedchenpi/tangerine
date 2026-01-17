@@ -267,7 +267,7 @@ def render_success_banner(message: str, duration: int = 3):
 
     with placeholder.container():
         st.success(message)
-        st.balloons()
+        st.toast(message, icon="✅")
 
     time.sleep(duration)
     placeholder.empty()

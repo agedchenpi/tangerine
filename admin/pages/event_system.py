@@ -18,13 +18,6 @@ from services.pubsub_service import (
 from utils.db_helpers import format_sql_error
 from utils.ui_helpers import load_custom_css, add_page_header
 
-# Page config
-st.set_page_config(
-    page_title="Event System - Tangerine Admin",
-    page_icon="🔔",
-    layout="wide"
-)
-
 load_custom_css()
 add_page_header("Event System", "Manage pub-sub events and subscribers", "🔔")
 

@@ -15,13 +15,6 @@ from utils.db_helpers import format_sql_error
 from utils.formatters import format_timestamp, format_duration
 from utils.ui_helpers import load_custom_css, add_page_header, render_empty_state
 
-# Page configuration
-st.set_page_config(
-    page_title="Run Jobs - Tangerine Admin",
-    page_icon="▶️",
-    layout="wide"
-)
-
 # Load custom CSS
 load_custom_css()
 
@@ -153,7 +146,7 @@ with tab1:
                     # Job completed
                     if any("✅" in line for line in output_lines[-5:]):
                         show_success("✅ Import job completed successfully!")
-                        st.balloons()
+                        st.toast("Job completed!", icon="✅")
                     elif any("❌" in line for line in output_lines[-5:]):
                         show_error("❌ Import job failed. Check the output above for details.")
                     else:

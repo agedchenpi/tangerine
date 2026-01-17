@@ -17,13 +17,6 @@ from services.scheduler_service import (
 from utils.db_helpers import format_sql_error
 from utils.ui_helpers import load_custom_css, add_page_header
 
-# Page config
-st.set_page_config(
-    page_title="Scheduler - Tangerine Admin",
-    page_icon="⏰",
-    layout="wide"
-)
-
 load_custom_css()
 add_page_header("Job Scheduler", "Manage automated job schedules", "⏰")
 
@@ -288,7 +281,7 @@ with tab2:
                 new_id = create_schedule(form_data)
                 show_success(f"Schedule created successfully! (ID: {new_id})")
                 st.info("Remember to regenerate the crontab in the 'Crontab' tab to apply changes.")
-                st.balloons()
+                st.toast("Schedule created!", icon="✅")
         except Exception as e:
             show_error(f"Failed to create schedule: {format_sql_error(e)}")
 

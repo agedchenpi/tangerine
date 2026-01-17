@@ -13,18 +13,11 @@ from services.inbox_config_service import (
     list_inbox_configs, get_inbox_config, create_inbox_config,
     update_inbox_config, delete_inbox_config, toggle_active,
     get_inbox_stats, config_name_exists, get_import_configs,
-    test_subject_pattern, test_sender_pattern, test_attachment_pattern,
+    validate_subject_pattern, validate_sender_pattern, validate_attachment_pattern,
     get_pattern_test_summary
 )
 from utils.db_helpers import format_sql_error
 from utils.ui_helpers import load_custom_css, add_page_header
-
-# Page config
-st.set_page_config(
-    page_title="Inbox Configs - Tangerine Admin",
-    page_icon="📧",
-    layout="wide"
-)
 
 load_custom_css()
 add_page_header("Inbox Configuration", "Manage Gmail inbox processing rules", "📧")
@@ -263,7 +256,7 @@ with tab2:
             else:
                 new_id = create_inbox_config(form_data)
                 show_success(f"Inbox configuration created successfully! (ID: {new_id})")
-                st.balloons()
+                st.toast("Inbox config created!", icon="✅")
         except Exception as e:
             show_error(f"Failed to create configuration: {format_sql_error(e)}")
 
@@ -429,7 +422,7 @@ with tab5:
                 value=test_subject if pattern_source == "From Existing Config" else '',
                 placeholder="e.g., .*Daily Report.*",
                 help="Regex pattern to match email subjects",
-                key="test_subject_pattern"
+                key="validate_subject_pattern"
             )
 
             sample_subjects = st.text_area(
@@ -446,7 +439,7 @@ with tab5:
             if test_subject_btn and subject_pattern:
                 subjects = [s.strip() for s in sample_subjects.strip().split('\n') if s.strip()]
                 if subjects:
-                    results = test_subject_pattern(subject_pattern, subjects)
+                    results = validate_subject_pattern(subject_pattern, subjects)
                     summary = get_pattern_test_summary(results)
 
                     if summary['has_error']:
@@ -476,7 +469,7 @@ with tab5:
                 value=test_sender if pattern_source == "From Existing Config" else '',
                 placeholder="e.g., .*@company\\.com",
                 help="Regex pattern to match sender email addresses",
-                key="test_sender_pattern"
+                key="validate_sender_pattern"
             )
 
             sample_senders = st.text_area(
@@ -493,7 +486,7 @@ with tab5:
             if test_sender_btn and sender_pattern:
                 senders = [s.strip() for s in sample_senders.strip().split('\n') if s.strip()]
                 if senders:
-                    results = test_sender_pattern(sender_pattern, senders)
+                    results = validate_sender_pattern(sender_pattern, senders)
                     summary = get_pattern_test_summary(results)
 
                     if summary['has_error']:
@@ -523,7 +516,7 @@ with tab5:
                 value=test_attachment if pattern_source == "From Existing Config" else '',
                 placeholder="e.g., *.csv or report_*.xlsx",
                 help="Glob pattern to match attachment filenames",
-                key="test_attachment_pattern"
+                key="validate_attachment_pattern"
             )
 
             sample_attachments = st.text_area(
@@ -540,7 +533,7 @@ with tab5:
             if test_attach_btn and attachment_pattern:
                 filenames = [f.strip() for f in sample_attachments.strip().split('\n') if f.strip()]
                 if filenames:
-                    results = test_attachment_pattern(attachment_pattern, filenames)
+                    results = validate_attachment_pattern(attachment_pattern, filenames)
                     summary = get_pattern_test_summary(results)
 
                     if summary['has_error']:

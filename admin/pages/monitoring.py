@@ -20,13 +20,6 @@ from utils.db_helpers import format_sql_error
 from utils.formatters import format_datetime, format_duration, format_boolean
 from utils.ui_helpers import load_custom_css, add_page_header, render_empty_state, with_loading
 
-# Page configuration
-st.set_page_config(
-    page_title="Monitoring - Tangerine Admin",
-    page_icon="📊",
-    layout="wide"
-)
-
 # Load custom CSS
 load_custom_css()
 

@@ -23,13 +23,6 @@ from services.reference_data_service import (
 from utils.db_helpers import format_sql_error
 from utils.formatters import format_timestamp
 
-# Page configuration
-st.set_page_config(
-    page_title="Reference Data - Tangerine Admin",
-    page_icon="📚",
-    layout="wide"
-)
-
 st.title("📚 Reference Data Management")
 st.markdown("Manage data sources, dataset types, and view import strategies.")
 
@@ -111,7 +104,7 @@ with tab1:
                         form_data.get('description')
                     )
                     show_success(f"✅ Data source '{form_data['sourcename']}' created successfully! (ID: {new_id})")
-                    st.balloons()
+                    st.toast("Data source created!", icon="✅")
                     st.rerun()
 
             except Exception as e:
@@ -299,7 +292,7 @@ with tab2:
                         form_data.get('description')
                     )
                     show_success(f"✅ Dataset type '{form_data['typename']}' created successfully! (ID: {new_id})")
-                    st.balloons()
+                    st.toast("Dataset type created!", icon="✅")
                     st.rerun()
 
             except Exception as e:

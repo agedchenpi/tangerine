@@ -17,13 +17,6 @@ from utils.db_helpers import format_sql_error
 from utils.formatters import format_timestamp, format_boolean, truncate_text
 
 
-# Page configuration
-st.set_page_config(
-    page_title="Import Configs - Tangerine Admin",
-    page_icon="📋",
-    layout="wide"
-)
-
 st.title("📋 Import Configuration Management")
 st.markdown("Create, view, edit, and delete import configurations for the ETL pipeline.")
 
@@ -159,7 +152,7 @@ with tab2:
         try:
             new_id = create_config(form_data)
             show_success(f"✅ Configuration '{form_data['config_name']}' created successfully! (ID: {new_id})")
-            st.balloons()
+            st.toast("Configuration created!", icon="✅")
 
             # Provide next steps
             st.info(f"""
@@ -180,7 +173,7 @@ with tab3:
     # Show success message if exists in session state
     if 'update_success_message' in st.session_state:
         show_success(st.session_state.update_success_message)
-        st.balloons()
+        st.toast("Configuration updated!", icon="✅")
         del st.session_state.update_success_message
 
     # Select configuration to edit
