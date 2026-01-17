@@ -460,12 +460,47 @@ docker compose down
 
 **✅ Phase 8: Testing Infrastructure (Complete)**
 - **ETL Tests**: 17 regression tests for ETL pipeline (100% pass rate)
-- **Admin Tests**: 137 pytest-based tests for admin interface
-  - 57 unit tests for validators (100% pass rate)
-  - 80 integration tests for services (CRUD, filtering, monitoring)
+- **Admin Tests**: 310 pytest-based tests for admin interface (100% pass rate)
+  - Unit tests for validators and pattern matching
+  - Integration tests for all services (import config, reference data, monitoring, inbox config, scheduler, report manager, pubsub)
   - Transaction-based test isolation with automatic rollback
-  - Comprehensive fixtures for datasources, dataset types, and configs
+  - Comprehensive fixtures for test data
 - **Test Execution**: `pytest tests/ -v` or `pytest tests/unit/ -m unit`
+
+**✅ Phase 9: Pub/Sub Event System (Complete - January 2026)**
+- **Database Schema**
+  - `dba.tpubsub_events` - Event queue table
+  - `dba.tpubsub_subscribers` - Subscriber configuration table
+  - `ppubsub_iu` - Stored procedure for upserts
+- **Python Daemon** (`pubsub/listener.py`)
+  - File watcher for event triggers
+  - Database poller for queued events
+  - Subscriber notification system
+- **Admin UI** (`8_Event_System.py`)
+  - Event Queue tab - View pending/processed events
+  - Subscribers tab - CRUD for event subscribers
+  - Event Log tab - Historical event tracking
+  - Service Status tab - Monitor pubsub daemon
+- **Service Layer** (`pubsub_service.py`)
+  - Full CRUD for events and subscribers
+  - Event filtering by type, source, status
+- **ETL Integration**
+  - `generic_import.py` emits `import_complete` event
+  - `run_report_generator.py` emits `report_sent` event
+  - `run_gmail_inbox_processor.py` emits `email_received` event
+- **Docker Integration**: `Dockerfile.pubsub` and docker-compose.yml updated
+
+### What's Planned
+
+**Future Enhancements:**
+- **Authentication/authorization**: Session-based auth or OAuth
+- **Data quality checks**: Automated validation rules and anomaly detection
+- **AI agent integration**: LLM-powered data analysis and recommendations
+- **Performance dashboard**: Real-time metrics and health monitoring
+- **Audit logging**: Track all admin actions and changes
+- **Bulk operations**: Import/export multiple configs at once
+- **Configuration templates**: Reusable config templates for common patterns
+- **Data lineage**: Visual graph of data flow and dependencies
 
 ### Architecture Overview
 
@@ -1179,4 +1214,13 @@ docker compose exec tangerine python common/db_utils.py
 - **Obsolete warnings in Compose**: Ensure 'version' is removed from yml.
 - **No schema subdirs in Git**: Add placeholders and commit.
 - **Gmail authentication errors**: Ensure `token.json` exists in secrets folder and hasn't expired.
+
+## Important Notes
+
+- **Never commit `.env` files** - contains secrets
+- **Always use parameterized queries** - prevents SQL injection
+- **Connection pooling** - max 10 connections, reuse via `db_transaction()`
+- **All SQL is idempotent** - safe to re-run initialization
+- **Volume mounts are bidirectional** - files sync both ways
+- **Admin service auto-reloads** - edit files and refresh browser in dev mode
 

@@ -32,7 +32,7 @@ Slim context file for Claude Code. Use for quick tasks or context-limited sessio
 
 ## When to Load More Context
 
-Load full `CLAUDE.md` when:
+Load full `README.md` when:
 - Starting a complex feature
 - Need detailed patterns (services, ETL, database)
 - Working across multiple system areas
