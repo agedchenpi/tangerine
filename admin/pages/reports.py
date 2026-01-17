@@ -488,7 +488,13 @@ with tab5:
                             for line in execute_report(selected_id, dry_run=False):
                                 output_lines.append(line)
                                 display_lines = output_lines[-50:]
-                                output_container.code("\n".join(display_lines), language="text")
+                                output_container.text_area(
+                                    "Output",
+                                    value="\n".join(display_lines),
+                                    height=300,
+                                    disabled=True,
+                                    label_visibility="collapsed"
+                                )
 
                             # Check result
                             if any("✅" in line for line in output_lines[-5:]):
@@ -505,7 +511,13 @@ with tab5:
                     # Show full output in expander if truncated
                     if len(output_lines) > 50:
                         with st.expander("📄 View Full Output", expanded=False):
-                            st.code("\n".join(output_lines), language="text")
+                            st.text_area(
+                                "Full Output",
+                                value="\n".join(output_lines),
+                                height=400,
+                                disabled=True,
+                                label_visibility="collapsed"
+                            )
         else:
             show_info("No active reports to run. Create and activate a report first.")
     except Exception as e:
@@ -535,11 +547,23 @@ with tab6:
 
                     if result['success']:
                         show_success("Report generated successfully (not sent)")
-                        st.code(result['output'], language='text')
+                        st.text_area(
+                            "Test Output",
+                            value=result['output'],
+                            height=300,
+                            disabled=True,
+                            label_visibility="collapsed"
+                        )
                     else:
                         show_error(f"Report generation failed: {result['error']}")
                         if result['output']:
-                            st.code(result['output'], language='text')
+                            st.text_area(
+                                "Error Output",
+                                value=result['output'],
+                                height=300,
+                                disabled=True,
+                                label_visibility="collapsed"
+                            )
         else:
             show_info("No active reports to test.")
     except Exception as e:
