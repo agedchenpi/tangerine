@@ -12,7 +12,11 @@ from components.validators import (
 from services.report_manager_service import (
     list_reports, get_report, create_report, update_report,
     delete_report, toggle_active, get_report_stats, report_name_exists,
-    get_schedules, get_output_formats, test_report_preview
+    get_schedules, get_output_formats, test_report_preview, execute_report
+)
+from services.scheduler_service import (
+    create_schedule_for_report, get_schedule, build_cron_expression,
+    calculate_next_run, job_name_exists as schedule_name_exists
 )
 from utils.db_helpers import format_sql_error
 from utils.ui_helpers import load_custom_css, add_page_header
@@ -209,11 +213,12 @@ def render_report_form(
 
 
 # Main tabs
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📋 View All",
     "➕ Create New",
     "✏️ Edit",
     "🗑️ Delete",
+    "▶️ Run Report",
     "🧪 Test Report"
 ])
 
@@ -322,6 +327,64 @@ with tab3:
                         st.rerun()
                     except Exception as e:
                         show_error(f"Failed to update: {format_sql_error(e)}")
+
+                # Quick Schedule Creator
+                st.divider()
+
+                # Show current schedule status
+                if report.get('schedule_id'):
+                    schedule = get_schedule(report['schedule_id'])
+                    if schedule:
+                        cron_expr = build_cron_expression(schedule)
+                        next_run = calculate_next_run(cron_expr)
+                        st.success(f"📅 Scheduled: **{schedule['job_name']}** ({cron_expr})")
+                        if next_run:
+                            st.info(f"Next run: {next_run.strftime('%Y-%m-%d %H:%M:%S')}")
+
+                with st.expander("⏰ Create New Schedule for This Report"):
+                    st.markdown("Quickly create a schedule without leaving this page.")
+
+                    with st.form("quick_schedule_form"):
+                        default_name = f"{report['report_name']}_schedule"
+                        quick_job_name = st.text_input(
+                            "Schedule Name *",
+                            value=default_name,
+                            help="Unique name for this schedule"
+                        )
+
+                        st.markdown("**Cron Schedule**")
+                        cron_col1, cron_col2, cron_col3, cron_col4, cron_col5 = st.columns(5)
+                        with cron_col1:
+                            q_minute = st.text_input("Minute", value="0", key="q_minute")
+                        with cron_col2:
+                            q_hour = st.text_input("Hour", value="8", key="q_hour")
+                        with cron_col3:
+                            q_day = st.text_input("Day", value="*", key="q_day")
+                        with cron_col4:
+                            q_month = st.text_input("Month", value="*", key="q_month")
+                        with cron_col5:
+                            q_weekday = st.text_input("Weekday", value="1-5", key="q_weekday")
+
+                        st.caption("Common: `0 8 * * 1-5` = Weekdays at 8 AM, `0 8 * * *` = Daily at 8 AM")
+
+                        if st.form_submit_button("📅 Create Schedule & Link", use_container_width=True):
+                            try:
+                                if schedule_name_exists(quick_job_name):
+                                    show_error(f"Schedule name '{quick_job_name}' already exists")
+                                else:
+                                    new_schedule_id = create_schedule_for_report(
+                                        report_id=selected_id,
+                                        job_name=quick_job_name,
+                                        cron_minute=q_minute,
+                                        cron_hour=q_hour,
+                                        cron_day=q_day,
+                                        cron_month=q_month,
+                                        cron_weekday=q_weekday
+                                    )
+                                    st.session_state.report_update_success = f"Schedule created and linked! (ID: {new_schedule_id}) Crontab regenerated."
+                                    st.rerun()
+                            except Exception as e:
+                                show_error(f"Failed to create schedule: {format_sql_error(e)}")
         else:
             show_info("No reports to edit. Create one first.")
     except Exception as e:
@@ -373,9 +436,85 @@ with tab4:
         show_error(f"Failed to load reports: {format_sql_error(e)}")
 
 # ============================================================================
-# TAB 5: TEST REPORT
+# TAB 5: RUN REPORT
 # ============================================================================
 with tab5:
+    st.subheader("Run Report Now")
+    st.markdown("Execute a report immediately and send the email to recipients.")
+
+    try:
+        reports = list_reports(active_only=True)
+        if reports:
+            report_options = {f"{r['report_id']}: {r['report_name']}": r['report_id'] for r in reports}
+            selected = st.selectbox(
+                "Select Report to Run",
+                options=list(report_options.keys()),
+                key="run_select"
+            )
+            selected_id = report_options[selected]
+
+            # Show report details
+            report = get_report(selected_id)
+            if report:
+                with st.expander("📋 Report Details", expanded=False):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.metric("Recipients", report['recipients'][:50] + "..." if len(report['recipients']) > 50 else report['recipients'])
+                        st.metric("Output Format", report['output_format'])
+                    with col2:
+                        last_run = report.get('last_run_at')
+                        st.metric("Last Run", last_run.strftime('%Y-%m-%d %H:%M') if last_run else 'Never')
+                        st.metric("Last Status", report.get('last_run_status') or '-')
+
+            st.divider()
+
+            # Confirmation checkbox
+            confirm = st.checkbox(
+                "I confirm I want to send this report NOW to the recipients",
+                key="run_confirm"
+            )
+
+            if confirm:
+                if st.button("📧 Send Report Now", type="primary", use_container_width=True):
+                    st.markdown("---")
+                    st.markdown("#### 📊 Report Execution Output")
+
+                    # Create output container
+                    output_container = st.empty()
+                    output_lines = []
+
+                    with st.spinner("Sending report..."):
+                        try:
+                            for line in execute_report(selected_id, dry_run=False):
+                                output_lines.append(line)
+                                display_lines = output_lines[-50:]
+                                output_container.code("\n".join(display_lines), language="text")
+
+                            # Check result
+                            if any("✅" in line for line in output_lines[-5:]):
+                                show_success("Report sent successfully!")
+                                st.toast("Report sent!", icon="📧")
+                            elif any("❌" in line for line in output_lines[-5:]):
+                                show_error("Report failed. Check the output above for details.")
+                            else:
+                                show_info("Report execution finished. Review output above.")
+
+                        except Exception as e:
+                            show_error(f"Error executing report: {format_sql_error(e)}")
+
+                    # Show full output in expander if truncated
+                    if len(output_lines) > 50:
+                        with st.expander("📄 View Full Output", expanded=False):
+                            st.code("\n".join(output_lines), language="text")
+        else:
+            show_info("No active reports to run. Create and activate a report first.")
+    except Exception as e:
+        show_error(f"Failed to load reports: {format_sql_error(e)}")
+
+# ============================================================================
+# TAB 6: TEST REPORT
+# ============================================================================
+with tab6:
     st.subheader("Test Report (Dry Run)")
     st.markdown("Preview report output without sending emails.")
 

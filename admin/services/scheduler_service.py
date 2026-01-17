@@ -411,3 +411,62 @@ def get_config_options(job_type: str) -> List[Dict[str, Any]]:
         return []
 
     return fetch_dict(query) or []
+
+
+def create_schedule_for_report(
+    report_id: int,
+    job_name: str,
+    cron_minute: str = '0',
+    cron_hour: str = '8',
+    cron_day: str = '*',
+    cron_month: str = '*',
+    cron_weekday: str = '1-5'
+) -> int:
+    """
+    Create a schedule specifically for a report, link them, and regenerate crontab.
+
+    Args:
+        report_id: ID of the report to schedule
+        job_name: Unique name for the schedule
+        cron_minute: Cron minute field (default: 0)
+        cron_hour: Cron hour field (default: 8)
+        cron_day: Cron day field (default: *)
+        cron_month: Cron month field (default: *)
+        cron_weekday: Cron weekday field (default: 1-5, weekdays)
+
+    Returns:
+        New scheduler_id
+
+    Raises:
+        Exception: If job_name already exists or database error
+    """
+    # Check for duplicate job name
+    if job_name_exists(job_name):
+        raise Exception(f"Schedule name '{job_name}' already exists")
+
+    # Create the schedule
+    schedule_data = {
+        'job_name': job_name,
+        'job_type': 'report',
+        'cron_minute': cron_minute,
+        'cron_hour': cron_hour,
+        'cron_day': cron_day,
+        'cron_month': cron_month,
+        'cron_weekday': cron_weekday,
+        'config_id': report_id,
+        'is_active': True
+    }
+
+    scheduler_id = create_schedule(schedule_data)
+
+    # Link the report to the schedule
+    with db_transaction() as cursor:
+        cursor.execute(
+            "UPDATE dba.treportmanager SET schedule_id = %s, last_modified_at = %s WHERE report_id = %s",
+            (scheduler_id, datetime.now(), report_id)
+        )
+
+    # Regenerate crontab to apply changes
+    regenerate_crontab()
+
+    return scheduler_id

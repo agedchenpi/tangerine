@@ -1,6 +1,7 @@
 """Business logic for report manager"""
 
-from typing import List, Dict, Any, Optional
+import subprocess
+from typing import List, Dict, Any, Optional, Generator
 from datetime import datetime
 from common.db_utils import fetch_dict, db_transaction
 
@@ -275,6 +276,64 @@ def get_output_formats() -> List[Dict[str, str]]:
     ]
 
 
+def execute_report(
+    report_id: int,
+    dry_run: bool = False,
+    timeout: int = 120
+) -> Generator[str, None, None]:
+    """
+    Execute a report and stream output in real-time.
+
+    Args:
+        report_id: Report ID to run
+        dry_run: If True, generates report but doesn't send email
+        timeout: Maximum execution time in seconds
+
+    Yields:
+        Output lines from report execution
+
+    Raises:
+        subprocess.TimeoutExpired: If job exceeds timeout
+        Exception: For other execution errors
+    """
+    cmd = [
+        "docker", "compose", "exec", "-T", "tangerine",
+        "python", "etl/jobs/run_report_generator.py",
+        "--report-id", str(report_id)
+    ]
+
+    if dry_run:
+        cmd.append("--dry-run")
+
+    try:
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            universal_newlines=True
+        )
+
+        for line in process.stdout:
+            yield line.rstrip('\n')
+
+        process.wait(timeout=timeout)
+
+        if process.returncode != 0:
+            yield f"\n❌ Report failed with exit code {process.returncode}"
+        else:
+            yield f"\n✅ Report completed successfully"
+
+    except subprocess.TimeoutExpired:
+        process.kill()
+        yield f"\n⏱️ Report execution exceeded timeout of {timeout} seconds"
+        raise
+    except Exception as e:
+        yield f"\n❌ Error executing report: {str(e)}"
+        raise
+
+
 def test_report_preview(report_id: int) -> Dict[str, Any]:
     """
     Generate a preview of the report without sending.
@@ -283,33 +342,22 @@ def test_report_preview(report_id: int) -> Dict[str, Any]:
         report_id: Report ID to preview
 
     Returns:
-        Dictionary with preview HTML and metadata
+        Dictionary with success status, output, and error
     """
-    import subprocess
-
+    output_lines = []
     try:
-        result = subprocess.run(
-            ['python', 'etl/jobs/run_report_generator.py', '--report-id', str(report_id), '--dry-run'],
-            capture_output=True,
-            text=True,
-            cwd='/app',
-            timeout=60
-        )
+        for line in execute_report(report_id, dry_run=True, timeout=60):
+            output_lines.append(line)
 
+        success = any("✅" in line or "SUCCESS" in line.upper() for line in output_lines[-5:])
         return {
-            'success': result.returncode == 0,
-            'output': result.stdout,
-            'error': result.stderr if result.returncode != 0 else None
-        }
-    except subprocess.TimeoutExpired:
-        return {
-            'success': False,
-            'output': None,
-            'error': 'Report generation timed out after 60 seconds'
+            'success': success,
+            'output': '\n'.join(output_lines),
+            'error': None if success else 'Report generation failed'
         }
     except Exception as e:
         return {
             'success': False,
-            'output': None,
+            'output': '\n'.join(output_lines),
             'error': str(e)
         }

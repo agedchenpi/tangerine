@@ -18,7 +18,12 @@ from admin.services.scheduler_service import (
     get_job_types,
     get_config_options,
     build_cron_expression,
-    calculate_next_run
+    calculate_next_run,
+    create_schedule_for_report
+)
+from admin.services.report_manager_service import (
+    create_report,
+    get_report
 )
 
 
@@ -412,3 +417,128 @@ class TestSchedulerEdgeCases:
         assert retrieved['cron_day'] == '*'
         assert retrieved['cron_month'] == '*'
         assert retrieved['cron_weekday'] == '*'
+
+
+# ============================================================================
+# CREATE SCHEDULE FOR REPORT TESTS
+# ============================================================================
+
+@pytest.fixture
+def sample_report_for_schedule(db_transaction):
+    """Create a sample report for schedule linking tests"""
+    report_data = {
+        'report_name': f'AdminTest_ScheduleReport_{uuid.uuid4().hex[:8]}',
+        'description': 'Test report for schedule linking',
+        'recipients': 'test@example.com',
+        'subject_line': 'Test Report',
+        'body_template': '{{SQL:SELECT 1 as value}}',
+        'output_format': 'html',
+        'is_active': True
+    }
+    report_id = create_report(report_data)
+    return get_report(report_id)
+
+
+@pytest.mark.integration
+class TestCreateScheduleForReport:
+    """Test create_schedule_for_report function"""
+
+    def test_create_schedule_for_report_success(self, db_transaction, sample_report_for_schedule):
+        """create_schedule_for_report creates and links schedule"""
+        report = sample_report_for_schedule
+        job_name = f'AdminTest_ReportSchedule_{uuid.uuid4().hex[:8]}'
+
+        scheduler_id = create_schedule_for_report(
+            report_id=report['report_id'],
+            job_name=job_name,
+            cron_minute='30',
+            cron_hour='9',
+            cron_day='*',
+            cron_month='*',
+            cron_weekday='1-5'
+        )
+
+        # Verify schedule was created
+        assert isinstance(scheduler_id, int)
+        assert scheduler_id > 0
+
+        # Verify schedule has correct values
+        schedule = get_schedule(scheduler_id)
+        assert schedule['job_name'] == job_name
+        assert schedule['job_type'] == 'report'
+        assert schedule['config_id'] == report['report_id']
+        assert schedule['cron_minute'] == '30'
+        assert schedule['cron_hour'] == '9'
+        assert schedule['cron_weekday'] == '1-5'
+        assert schedule['is_active'] is True
+
+        # Verify report is linked to schedule
+        updated_report = get_report(report['report_id'])
+        assert updated_report['schedule_id'] == scheduler_id
+
+    def test_create_schedule_for_report_default_cron(self, db_transaction, sample_report_for_schedule):
+        """create_schedule_for_report uses default cron values"""
+        report = sample_report_for_schedule
+        job_name = f'AdminTest_DefaultCron_{uuid.uuid4().hex[:8]}'
+
+        scheduler_id = create_schedule_for_report(
+            report_id=report['report_id'],
+            job_name=job_name
+        )
+
+        schedule = get_schedule(scheduler_id)
+        # Check default values
+        assert schedule['cron_minute'] == '0'
+        assert schedule['cron_hour'] == '8'
+        assert schedule['cron_day'] == '*'
+        assert schedule['cron_month'] == '*'
+        assert schedule['cron_weekday'] == '1-5'
+
+    def test_create_schedule_for_report_duplicate_name_fails(self, db_transaction, sample_report_for_schedule):
+        """create_schedule_for_report fails on duplicate job name"""
+        report = sample_report_for_schedule
+        job_name = f'AdminTest_DuplicateName_{uuid.uuid4().hex[:8]}'
+
+        # Create first schedule
+        create_schedule_for_report(
+            report_id=report['report_id'],
+            job_name=job_name
+        )
+
+        # Create another report for second schedule attempt
+        report2_data = {
+            'report_name': f'AdminTest_Report2_{uuid.uuid4().hex[:8]}',
+            'recipients': 'test2@example.com',
+            'subject_line': 'Test Report 2',
+            'body_template': '{{SQL:SELECT 2}}',
+            'output_format': 'html',
+            'is_active': True
+        }
+        report2_id = create_report(report2_data)
+
+        # Attempt to create schedule with same name should fail
+        with pytest.raises(Exception) as exc_info:
+            create_schedule_for_report(
+                report_id=report2_id,
+                job_name=job_name
+            )
+        assert 'already exists' in str(exc_info.value).lower()
+
+    def test_create_schedule_for_report_cron_expression(self, db_transaction, sample_report_for_schedule):
+        """create_schedule_for_report creates valid cron expression"""
+        report = sample_report_for_schedule
+        job_name = f'AdminTest_CronExpr_{uuid.uuid4().hex[:8]}'
+
+        scheduler_id = create_schedule_for_report(
+            report_id=report['report_id'],
+            job_name=job_name,
+            cron_minute='15',
+            cron_hour='*/2',
+            cron_day='1,15',
+            cron_month='*',
+            cron_weekday='*'
+        )
+
+        schedule = get_schedule(scheduler_id)
+        cron = build_cron_expression(schedule)
+        assert cron == '15 */2 1,15 * *'
