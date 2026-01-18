@@ -19,6 +19,51 @@ from services.inbox_config_service import (
 from utils.db_helpers import format_sql_error
 from utils.ui_helpers import load_custom_css, add_page_header
 
+# Pattern hint constants for user guidance
+SUBJECT_PATTERN_HINTS = """
+| Pattern | What it matches |
+|---------|----------------|
+| `.*Report.*` | Any subject containing "Report" |
+| `^Invoice` | Subjects starting with "Invoice" |
+| `.*\\d{4}-\\d{2}-\\d{2}.*` | Subjects with dates like 2026-01-15 |
+| *(leave blank)* | Match all subjects |
+"""
+
+SENDER_PATTERN_HINTS = """
+| Pattern | What it matches |
+|---------|----------------|
+| `.*@company\\.com$` | Any email from @company.com |
+| `^reports@company\\.com$` | Exact address match |
+| `^(reports|alerts)@.*` | From reports@ or alerts@ |
+| *(leave blank)* | Match all senders |
+"""
+
+ATTACHMENT_PATTERN_HINTS = """
+| Pattern | What it matches |
+|---------|----------------|
+| `*.csv` | Any CSV file |
+| `*.xlsx` | Any Excel file |
+| `report_*.csv` | CSV files starting with "report_" |
+| `*.{csv,xlsx}` | CSV or Excel files |
+"""
+
+QUICK_START_SCENARIOS = """
+**Daily report from finance:**
+- Subject: `.*Daily Report.*`
+- Sender: `.*@finance\\.yourcompany\\.com$`
+- Attachment: `*.csv`
+
+**Monthly invoices (any sender):**
+- Subject: `^Invoice`
+- Sender: *(leave blank)*
+- Attachment: `*.pdf`
+
+**All attachments from specific sender:**
+- Subject: *(leave blank)*
+- Sender: `^reports@vendor\\.com$`
+- Attachment: `*.*`
+"""
+
 load_custom_css()
 add_page_header("Inbox Configuration", "Manage Gmail inbox processing rules", "📧")
 
@@ -58,13 +103,17 @@ def render_inbox_config_form(
             subject_pattern = st.text_input(
                 "Subject Pattern (Regex)",
                 value=config_data.get('subject_pattern', '') if config_data else '',
-                help="Regex to match email subjects (e.g., 'Daily Report.*')"
+                help="Leave blank to match all. See examples below."
             )
+            with st.expander("Common examples", expanded=False):
+                st.markdown(SUBJECT_PATTERN_HINTS)
             attachment_pattern = st.text_input(
                 "Attachment Pattern *",
                 value=config_data.get('attachment_pattern', '*.csv') if config_data else '*.csv',
-                help="Glob pattern for attachments (e.g., *.csv, report_*.xlsx)"
+                help="Use * as wildcard. Example: *.csv for all CSV files"
             )
+            with st.expander("Common examples", expanded=False):
+                st.markdown(ATTACHMENT_PATTERN_HINTS)
 
         with col2:
             description = st.text_area(
@@ -76,8 +125,10 @@ def render_inbox_config_form(
             sender_pattern = st.text_input(
                 "Sender Pattern (Regex)",
                 value=config_data.get('sender_pattern', '') if config_data else '',
-                help="Regex to match sender emails"
+                help="Leave blank to match all senders. See examples below."
             )
+            with st.expander("Common examples", expanded=False):
+                st.markdown(SENDER_PATTERN_HINTS)
 
         st.markdown("### File Settings")
         col1, col2 = st.columns(2)
@@ -86,14 +137,14 @@ def render_inbox_config_form(
             target_directory = st.text_input(
                 "Target Directory *",
                 value=config_data.get('target_directory', '/app/data/source/inbox') if config_data else '/app/data/source/inbox',
-                help="Directory where attachments are saved"
+                help="Where files are saved. Default works for most setups."
             )
 
         with col2:
             date_prefix_format = st.text_input(
                 "Date Prefix Format",
                 value=config_data.get('date_prefix_format', 'yyyyMMdd') if config_data else 'yyyyMMdd',
-                help="Date format for filename prefix (Java-style)"
+                help="Prepended to filenames. yyyyMMdd = 20260118_file.csv"
             )
 
         st.markdown("### Gmail Labels")
@@ -247,6 +298,9 @@ with tab1:
 # ============================================================================
 with tab2:
     st.subheader("Create New Inbox Configuration")
+
+    with st.expander("Quick Start - Common Scenarios", expanded=False):
+        st.markdown(QUICK_START_SCENARIOS)
 
     form_data = render_inbox_config_form(is_edit=False)
     if form_data:

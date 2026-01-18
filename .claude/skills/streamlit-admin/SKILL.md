@@ -332,3 +332,27 @@ docker compose exec tangerine pytest tests/ -v
 # Run service tests only
 docker compose exec tangerine pytest tests/integration/services/ -v
 ```
+
+## Documentation Requirements
+
+**After making changes to admin pages, always update documentation:**
+
+1. **CHANGELOG.md** - Add entry under `[Unreleased]` section:
+   - `Added` - New features/pages
+   - `Changed` - Modifications to existing functionality
+   - `Fixed` - Bug fixes
+
+2. **Codemaps** (if architecture changes):
+   - `.claude/codemaps/admin-services.md` - Service layer changes
+   - `.claude/codemaps/architecture-overview.md` - New pages/components
+
+3. **Feature docs** (for significant features):
+   - Create `docs/features/{feature-name}.md` using `/doc-feature`
+
+**Example CHANGELOG entry:**
+```markdown
+### Changed
+- **Inbox Rules UX**: Added inline pattern examples and Quick Start guide
+```
+
+This ensures future developers (and Claude) understand what changed and why.

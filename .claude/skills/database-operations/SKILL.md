@@ -295,3 +295,24 @@ JOIN information_schema.constraint_column_usage ccu
 WHERE tc.constraint_type = 'FOREIGN KEY'
 AND tc.table_schema = 'dba';
 ```
+
+## Documentation Requirements
+
+**After making schema changes, always update documentation:**
+
+1. **CHANGELOG.md** - Add entry under `[Unreleased]` section:
+   - `Added` - New tables, columns
+   - `Changed` - Schema modifications
+   - `Removed` - Dropped tables/columns
+
+2. **Codemaps** (required for schema changes):
+   - `.claude/codemaps/database-schema.md` - Table definitions, relationships
+
+3. **Migration tracking**:
+   - Keep `.sql` files in `schema/migrations/` with dated filenames
+
+**Example CHANGELOG entry:**
+```markdown
+### Added
+- **dba.tauditlog**: New table for tracking all data changes
+```

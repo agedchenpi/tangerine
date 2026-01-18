@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 - Updated CLAUDE.md with skills, hooks, and documentation sections
+- **Inbox Rules UX**: Added inline pattern examples, improved help text, and Quick Start guide for non-technical users
 
 ---
 

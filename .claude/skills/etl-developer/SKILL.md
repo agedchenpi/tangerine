@@ -188,3 +188,25 @@ docker compose exec tangerine pytest tests/integration/etl/test_generic_import.p
 3. **Don't forget dataset tracking** - Every import needs a tdataset record
 4. **Don't leave files in source** - Archive after successful processing
 5. **Don't use string formatting for SQL** - Always use parameterized queries
+
+## Documentation Requirements
+
+**After making ETL changes, always update documentation:**
+
+1. **CHANGELOG.md** - Add entry under `[Unreleased]` section:
+   - `Added` - New jobs, extractors, file formats
+   - `Changed` - Modifications to existing ETL behavior
+   - `Fixed` - Bug fixes
+
+2. **Codemaps** (if architecture changes):
+   - `.claude/codemaps/etl-framework.md` - Job structure, strategies
+   - `.claude/codemaps/database-schema.md` - New tracking tables
+
+3. **Feature docs** (for significant features):
+   - Create `docs/features/{feature-name}.md` using `/doc-feature`
+
+**Example CHANGELOG entry:**
+```markdown
+### Added
+- **XML Import Support**: Added XML file parsing to generic import job
+```

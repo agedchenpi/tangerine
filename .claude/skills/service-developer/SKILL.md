@@ -279,3 +279,25 @@ def test_create_item(db_transaction):
     with db_transaction() as cursor:
         # Test code here - auto-rolls back after test
 ```
+
+## Documentation Requirements
+
+**After making service changes, always update documentation:**
+
+1. **CHANGELOG.md** - Add entry under `[Unreleased]` section:
+   - `Added` - New services, CRUD operations
+   - `Changed` - Modifications to existing services
+   - `Fixed` - Bug fixes
+
+2. **Codemaps** (if architecture changes):
+   - `.claude/codemaps/admin-services.md` - New services, patterns
+   - `.claude/codemaps/database-schema.md` - New tables accessed
+
+3. **Feature docs** (for significant features):
+   - Create `docs/features/{feature-name}.md` using `/doc-feature`
+
+**Example CHANGELOG entry:**
+```markdown
+### Added
+- **Audit Service**: Track all CRUD operations with user and timestamp
+```
