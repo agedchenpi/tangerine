@@ -36,3 +36,7 @@ GRANT SELECT ON dba.tdataset TO app_ro;
 GRANT SELECT, INSERT, UPDATE ON dba.tdataset TO app_rw;
 GRANT ALL ON dba.tdataset TO admin;
 GRANT USAGE, SELECT ON SEQUENCE dba.tdataset_datasetid_seq TO app_rw, app_ro;
+
+-- Index to optimize MAX(datasetdate) lookup for isactive enforcement
+CREATE INDEX IF NOT EXISTS idx_tdataset_label_type_source_date
+    ON dba.tdataset(label, datasettypeid, datasourceid, datasetdate DESC);

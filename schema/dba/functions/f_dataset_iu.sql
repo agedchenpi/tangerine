@@ -43,17 +43,7 @@ BEGIN
                 SET datastatusid = v_datastatusid,
                     isactive = CASE WHEN p_statusname = 'Active' THEN TRUE ELSE isactive END
                 WHERE datasetid = p_datasetid;
-                IF p_statusname = 'Active' THEN
-                    UPDATE dba.tdataset
-                    SET isactive = FALSE,
-                        effthrudate = CURRENT_TIMESTAMP,
-                        datastatusid = (SELECT datastatusid FROM dba.tdatastatus WHERE statusname = 'Inactive')
-                    WHERE label = p_label
-                      AND datasettypeid = v_datasettypeid
-                      AND datasetdate = p_datasetdate
-                      AND datasetid != p_datasetid
-                      AND isactive = TRUE;
-                END IF;
+                -- Note: Trigger fenforcesingleactivedataset() handles deactivating other datasets
                 v_datasetid := p_datasetid;
             END IF;
             RETURN v_datasetid;
