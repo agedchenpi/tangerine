@@ -21,6 +21,48 @@ from services.scheduler_service import (
 from utils.db_helpers import format_sql_error
 from utils.ui_helpers import load_custom_css, add_page_header
 
+# Template hint constants for user guidance
+SQL_TEMPLATE_HINTS = """
+| Syntax | What it does |
+|--------|--------------|
+| `{{SQL:SELECT * FROM dba.table}}` | Embed query results as HTML table |
+| `{{SQL:query \\| format=csv}}` | Attach query results as CSV file |
+| `{{DATE:yyyy-MM-dd}}` | Insert current date |
+| `{{CONFIG:report_name}}` | Insert config value |
+"""
+
+RECIPIENT_HINTS = """
+| Format | Example |
+|--------|---------|
+| Single | `user@company.com` |
+| Multiple | `user1@co.com, user2@co.com` |
+| With name | `John Doe <john@co.com>` |
+"""
+
+REPORTS_QUICK_START = """
+**Simple data report:**
+```html
+<h2>Daily Sales Report</h2>
+<p>Generated: {{DATE:yyyy-MM-dd}}</p>
+{{SQL:SELECT * FROM dba.daily_sales WHERE date = CURRENT_DATE}}
+```
+
+**Report with CSV attachment:**
+```html
+<p>See attached CSV file.</p>
+{{SQL:SELECT * FROM dba.export_data | format=csv}}
+```
+
+**Multiple tables report:**
+```html
+<h2>Summary</h2>
+{{SQL:SELECT status, COUNT(*) FROM dba.jobs GROUP BY status}}
+
+<h2>Recent Failures</h2>
+{{SQL:SELECT * FROM dba.jobs WHERE status = 'Failed' ORDER BY created_at DESC LIMIT 10}}
+```
+"""
+
 load_custom_css()
 add_page_header("Report Manager", "Configure automated email reports", "📊")
 
@@ -64,6 +106,8 @@ def render_report_form(
                 value=report_data.get('recipients', '') if report_data else '',
                 help="Comma-separated email addresses"
             )
+            with st.expander("Format examples", expanded=False):
+                st.markdown(RECIPIENT_HINTS)
             subject_line = st.text_input(
                 "Subject Line *",
                 value=report_data.get('subject_line', '') if report_data else '',
@@ -101,6 +145,8 @@ def render_report_form(
             height=200,
             help="HTML template with embedded SQL queries"
         )
+        with st.expander("Template syntax reference", expanded=False):
+            st.markdown(SQL_TEMPLATE_HINTS)
 
         st.markdown("### Output Settings")
         col1, col2 = st.columns(2)
@@ -262,6 +308,9 @@ with tab1:
 # ============================================================================
 with tab2:
     st.subheader("Create New Report")
+
+    with st.expander("Quick Start - Common Templates", expanded=False):
+        st.markdown(REPORTS_QUICK_START)
 
     form_data = render_report_form(is_edit=False)
     if form_data:

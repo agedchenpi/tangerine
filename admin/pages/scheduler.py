@@ -17,6 +17,36 @@ from services.scheduler_service import (
 from utils.db_helpers import format_sql_error
 from utils.ui_helpers import load_custom_css, add_page_header
 
+# Cron hint constants for user guidance
+CRON_HINTS = """
+| Schedule | Expression | Description |
+|----------|------------|-------------|
+| Every hour | `0 * * * *` | At minute 0 of every hour |
+| Daily at 8am | `0 8 * * *` | 8:00 AM every day |
+| Weekdays 6pm | `0 18 * * 1-5` | Mon-Fri at 6:00 PM |
+| First of month | `0 0 1 * *` | Midnight on day 1 |
+| Every 15 min | `*/15 * * * *` | :00, :15, :30, :45 |
+| Every 5 min | `*/5 * * * *` | Every 5 minutes |
+"""
+
+SCHEDULER_QUICK_START = """
+**Daily import job at 6 AM:**
+- Job Type: Import
+- Minute: `0`, Hour: `6`, Day: `*`, Month: `*`, Weekday: `*`
+
+**Hourly inbox check:**
+- Job Type: Inbox Processor
+- Minute: `0`, Hour: `*`, Day: `*`, Month: `*`, Weekday: `*`
+
+**Weekly report (Monday 8 AM):**
+- Job Type: Report
+- Minute: `0`, Hour: `8`, Day: `*`, Month: `*`, Weekday: `1`
+
+**Business hours only (every 30 min, Mon-Fri 9-5):**
+- Job Type: Any
+- Minute: `0,30`, Hour: `9-17`, Day: `*`, Month: `*`, Weekday: `1-5`
+"""
+
 load_custom_css()
 add_page_header("Job Scheduler", "Manage automated job schedules", "⏰")
 
@@ -125,6 +155,9 @@ def render_scheduler_form(
             st.caption("Daily 8 AM: `0 8 * * *`")
         with preset_col4:
             st.caption("Weekdays: `0 8 * * 1-5`")
+
+        with st.expander("More cron examples", expanded=False):
+            st.markdown(CRON_HINTS)
 
         st.markdown("### Job Configuration")
 
@@ -271,6 +304,9 @@ with tab1:
 # ============================================================================
 with tab2:
     st.subheader("Create New Schedule")
+
+    with st.expander("Quick Start - Common Scenarios", expanded=False):
+        st.markdown(SCHEDULER_QUICK_START)
 
     form_data = render_scheduler_form(is_edit=False)
     if form_data:

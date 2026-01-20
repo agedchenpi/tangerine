@@ -297,19 +297,60 @@ label {
     background-color: #F5F5F5;
 }
 
-pre {
+/* Fenced code blocks (```html, ```sql, etc.) - dark theme for readability */
+/* Target all possible Streamlit containers */
+pre,
+.stMarkdown pre,
+.stExpander pre,
+[data-testid="stExpander"] pre,
+[data-testid="stMarkdownContainer"] pre,
+[data-testid="stForm"] pre,
+.streamlit-expanderContent pre,
+.element-container pre,
+.stApp pre {
     border-radius: 6px;
-    background-color: #2D2D2D;
-    padding: 1rem;
-    color: #F8F8F2;
+    background-color: #1E1E1E !important;
+    padding: 1rem !important;
+    color: #D4D4D4 !important;
+    border: 1px solid #444444 !important;
+    overflow-x: auto;
 }
 
+/* Inline code - improved contrast for light mode */
 code {
-    background-color: #F5F5F5;
-    padding: 0.2rem 0.4rem;
+    background-color: #E8E8E8;
+    padding: 0.2rem 0.5rem;
     border-radius: 4px;
-    color: var(--tangerine-dark);
-    font-family: 'Courier New', monospace;
+    color: #C25A00;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
+    font-size: 0.9em;
+    font-weight: 500;
+    border: 1px solid #D0D0D0;
+}
+
+/* Inline code inside markdown tables - ensure visibility */
+table code, td code, th code {
+    background-color: #E8E8E8;
+    color: #C25A00;
+    border: 1px solid #D0D0D0;
+}
+
+/* Code inside pre blocks (fenced code blocks) - light text on dark background */
+pre code,
+.stMarkdown pre code,
+.stExpander pre code,
+[data-testid="stExpander"] pre code,
+[data-testid="stMarkdownContainer"] pre code,
+[data-testid="stForm"] pre code,
+.streamlit-expanderContent pre code,
+.element-container pre code,
+.stApp pre code {
+    background-color: transparent !important;
+    background: none !important;
+    padding: 0 !important;
+    border: none !important;
+    color: #D4D4D4 !important;
+    font-weight: normal;
 }
 
 /* ============================================================================
@@ -464,4 +505,94 @@ hr {
 
 .mt-3 {
     margin-top: 1.5rem;
+}
+
+/* ============================================================================
+   DARK MODE SUPPORT
+   ============================================================================ */
+/* Dark mode detection via Streamlit's theme attribute and prefers-color-scheme */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-light: #1E1E1E;
+        --text-dark: #E0E0E0;
+        --text-light: #A0A0A0;
+        --border-color: #404040;
+    }
+}
+
+/* Streamlit dark mode - inline code */
+[data-theme="dark"] code,
+.stApp[data-theme="dark"] code {
+    background-color: #3A3A3A;
+    color: #FFB366;
+    border-color: #505050;
+}
+
+[data-theme="dark"] table code,
+[data-theme="dark"] td code,
+[data-theme="dark"] th code,
+.stApp[data-theme="dark"] table code {
+    background-color: #3A3A3A;
+    color: #FFB366;
+    border-color: #505050;
+}
+
+/* Dark mode pre code blocks stay the same (already dark) */
+[data-theme="dark"] pre code,
+.stApp[data-theme="dark"] pre code {
+    background-color: transparent;
+    color: inherit;
+    border: none;
+}
+
+/* Dark mode - markdown tables */
+[data-theme="dark"] table,
+.stApp[data-theme="dark"] table {
+    border-color: #404040;
+}
+
+[data-theme="dark"] th,
+[data-theme="dark"] td,
+.stApp[data-theme="dark"] th,
+.stApp[data-theme="dark"] td {
+    border-color: #404040;
+}
+
+/* Dark mode - expander content */
+[data-theme="dark"] .streamlit-expanderContent,
+.stApp[data-theme="dark"] .streamlit-expanderContent {
+    background-color: #262626;
+}
+
+/* Dark mode - metric cards */
+[data-theme="dark"] [data-testid="stMetric"],
+.stApp[data-theme="dark"] [data-testid="stMetric"] {
+    background-color: #262626;
+}
+
+/* Dark mode - tabs */
+[data-theme="dark"] .stTabs [data-baseweb="tab-list"],
+.stApp[data-theme="dark"] .stTabs [data-baseweb="tab-list"] {
+    background-color: #262626;
+}
+
+/* Dark mode - alerts */
+[data-theme="dark"] .stSuccess,
+.stApp[data-theme="dark"] .stSuccess {
+    background-color: #1D3D25;
+}
+
+[data-theme="dark"] .stError,
+.stApp[data-theme="dark"] .stError {
+    background-color: #3D1D1D;
+}
+
+[data-theme="dark"] .stWarning,
+.stApp[data-theme="dark"] .stWarning {
+    background-color: #3D3D1D;
+}
+
+[data-theme="dark"] .stInfo,
+.stApp[data-theme="dark"] .stInfo {
+    background-color: #1D2D3D;
 }

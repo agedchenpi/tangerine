@@ -2,7 +2,7 @@
 
 import streamlit as st
 import pandas as pd
-from components.forms import render_import_config_form
+from components.forms import render_import_config_form, IMPORT_QUICK_START
 from components.notifications import show_success, show_error, show_info, show_warning
 from services.import_config_service import (
     list_configs,
@@ -146,6 +146,9 @@ with tab1:
 
 # TAB 2: Create New Configuration
 with tab2:
+    with st.expander("Quick Start - Common Scenarios", expanded=False):
+        st.markdown(IMPORT_QUICK_START)
+
     form_data = render_import_config_form(is_edit=False)
 
     if form_data:

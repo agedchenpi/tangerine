@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - Updated CLAUDE.md with skills, hooks, and documentation sections
 - **Inbox Rules UX**: Added inline pattern examples, improved help text, and Quick Start guide for non-technical users
+- **Imports UX**: Added file pattern and date format examples with Quick Start guide
+- **Scheduler UX**: Added cron expression examples and Quick Start guide for common schedules
+- **Reports UX**: Added SQL template syntax and recipient format examples with Quick Start guide
+- **Admin Theme**: Improved inline code readability in both light and dark modes
 
 ---
 

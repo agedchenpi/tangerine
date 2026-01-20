@@ -16,6 +16,46 @@ from components.notifications import show_error, show_warning
 from services.import_config_service import get_datasources, get_datasettypes, get_strategies
 from utils.db_helpers import table_exists
 
+# Pattern hint constants for user guidance
+FILE_PATTERN_HINTS = """
+| Pattern | What it matches |
+|---------|----------------|
+| `.*\\.csv` | Any CSV file |
+| `sales_.*\\.csv` | Files starting with "sales_" |
+| `.*_\\d{8}\\.csv` | Files with 8-digit date suffix |
+| `report_[A-Z]{3}\\.xlsx` | 3-letter code (e.g., report_ABC.xlsx) |
+"""
+
+DATE_FORMAT_HINTS = """
+| Format | Input Example | Parsed As |
+|--------|---------------|-----------|
+| `yyyyMMdd` | 20260115 | 2026-01-15 |
+| `yyyy-MM-dd` | 2026-01-15 | 2026-01-15 |
+| `MM/dd/yyyy` | 01/15/2026 | 2026-01-15 |
+| `dd-MMM-yyyy` | 15-Jan-2026 | 2026-01-15 |
+| `yyyyMMddTHHmmss` | 20260115T083000 | 2026-01-15 08:30:00 |
+"""
+
+IMPORT_QUICK_START = """
+**CSV file with date in filename:**
+- File Pattern: `sales_.*\\.csv`
+- File Type: CSV
+- Date Source: filename
+- Date Format: `yyyyMMdd`
+- Metadata Label Source: filename
+
+**Excel report (any name):**
+- File Pattern: `.*\\.xlsx`
+- File Type: XLSX
+- Strategy: auto_add_columns
+- Date Source: static
+
+**JSON data feed:**
+- File Pattern: `.*\\.json`
+- File Type: JSON
+- Store as Blob: ✓ (for nested JSON)
+"""
+
 
 def render_import_config_form(
     config_data: Optional[Dict[str, Any]] = None,
@@ -125,6 +165,8 @@ def render_import_config_form(
                 value=config_data.get('file_pattern', '.*\\.csv') if config_data else '.*\\.csv',
                 help="Regex pattern to match files (e.g., .*MyPattern\\.csv)"
             )
+            with st.expander("Common examples", expanded=False):
+                st.markdown(FILE_PATTERN_HINTS)
 
         with col2:
             archive_directory = st.text_input(
@@ -213,6 +255,8 @@ def render_import_config_form(
                 value=config_data.get('dateformat', 'yyyyMMddTHHmmss') if config_data else 'yyyyMMddTHHmmss',
                 help="Date format pattern (e.g., yyyyMMddTHHmmss, yyyy-MM-dd)"
             )
+            with st.expander("Common examples", expanded=False):
+                st.markdown(DATE_FORMAT_HINTS)
 
         with col2:
             delimiter = st.text_input(
