@@ -417,6 +417,88 @@ def get_strategy(importstrategyid: int) -> Optional[Dict[str, Any]]:
 
 
 # ============================================================================
+# USAGE QUERIES
+# ============================================================================
+
+def get_datasource_usage(sourcename: str) -> List[str]:
+    """
+    Get list of import config names that reference a datasource.
+
+    Args:
+        sourcename: Name of the datasource
+
+    Returns:
+        List of config_name strings that use this datasource
+    """
+    query = """
+        SELECT config_name
+        FROM dba.timportconfig
+        WHERE datasource = %s
+        ORDER BY config_name
+    """
+    result = fetch_dict(query, (sourcename,))
+    return [r['config_name'] for r in result] if result else []
+
+
+def get_datasettype_usage(typename: str) -> List[str]:
+    """
+    Get list of import config names that reference a dataset type.
+
+    Args:
+        typename: Name of the dataset type
+
+    Returns:
+        List of config_name strings that use this dataset type
+    """
+    query = """
+        SELECT config_name
+        FROM dba.timportconfig
+        WHERE datasettype = %s
+        ORDER BY config_name
+    """
+    result = fetch_dict(query, (typename,))
+    return [r['config_name'] for r in result] if result else []
+
+
+def get_datasource_usage_count(sourcename: str) -> int:
+    """
+    Get count of import configs that reference a datasource.
+
+    Args:
+        sourcename: Name of the datasource
+
+    Returns:
+        Count of configs using this datasource
+    """
+    query = """
+        SELECT COUNT(*) as count
+        FROM dba.timportconfig
+        WHERE datasource = %s
+    """
+    result = fetch_dict(query, (sourcename,))
+    return result[0]['count'] if result else 0
+
+
+def get_datasettype_usage_count(typename: str) -> int:
+    """
+    Get count of import configs that reference a dataset type.
+
+    Args:
+        typename: Name of the dataset type
+
+    Returns:
+        Count of configs using this dataset type
+    """
+    query = """
+        SELECT COUNT(*) as count
+        FROM dba.timportconfig
+        WHERE datasettype = %s
+    """
+    result = fetch_dict(query, (typename,))
+    return result[0]['count'] if result else 0
+
+
+# ============================================================================
 # STATISTICS
 # ============================================================================
 

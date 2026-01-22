@@ -18,11 +18,19 @@ if 'db_connected' not in st.session_state:
     st.session_state.db_connected = test_connection()
 
 # Main page content
-add_page_header(
-    title="Tangerine ETL Administration",
-    subtitle="Manage ETL configurations, execute jobs, and monitor pipeline health.",
-    icon="🍊"
-)
+col_title, col_action = st.columns([3, 1])
+
+with col_title:
+    add_page_header(
+        title="Tangerine ETL Administration",
+        subtitle="Manage ETL configurations, execute jobs, and monitor pipeline health.",
+        icon="🍊"
+    )
+
+with col_action:
+    st.markdown("<br>", unsafe_allow_html=True)  # Spacing to align with header
+    if st.button("🚀 Getting Started", type="primary", use_container_width=True):
+        st.switch_page("pages/getting_started.py")
 
 # System Status Metrics
 st.markdown("### System Status")

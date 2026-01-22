@@ -17,6 +17,7 @@ from services.pubsub_service import (
 )
 from utils.db_helpers import format_sql_error
 from utils.ui_helpers import load_custom_css, add_page_header
+from components.dependency_checker import render_missing_config_link
 
 load_custom_css()
 add_page_header("Event System", "Manage pub-sub events and subscribers", "🔔")
@@ -259,31 +260,46 @@ with tab2:
                 # Dynamic config selection based on job type
                 if sub_job_type == 'import':
                     configs = get_import_configs()
-                    config_options = [{'config_id': None, 'config_name': '-- Select --'}] + configs
-                    sub_config_id = st.selectbox(
-                        "Import Config *",
-                        options=[c['config_id'] for c in config_options],
-                        format_func=lambda x: next((c['config_name'] for c in config_options if c['config_id'] == x), '-- Select --'),
-                        key="new_sub_config_import"
-                    )
+                    if not configs:
+                        st.warning("No import configs available.")
+                        render_missing_config_link('import', context="inline")
+                        sub_config_id = None
+                    else:
+                        config_options = [{'config_id': None, 'config_name': '-- Select --'}] + configs
+                        sub_config_id = st.selectbox(
+                            "Import Config *",
+                            options=[c['config_id'] for c in config_options],
+                            format_func=lambda x: next((c['config_name'] for c in config_options if c['config_id'] == x), '-- Select --'),
+                            key="new_sub_config_import"
+                        )
                 elif sub_job_type == 'inbox_processor':
                     configs = get_inbox_configs()
-                    config_options = [{'config_id': None, 'config_name': '-- Select --'}] + configs
-                    sub_config_id = st.selectbox(
-                        "Inbox Config *",
-                        options=[c['config_id'] for c in config_options],
-                        format_func=lambda x: next((c['config_name'] for c in config_options if c['config_id'] == x), '-- Select --'),
-                        key="new_sub_config_inbox"
-                    )
+                    if not configs:
+                        st.warning("No inbox configs available.")
+                        render_missing_config_link('inbox_processor', context="inline")
+                        sub_config_id = None
+                    else:
+                        config_options = [{'config_id': None, 'config_name': '-- Select --'}] + configs
+                        sub_config_id = st.selectbox(
+                            "Inbox Config *",
+                            options=[c['config_id'] for c in config_options],
+                            format_func=lambda x: next((c['config_name'] for c in config_options if c['config_id'] == x), '-- Select --'),
+                            key="new_sub_config_inbox"
+                        )
                 elif sub_job_type == 'report':
                     configs = get_report_configs()
-                    config_options = [{'config_id': None, 'config_name': '-- Select --'}] + configs
-                    sub_config_id = st.selectbox(
-                        "Report Config *",
-                        options=[c['config_id'] for c in config_options],
-                        format_func=lambda x: next((c['config_name'] for c in config_options if c['config_id'] == x), '-- Select --'),
-                        key="new_sub_config_report"
-                    )
+                    if not configs:
+                        st.warning("No report configs available.")
+                        render_missing_config_link('report', context="inline")
+                        sub_config_id = None
+                    else:
+                        config_options = [{'config_id': None, 'config_name': '-- Select --'}] + configs
+                        sub_config_id = st.selectbox(
+                            "Report Config *",
+                            options=[c['config_id'] for c in config_options],
+                            format_func=lambda x: next((c['config_name'] for c in config_options if c['config_id'] == x), '-- Select --'),
+                            key="new_sub_config_report"
+                        )
                 else:
                     sub_config_id = None
 

@@ -16,6 +16,7 @@ from services.scheduler_service import (
 )
 from utils.db_helpers import format_sql_error
 from utils.ui_helpers import load_custom_css, add_page_header
+from components.dependency_checker import render_missing_config_link
 
 # Cron hint constants for user guidance
 CRON_HINTS = """
@@ -178,6 +179,7 @@ def render_scheduler_form(
                 )
             else:
                 st.info(f"No active {job_type} configurations found.")
+                render_missing_config_link(job_type, context="inline")
                 config_id = None
             script_path = None
 

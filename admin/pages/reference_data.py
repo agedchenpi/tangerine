@@ -18,8 +18,13 @@ from services.reference_data_service import (
     delete_datasettype,
     datasettype_name_exists,
     list_strategies,
-    get_reference_stats
+    get_reference_stats,
+    get_datasource_usage,
+    get_datasettype_usage,
+    get_datasource_usage_count,
+    get_datasettype_usage_count
 )
+from components.dependency_checker import render_usage_badge, get_usage_warning_message
 from utils.db_helpers import format_sql_error
 from utils.formatters import format_timestamp
 
@@ -59,14 +64,22 @@ with tab1:
             if datasources:
                 df = pd.DataFrame(datasources)
 
+                # Add usage count column
+                df['usage_count'] = df['sourcename'].apply(get_datasource_usage_count)
+
                 # Format timestamps
                 if 'createddate' in df.columns:
                     df['createddate'] = df['createddate'].apply(
                         lambda x: format_timestamp(x) if pd.notna(x) else 'N/A'
                     )
 
+                # Format usage count for display
+                df['used_by'] = df['usage_count'].apply(
+                    lambda x: f"Used by {x} config(s)" if x > 0 else "Not used"
+                )
+
                 # Select columns to display
-                display_columns = ['datasourceid', 'sourcename', 'description', 'createddate', 'createdby']
+                display_columns = ['datasourceid', 'sourcename', 'description', 'used_by', 'createddate', 'createdby']
                 display_columns = [col for col in display_columns if col in df.columns]
 
                 st.dataframe(
@@ -77,6 +90,7 @@ with tab1:
                         'datasourceid': st.column_config.NumberColumn('ID', width="small"),
                         'sourcename': st.column_config.TextColumn('Source Name', width="medium"),
                         'description': st.column_config.TextColumn('Description', width="large"),
+                        'used_by': st.column_config.TextColumn('Usage', width="small"),
                         'createddate': st.column_config.TextColumn('Created', width="medium"),
                         'createdby': st.column_config.TextColumn('Created By', width="small")
                     }
@@ -206,21 +220,33 @@ with tab1:
 
                     st.text_area("Description", value=ds_to_delete.get('description', 'N/A'), disabled=True, height=100)
 
+                    # Check for references before allowing delete
+                    referencing_configs = get_datasource_usage(ds_to_delete['sourcename'])
+
                     st.divider()
 
-                    confirm = st.checkbox(
-                        f"I confirm I want to permanently delete data source '{ds_to_delete['sourcename']}'",
-                        key="delete_ds_confirm"
-                    )
+                    if referencing_configs:
+                        # Show blocking message with specific config names
+                        show_error(get_usage_warning_message(
+                            "data source",
+                            ds_to_delete['sourcename'],
+                            referencing_configs
+                        ))
+                        st.info("Update or delete the referencing configurations before deleting this data source.")
+                    else:
+                        confirm = st.checkbox(
+                            f"I confirm I want to permanently delete data source '{ds_to_delete['sourcename']}'",
+                            key="delete_ds_confirm"
+                        )
 
-                    if confirm:
-                        if st.button("🗑️ Delete Data Source Permanently", type="primary", key="delete_ds_button"):
-                            try:
-                                delete_datasource(selected_ds_id)
-                                show_success(f"Data source '{ds_to_delete['sourcename']}' deleted successfully")
-                                st.rerun()
-                            except Exception as e:
-                                show_error(f"Failed to delete data source: {format_sql_error(e)}")
+                        if confirm:
+                            if st.button("🗑️ Delete Data Source Permanently", type="primary", key="delete_ds_button"):
+                                try:
+                                    delete_datasource(selected_ds_id)
+                                    show_success(f"Data source '{ds_to_delete['sourcename']}' deleted successfully")
+                                    st.rerun()
+                                except Exception as e:
+                                    show_error(f"Failed to delete data source: {format_sql_error(e)}")
 
             else:
                 show_info("No data sources available to delete.")
@@ -247,14 +273,22 @@ with tab2:
             if datasettypes:
                 df = pd.DataFrame(datasettypes)
 
+                # Add usage count column
+                df['usage_count'] = df['typename'].apply(get_datasettype_usage_count)
+
                 # Format timestamps
                 if 'createddate' in df.columns:
                     df['createddate'] = df['createddate'].apply(
                         lambda x: format_timestamp(x) if pd.notna(x) else 'N/A'
                     )
 
+                # Format usage count for display
+                df['used_by'] = df['usage_count'].apply(
+                    lambda x: f"Used by {x} config(s)" if x > 0 else "Not used"
+                )
+
                 # Select columns to display
-                display_columns = ['datasettypeid', 'typename', 'description', 'createddate', 'createdby']
+                display_columns = ['datasettypeid', 'typename', 'description', 'used_by', 'createddate', 'createdby']
                 display_columns = [col for col in display_columns if col in df.columns]
 
                 st.dataframe(
@@ -265,6 +299,7 @@ with tab2:
                         'datasettypeid': st.column_config.NumberColumn('ID', width="small"),
                         'typename': st.column_config.TextColumn('Type Name', width="medium"),
                         'description': st.column_config.TextColumn('Description', width="large"),
+                        'used_by': st.column_config.TextColumn('Usage', width="small"),
                         'createddate': st.column_config.TextColumn('Created', width="medium"),
                         'createdby': st.column_config.TextColumn('Created By', width="small")
                     }
@@ -394,21 +429,33 @@ with tab2:
 
                     st.text_area("Description", value=dt_to_delete.get('description', 'N/A'), disabled=True, height=100)
 
+                    # Check for references before allowing delete
+                    referencing_configs = get_datasettype_usage(dt_to_delete['typename'])
+
                     st.divider()
 
-                    confirm = st.checkbox(
-                        f"I confirm I want to permanently delete dataset type '{dt_to_delete['typename']}'",
-                        key="delete_dt_confirm"
-                    )
+                    if referencing_configs:
+                        # Show blocking message with specific config names
+                        show_error(get_usage_warning_message(
+                            "dataset type",
+                            dt_to_delete['typename'],
+                            referencing_configs
+                        ))
+                        st.info("Update or delete the referencing configurations before deleting this dataset type.")
+                    else:
+                        confirm = st.checkbox(
+                            f"I confirm I want to permanently delete dataset type '{dt_to_delete['typename']}'",
+                            key="delete_dt_confirm"
+                        )
 
-                    if confirm:
-                        if st.button("🗑️ Delete Dataset Type Permanently", type="primary", key="delete_dt_button"):
-                            try:
-                                delete_datasettype(selected_dt_id)
-                                show_success(f"Dataset type '{dt_to_delete['typename']}' deleted successfully")
-                                st.rerun()
-                            except Exception as e:
-                                show_error(f"Failed to delete dataset type: {format_sql_error(e)}")
+                        if confirm:
+                            if st.button("🗑️ Delete Dataset Type Permanently", type="primary", key="delete_dt_button"):
+                                try:
+                                    delete_datasettype(selected_dt_id)
+                                    show_success(f"Dataset type '{dt_to_delete['typename']}' deleted successfully")
+                                    st.rerun()
+                                except Exception as e:
+                                    show_error(f"Failed to delete dataset type: {format_sql_error(e)}")
 
             else:
                 show_info("No dataset types available to delete.")

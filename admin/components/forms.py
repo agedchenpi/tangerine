@@ -14,6 +14,12 @@ from components.validators import (
 )
 from components.notifications import show_error, show_warning
 from services.import_config_service import get_datasources, get_datasettypes, get_strategies
+from services.reference_data_service import (
+    create_datasource,
+    create_datasettype,
+    datasource_name_exists,
+    datasettype_name_exists
+)
 from utils.db_helpers import table_exists
 
 # Pattern hint constants for user guidance
@@ -78,26 +84,117 @@ def render_import_config_form(
     datasettypes = get_datasettypes()
     strategies = get_strategies()
 
-    if not datasources:
-        show_error("No datasources found. Please create at least one datasource first.")
-        st.info("💡 To add a new datasource, run: `INSERT INTO dba.tdatasource (sourcename, description) VALUES ('MySource', 'Description');`")
-        return None
+    # Section 1: Basic Information - Datasource & Datasettype selection (outside form for inline create)
+    st.markdown("### Basic Information")
 
-    if not datasettypes:
-        show_error("No dataset types found. Please create at least one dataset type first.")
-        st.info("💡 To add a new dataset type, run: `INSERT INTO dba.tdatasettype (typename, description) VALUES ('MyType', 'Description');`")
+    col1, col2 = st.columns(2)
+
+    # --- Data Source selection with inline create ---
+    with col1:
+        # Determine default datasource index (auto-select newly created one)
+        datasource_index = 0
+        if st.session_state.get('new_datasource_name') and st.session_state['new_datasource_name'] in datasources:
+            datasource_index = datasources.index(st.session_state['new_datasource_name'])
+            del st.session_state['new_datasource_name']  # Clear after use
+        elif config_data and config_data.get('datasource') in datasources:
+            datasource_index = datasources.index(config_data['datasource'])
+
+        if datasources:
+            datasource = st.selectbox(
+                "Data Source *",
+                options=datasources,
+                index=datasource_index,
+                help="Select the data source for this import",
+                key="datasource_select"
+            )
+        else:
+            st.selectbox("Data Source *", options=["-- Create one below --"], disabled=True)
+            datasource = None
+
+        # Inline create for datasource
+        if not is_edit:
+            with st.expander("➕ Create new data source", expanded=not datasources):
+                new_ds_name = st.text_input(
+                    "Source Name *",
+                    key="new_datasource_name_input",
+                    max_chars=50
+                )
+                new_ds_desc = st.text_area(
+                    "Description",
+                    key="new_datasource_desc_input",
+                    height=68
+                )
+                if st.button("Create Data Source", key="create_datasource_btn", type="primary"):
+                    if not new_ds_name or not new_ds_name.strip():
+                        show_error("Source Name is required")
+                    elif datasource_name_exists(new_ds_name.strip()):
+                        show_error(f"Data source '{new_ds_name.strip()}' already exists")
+                    else:
+                        try:
+                            create_datasource(new_ds_name.strip(), new_ds_desc.strip() if new_ds_desc else None)
+                            st.session_state['new_datasource_name'] = new_ds_name.strip()
+                            st.success(f"Created '{new_ds_name.strip()}'")
+                            st.rerun()
+                        except Exception as e:
+                            show_error(f"Failed to create: {e}")
+
+    # --- Dataset Type selection with inline create ---
+    with col2:
+        # Determine default datasettype index (auto-select newly created one)
+        datasettype_index = 0
+        if st.session_state.get('new_datasettype_name') and st.session_state['new_datasettype_name'] in datasettypes:
+            datasettype_index = datasettypes.index(st.session_state['new_datasettype_name'])
+            del st.session_state['new_datasettype_name']  # Clear after use
+        elif config_data and config_data.get('datasettype') in datasettypes:
+            datasettype_index = datasettypes.index(config_data['datasettype'])
+
+        if datasettypes:
+            datasettype = st.selectbox(
+                "Dataset Type *",
+                options=datasettypes,
+                index=datasettype_index,
+                help="Select the dataset type for this import",
+                key="datasettype_select"
+            )
+        else:
+            st.selectbox("Dataset Type *", options=["-- Create one below --"], disabled=True)
+            datasettype = None
+
+        # Inline create for datasettype
+        if not is_edit:
+            with st.expander("➕ Create new dataset type", expanded=not datasettypes):
+                new_dt_name = st.text_input(
+                    "Type Name *",
+                    key="new_datasettype_name_input",
+                    max_chars=50
+                )
+                new_dt_desc = st.text_area(
+                    "Description",
+                    key="new_datasettype_desc_input",
+                    height=68
+                )
+                if st.button("Create Dataset Type", key="create_datasettype_btn", type="primary"):
+                    if not new_dt_name or not new_dt_name.strip():
+                        show_error("Type Name is required")
+                    elif datasettype_name_exists(new_dt_name.strip()):
+                        show_error(f"Dataset type '{new_dt_name.strip()}' already exists")
+                    else:
+                        try:
+                            create_datasettype(new_dt_name.strip(), new_dt_desc.strip() if new_dt_desc else None)
+                            st.session_state['new_datasettype_name'] = new_dt_name.strip()
+                            st.success(f"Created '{new_dt_name.strip()}'")
+                            st.rerun()
+                        except Exception as e:
+                            show_error(f"Failed to create: {e}")
+
+    # Check if we have required reference data
+    if not datasource or not datasettype:
+        show_warning("Create the required data source and dataset type above to continue.")
         return None
 
     # Create form with unique key based on mode
     form_key = "import_config_form_edit" if is_edit else "import_config_form_create"
     with st.form(key=form_key):
-        # Section 1: Basic Information
-        st.markdown("### Basic Information")
-
-        # Info box for reference data
-        if not is_edit:
-            st.info("💡 **Need to add a new Data Source or Dataset Type?** Navigate to the **Reference Data** page (Phase 4 - coming soon), or add via SQL: `INSERT INTO dba.tdatasource (sourcename, description) VALUES ('MySource', 'Description');`")
-
         col1, col2 = st.columns(2)
 
         with col1:
@@ -105,13 +202,6 @@ def render_import_config_form(
                 "Configuration Name *",
                 value=config_data.get('config_name', '') if config_data else '',
                 help="Unique name for this configuration (alphanumeric, underscore, hyphen only)"
-            )
-
-            datasource = st.selectbox(
-                "Data Source *",
-                options=datasources,
-                index=datasources.index(config_data['datasource']) if config_data and config_data.get('datasource') in datasources else 0,
-                help="Select the data source for this import"
             )
 
             file_type = st.selectbox(
@@ -122,13 +212,6 @@ def render_import_config_form(
             )
 
         with col2:
-            datasettype = st.selectbox(
-                "Dataset Type *",
-                options=datasettypes,
-                index=datasettypes.index(config_data['datasettype']) if config_data and config_data.get('datasettype') in datasettypes else 0,
-                help="Select the dataset type for this import"
-            )
-
             strategy_options = [f"{s['importstrategyid']}. {s['name']}" for s in strategies]
             strategy_index = 0
             if config_data and config_data.get('importstrategyid'):
