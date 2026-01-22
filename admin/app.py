@@ -9,6 +9,7 @@ This file serves as the navigation entry point using st.navigation().
 
 import streamlit as st
 from common.db_utils import test_connection
+from admin.utils.ui_helpers import load_custom_css
 
 # Set page config (must be first Streamlit command)
 st.set_page_config(
@@ -21,6 +22,13 @@ st.set_page_config(
 # Initialize session state for database connection
 if 'db_connected' not in st.session_state:
     st.session_state.db_connected = test_connection()
+
+# Initialize theme in session state
+if 'theme' not in st.session_state:
+    st.session_state.theme = 'light'
+
+# Load custom CSS with theme support
+load_custom_css()
 
 # Define all pages with groups
 pages = {
@@ -56,6 +64,28 @@ with st.sidebar:
     else:
         st.error("Database Disconnected")
         st.caption("Check DB_URL environment variable")
+
+    # Theme toggle at bottom
+    st.markdown("---")
+
+    # Toggle switch with moon/sun label
+    theme_label = "🌙 Dark Mode" if st.session_state.theme == 'light' else "☀️ Light Mode"
+    dark_mode = st.toggle(
+        "🌙 Dark Mode",
+        value=st.session_state.theme == 'dark',
+        key="theme_toggle"
+    )
+
+    # Debug: Show current theme state
+    st.caption(f"Theme: {st.session_state.theme}")
+
+    # Apply theme change on toggle
+    if dark_mode and st.session_state.theme == 'light':
+        st.session_state.theme = 'dark'
+        st.rerun()
+    elif not dark_mode and st.session_state.theme == 'dark':
+        st.session_state.theme = 'light'
+        st.rerun()
 
 # Run the selected page
 nav.run()

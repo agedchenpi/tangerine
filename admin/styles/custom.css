@@ -510,31 +510,57 @@ hr {
 /* ============================================================================
    DARK MODE SUPPORT
    ============================================================================ */
-/* Dark mode detection via Streamlit's theme attribute and prefers-color-scheme */
+/* Dark mode CSS variables - WCAG compliant contrast */
+[data-theme="dark"],
+.stApp[data-theme="dark"] {
+    --bg-light: #121212;
+    --text-dark: #E8E8E8;
+    --text-light: #B0B0B0;
+    --border-color: #2D2D3D;
+    --tangerine-primary: #FFA05C;
+    --tangerine-secondary: #FFB87A;
+    --tangerine-dark: #E07830;
+    --tangerine-light: #3D2A1A;
+}
+
+/* Dark mode detection via prefers-color-scheme */
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg-light: #1E1E1E;
-        --text-dark: #E0E0E0;
-        --text-light: #A0A0A0;
-        --border-color: #404040;
+        --bg-light: #121212;
+        --text-dark: #E8E8E8;
+        --text-light: #B0B0B0;
+        --border-color: #2D2D3D;
     }
+}
+
+/* Dark mode - main background */
+[data-theme="dark"] .main,
+.stApp[data-theme="dark"] .main {
+    background-color: #121212;
+}
+
+/* Dark mode - sidebar */
+[data-theme="dark"] [data-testid="stSidebar"],
+.stApp[data-theme="dark"] [data-testid="stSidebar"] {
+    background-color: #1E1E2E;
+    border-right-color: #2D2D3D;
 }
 
 /* Streamlit dark mode - inline code */
 [data-theme="dark"] code,
 .stApp[data-theme="dark"] code {
-    background-color: #3A3A3A;
-    color: #FFB366;
-    border-color: #505050;
+    background-color: #2D2D3D;
+    color: #FFA05C;
+    border-color: #3D3D4D;
 }
 
 [data-theme="dark"] table code,
 [data-theme="dark"] td code,
 [data-theme="dark"] th code,
 .stApp[data-theme="dark"] table code {
-    background-color: #3A3A3A;
-    color: #FFB366;
-    border-color: #505050;
+    background-color: #2D2D3D;
+    color: #FFA05C;
+    border-color: #3D3D4D;
 }
 
 /* Dark mode pre code blocks stay the same (already dark) */
@@ -548,51 +574,228 @@ hr {
 /* Dark mode - markdown tables */
 [data-theme="dark"] table,
 .stApp[data-theme="dark"] table {
-    border-color: #404040;
+    border-color: #2D2D3D;
 }
 
 [data-theme="dark"] th,
 [data-theme="dark"] td,
 .stApp[data-theme="dark"] th,
 .stApp[data-theme="dark"] td {
-    border-color: #404040;
+    border-color: #2D2D3D;
 }
 
-/* Dark mode - expander content */
+/* Dark mode - headers */
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6,
+.stApp[data-theme="dark"] h1,
+.stApp[data-theme="dark"] h2,
+.stApp[data-theme="dark"] h3,
+.stApp[data-theme="dark"] h4,
+.stApp[data-theme="dark"] h5,
+.stApp[data-theme="dark"] h6 {
+    color: #E8E8E8;
+}
+
+[data-theme="dark"] h1,
+.stApp[data-theme="dark"] h1 {
+    border-bottom-color: #FFA05C;
+}
+
+/* Dark mode - expander */
+[data-theme="dark"] .streamlit-expanderHeader,
+.stApp[data-theme="dark"] .streamlit-expanderHeader {
+    background-color: #1E1E2E;
+    border-color: #2D2D3D;
+    color: #E8E8E8;
+}
+
+[data-theme="dark"] .streamlit-expanderHeader:hover,
+.stApp[data-theme="dark"] .streamlit-expanderHeader:hover {
+    border-color: #FFA05C;
+    background-color: #2D2A3A;
+}
+
 [data-theme="dark"] .streamlit-expanderContent,
 .stApp[data-theme="dark"] .streamlit-expanderContent {
-    background-color: #262626;
+    background-color: #1A1A2A;
 }
 
 /* Dark mode - metric cards */
 [data-theme="dark"] [data-testid="stMetric"],
 .stApp[data-theme="dark"] [data-testid="stMetric"] {
-    background-color: #262626;
+    background-color: #1E1E2E;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    border-left-color: #FFA05C;
+}
+
+[data-theme="dark"] [data-testid="stMetric"] > div:first-child,
+.stApp[data-theme="dark"] [data-testid="stMetric"] > div:first-child {
+    color: #B0B0B0;
+}
+
+[data-theme="dark"] [data-testid="stMetric"] > div:last-child,
+.stApp[data-theme="dark"] [data-testid="stMetric"] > div:last-child {
+    color: #FFA05C;
 }
 
 /* Dark mode - tabs */
 [data-theme="dark"] .stTabs [data-baseweb="tab-list"],
 .stApp[data-theme="dark"] .stTabs [data-baseweb="tab-list"] {
-    background-color: #262626;
+    background-color: #1E1E2E;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-/* Dark mode - alerts */
+[data-theme="dark"] .stTabs [data-baseweb="tab"],
+.stApp[data-theme="dark"] .stTabs [data-baseweb="tab"] {
+    color: #B0B0B0;
+}
+
+[data-theme="dark"] .stTabs [aria-selected="true"],
+.stApp[data-theme="dark"] .stTabs [aria-selected="true"] {
+    background-color: #FFA05C;
+    color: #121212;
+}
+
+[data-theme="dark"] .stTabs [data-baseweb="tab"]:hover,
+.stApp[data-theme="dark"] .stTabs [data-baseweb="tab"]:hover {
+    background-color: #2D2A3A;
+}
+
+/* Dark mode - buttons */
+[data-theme="dark"] .stButton > button,
+.stApp[data-theme="dark"] .stButton > button {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+[data-theme="dark"] .stButton > button[kind="primary"],
+.stApp[data-theme="dark"] .stButton > button[kind="primary"] {
+    background-color: #FFA05C;
+    color: #121212;
+}
+
+[data-theme="dark"] .stButton > button[kind="primary"]:hover,
+.stApp[data-theme="dark"] .stButton > button[kind="primary"]:hover {
+    background-color: #E07830;
+}
+
+[data-theme="dark"] .stButton > button[kind="secondary"],
+.stApp[data-theme="dark"] .stButton > button[kind="secondary"] {
+    background-color: #1E1E2E;
+    border-color: #FFA05C;
+    color: #FFA05C;
+}
+
+[data-theme="dark"] .stButton > button[kind="secondary"]:hover,
+.stApp[data-theme="dark"] .stButton > button[kind="secondary"]:hover {
+    background-color: #2D2A3A;
+}
+
+/* Dark mode - forms & inputs */
+[data-theme="dark"] .stTextInput > div > div > input,
+[data-theme="dark"] .stTextArea > div > div > textarea,
+[data-theme="dark"] .stSelectbox > div > div > select,
+[data-theme="dark"] .stNumberInput > div > div > input,
+[data-theme="dark"] .stDateInput > div > div > input,
+.stApp[data-theme="dark"] .stTextInput > div > div > input,
+.stApp[data-theme="dark"] .stTextArea > div > div > textarea,
+.stApp[data-theme="dark"] .stSelectbox > div > div > select,
+.stApp[data-theme="dark"] .stNumberInput > div > div > input,
+.stApp[data-theme="dark"] .stDateInput > div > div > input {
+    background-color: #1E1E2E;
+    border-color: #2D2D3D;
+    color: #E8E8E8;
+}
+
+[data-theme="dark"] .stTextInput > div > div > input:focus,
+[data-theme="dark"] .stTextArea > div > div > textarea:focus,
+.stApp[data-theme="dark"] .stTextInput > div > div > input:focus,
+.stApp[data-theme="dark"] .stTextArea > div > div > textarea:focus {
+    border-color: #FFA05C;
+    box-shadow: 0 0 0 3px rgba(255, 160, 92, 0.15);
+}
+
+[data-theme="dark"] label,
+.stApp[data-theme="dark"] label {
+    color: #E8E8E8;
+}
+
+/* Dark mode - dataframes */
+[data-theme="dark"] .stDataFrame,
+.stApp[data-theme="dark"] .stDataFrame {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+[data-theme="dark"] .stDataFrame thead tr th,
+.stApp[data-theme="dark"] .stDataFrame thead tr th {
+    background-color: #FFA05C !important;
+    color: #121212 !important;
+}
+
+[data-theme="dark"] .stDataFrame tbody tr:nth-child(even),
+.stApp[data-theme="dark"] .stDataFrame tbody tr:nth-child(even) {
+    background-color: #1A1A2A;
+}
+
+[data-theme="dark"] .stDataFrame tbody tr:hover,
+.stApp[data-theme="dark"] .stDataFrame tbody tr:hover {
+    background-color: #2D2A3A;
+}
+
+/* Dark mode - charts */
+[data-theme="dark"] .stPlotlyChart,
+.stApp[data-theme="dark"] .stPlotlyChart {
+    background-color: #1E1E2E;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* Dark mode - dividers */
+[data-theme="dark"] hr,
+.stApp[data-theme="dark"] hr {
+    background: linear-gradient(to right, #FFA05C, #3D2A1A);
+}
+
+/* Dark mode - alerts - WCAG compliant backgrounds */
 [data-theme="dark"] .stSuccess,
 .stApp[data-theme="dark"] .stSuccess {
-    background-color: #1D3D25;
+    background-color: #1A3D25;
+    border-left-color: #28A745;
+    color: #B8E6C4;
 }
 
 [data-theme="dark"] .stError,
 .stApp[data-theme="dark"] .stError {
-    background-color: #3D1D1D;
+    background-color: #3D1A1A;
+    border-left-color: #DC3545;
+    color: #F5C6CB;
 }
 
 [data-theme="dark"] .stWarning,
 .stApp[data-theme="dark"] .stWarning {
-    background-color: #3D3D1D;
+    background-color: #3D3D1A;
+    border-left-color: #FFC107;
+    color: #FFEEBA;
 }
 
 [data-theme="dark"] .stInfo,
 .stApp[data-theme="dark"] .stInfo {
-    background-color: #1D2D3D;
+    background-color: #1A2A3D;
+    border-left-color: #17A2B8;
+    color: #BEE5EB;
+}
+
+/* Dark mode - tooltips */
+[data-theme="dark"] [data-baseweb="tooltip"],
+.stApp[data-theme="dark"] [data-baseweb="tooltip"] {
+    background-color: #2D2D3D;
+    color: #E8E8E8;
+}
+
+/* Dark mode - captions */
+[data-theme="dark"] .stCaption,
+.stApp[data-theme="dark"] .stCaption {
+    color: #B0B0B0;
 }
