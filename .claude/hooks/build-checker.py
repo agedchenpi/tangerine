@@ -2,12 +2,19 @@
 """
 Stop Hook: Run quick checks after Claude finishes responding.
 Provides reminders about code quality and documentation.
+
+Also handles spec generation when plan mode was used during session.
+(Moved from spec-generator.py since ExitPlanMode doesn't trigger PostToolUse hooks)
 """
 import json
 import os
+import re
 import subprocess
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
+
+SPECS_DIR = Path("/opt/tangerine/specs")
 
 
 def run_ruff_check() -> tuple[int, str]:
@@ -82,6 +89,107 @@ def detect_significant_work(transcript_path: str) -> dict:
     return indicators
 
 
+def extract_key_feature(content: str) -> str:
+    """Extract key feature from first heading in plan.
+
+    Parses the first # or ## heading and converts it to a URL-friendly slug.
+    Returns 'unnamed' if no heading is found.
+    """
+    match = re.search(r'^#+ (.+)$', content, re.MULTILINE)
+    if match:
+        title = match.group(1).strip()
+        # Remove common prefixes like "Plan:" or "Spec:"
+        title = re.sub(r'^(Plan|Spec|Feature|Fix):\s*', '', title, flags=re.IGNORECASE)
+        # Convert to slug: lowercase, replace spaces/special chars with hyphens
+        slug = re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')
+        return slug[:50]  # Limit length
+    return "unnamed"
+
+
+def find_recent_plan_file(max_age_minutes: int = 30) -> Path | None:
+    """Find most recently modified plan file within time window.
+
+    Args:
+        max_age_minutes: Only consider files modified within this many minutes
+
+    Returns:
+        Path to plan file or None if not found
+    """
+    plans_dir = Path.home() / ".claude" / "plans"
+    if not plans_dir.exists():
+        return None
+
+    plan_files = list(plans_dir.glob("*.md"))
+    if not plan_files:
+        return None
+
+    # Filter to recent files only
+    now = datetime.now()
+    cutoff = now - timedelta(minutes=max_age_minutes)
+
+    recent_files = []
+    for pf in plan_files:
+        mtime = datetime.fromtimestamp(pf.stat().st_mtime)
+        if mtime >= cutoff:
+            recent_files.append((pf, mtime))
+
+    if not recent_files:
+        return None
+
+    # Return most recently modified
+    return max(recent_files, key=lambda x: x[1])[0]
+
+
+def spec_already_exists(plan_content: str) -> bool:
+    """Check if a spec already exists for this plan content.
+
+    Compares first heading to avoid duplicate specs.
+    """
+    if not SPECS_DIR.exists():
+        return False
+
+    key_feature = extract_key_feature(plan_content)
+    if key_feature == "unnamed":
+        return False
+
+    # Check for existing spec with same feature name (any timestamp)
+    existing = list(SPECS_DIR.glob(f"*_spec_{key_feature}.md"))
+    return len(existing) > 0
+
+
+def generate_spec_from_plan() -> str | None:
+    """Check for recent plan and generate spec if needed.
+
+    Returns:
+        Message about spec generation, or None if nothing done
+    """
+    plan_file = find_recent_plan_file(max_age_minutes=30)
+    if not plan_file:
+        return None
+
+    content = plan_file.read_text()
+    if not content.strip():
+        return None
+
+    # Skip if spec already exists for this plan
+    if spec_already_exists(content):
+        return None
+
+    # Generate spec filename
+    timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+    key_feature = extract_key_feature(content)
+    spec_filename = f"{timestamp}_spec_{key_feature}.md"
+
+    # Ensure specs directory exists
+    SPECS_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Write spec file
+    spec_path = SPECS_DIR / spec_filename
+    spec_path.write_text(content)
+
+    return f"📋 Spec saved: specs/{spec_filename}"
+
+
 def main():
     try:
         input_data = json.load(sys.stdin)
@@ -123,6 +231,11 @@ def main():
         doc_reminders.append("   • Document the feature in `docs/features/`")
         doc_reminders.append("   • Add entry to `CHANGELOG.md`")
         doc_reminders.append("   • Run `/dev-docs-update` if task is done")
+
+    # Check for recent plan files and generate spec if needed
+    spec_message = generate_spec_from_plan()
+    if spec_message:
+        messages.insert(0, spec_message)
 
     # Only output if there are issues or reminders
     # Note: Stop hooks don't support hookSpecificOutput, so we print to stderr

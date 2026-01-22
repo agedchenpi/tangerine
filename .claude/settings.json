@@ -33,16 +33,6 @@
             "timeout": 10
           }
         ]
-      },
-      {
-        "matcher": "ExitPlanMode",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 $CLAUDE_PROJECT_DIR/.claude/hooks/spec-generator.py",
-            "timeout": 10
-          }
-        ]
       }
     ],
     "Stop": [

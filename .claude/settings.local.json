@@ -45,7 +45,8 @@
       "Bash(fuser:*)",
       "Bash(wc:*)",
       "Bash(grep:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(SPEC_GENERATOR_DEBUG=1 python3:*)"
     ]
   }
 }
