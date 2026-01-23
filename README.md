@@ -317,24 +317,14 @@ Example: If your server IP is `192.168.1.100`, access at `http://192.168.1.100:8
 
 ### Starting the Admin Service
 
-The admin service is part of the Docker Compose stack:
+The admin service is part of the Docker Compose stack. Quick start:
 
 ```bash
-# Start all services including admin
-docker compose up --build
-
-# Start in detached mode
-docker compose up -d
-
-# View admin service logs
-docker compose logs -f admin
-
-# Restart just the admin service
-docker compose restart admin
-
-# Stop all services
-docker compose down
+docker compose up -d        # Start all services
+docker compose logs -f admin # View admin logs
 ```
+
+For comprehensive Docker commands (build, restart, volumes, cleanup), see [Docker Management Commands](#docker-management-commands).
 
 ### Admin Features Implementation Status
 
@@ -553,6 +543,125 @@ docker compose down
 - **admin**: Streamlit web interface (port 8501)
 
 All services communicate via the `tangerine_network` bridge network.
+
+### Streamlit Admin Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      STREAMLIT ADMIN ARCHITECTURE                        │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │                         app.py (Entry Point)                      │   │
+│  │                    st.navigation() + Sidebar Menu                 │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                                    │                                     │
+│         ┌──────────────────────────┼──────────────────────────┐         │
+│         ▼                          ▼                          ▼         │
+│  ┌─────────────┐           ┌─────────────┐           ┌─────────────┐   │
+│  │ CONFIGURATION│           │ OPERATIONS  │           │   SYSTEM    │   │
+│  ├─────────────┤           ├─────────────┤           ├─────────────┤   │
+│  │ imports.py  │           │ run_jobs.py │           │event_system │   │
+│  │ inbox_rules │           │ monitoring  │           │    .py      │   │
+│  │ reference_  │           │ reports.py  │           └─────────────┘   │
+│  │   data.py   │           └─────────────┘                              │
+│  │ scheduler   │                                                        │
+│  └─────────────┘                                                        │
+│         │                          │                          │         │
+│         └──────────────────────────┼──────────────────────────┘         │
+│                                    ▼                                     │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │                      SERVICE LAYER (admin/services/)              │   │
+│  │  import_config_service │ job_execution_service │ pubsub_service  │   │
+│  │  inbox_config_service  │ monitoring_service    │ scheduler_service│  │
+│  │  reference_data_service│ report_manager_service│                  │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                                    │                                     │
+│                                    ▼                                     │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │                    COMPONENTS (admin/components/)                 │   │
+│  │  notifications.py │ forms.py │ validators.py │ dependency_checker│   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                                    │                                     │
+│                                    ▼                                     │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │                      common/db_utils.py                           │   │
+│  │                   Connection Pool + db_transaction()              │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                                    │                                     │
+│                                    ▼                                     │
+│                            ┌─────────────┐                              │
+│                            │ PostgreSQL  │                              │
+│                            │    (db)     │                              │
+│                            └─────────────┘                              │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Page Dependency Graph
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        PAGE DEPENDENCY GRAPH                             │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌─────────────────┐                                                    │
+│  │ Reference Data  │ ◄─── Master data (must exist first)                │
+│  │ (datasources,   │                                                    │
+│  │  datasettypes,  │                                                    │
+│  │  strategies)    │                                                    │
+│  └────────┬────────┘                                                    │
+│           │                                                              │
+│           ├────────────────┬────────────────┬────────────────┐          │
+│           ▼                ▼                ▼                ▼          │
+│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐  ┌──────────┐     │
+│  │   Imports   │   │ Inbox Rules │   │  Scheduler  │  │ Reports  │     │
+│  │  (configs)  │   │  (patterns) │   │   (cron)    │  │(templates)│    │
+│  └──────┬──────┘   └──────┬──────┘   └──────┬──────┘  └────┬─────┘     │
+│         │                 │                 │               │           │
+│         └────────┬────────┴────────┬────────┘               │           │
+│                  ▼                 ▼                        ▼           │
+│         ┌─────────────┐   ┌─────────────────┐      ┌─────────────┐     │
+│         │  Run Jobs   │   │  Event System   │      │  Run Report │     │
+│         │ (execution) │   │ (pub/sub queue) │      │   (send)    │     │
+│         └──────┬──────┘   └────────┬────────┘      └──────┬──────┘     │
+│                │                   │                      │             │
+│                └───────────────────┼──────────────────────┘             │
+│                                    ▼                                     │
+│                           ┌─────────────┐                               │
+│                           │ Monitoring  │                               │
+│                           │(logs, stats)│                               │
+│                           └─────────────┘                               │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Docker Services & Volumes
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    DOCKER SERVICES & VOLUMES                             │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  HOST MACHINE                          DOCKER CONTAINERS                 │
+│  ─────────────                         ──────────────────                │
+│                                                                          │
+│  ./.data/etl/ ◄───────────────────────► /app/data (tangerine, admin)    │
+│    ├── source/     (bidirectional)        ├── source/                   │
+│    ├── archive/                           ├── archive/                  │
+│    └── inbox/                             └── inbox/                    │
+│                                                                          │
+│  ./secrets/ ─────────────────────────► /app/secrets (read-only)         │
+│    ├── credentials.json                                                  │
+│    └── token.json                                                        │
+│                                                                          │
+│  ./schema/ ──────────────────────────► /app/schema (db init)            │
+│                                                                          │
+│  NAMED VOLUMES (Docker-managed):                                         │
+│  ───────────────────────────────                                         │
+│  db_data ◄───────────────────────────► /var/lib/postgresql (db)         │
+│  etl_logs ◄──────────────────────────► /app/logs (tangerine, admin)     │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
 ### Database Integration
 
@@ -1115,6 +1224,79 @@ Tangerine includes Gmail integration for automated email processing and report g
 **Data Storage:**
 - `feeds.*` - Target tables for imported data (must have datasetid FK)
 
+## Docker Management Commands
+
+This section provides comprehensive Docker commands for managing the Tangerine stack. For ETL job execution and testing commands, see [Common Commands](#common-commands) below.
+
+### Service Management
+
+```bash
+# Start/Stop/Restart
+docker compose up -d                    # Start all services (detached)
+docker compose down                     # Stop all services
+docker compose restart admin            # Restart single service
+docker compose stop tangerine           # Stop without removing
+
+# View status
+docker compose ps                       # List running services
+docker compose ps -a                    # Include stopped services
+```
+
+### Image Management
+
+```bash
+# Build/Rebuild
+docker compose build                    # Build all images
+docker compose build --no-cache admin   # Force rebuild (no cache)
+docker compose up --build -d            # Build and start
+
+# Clean up images
+docker image ls                         # List all images
+docker image prune                      # Remove unused images
+docker image rm tangerine-admin         # Remove specific image
+```
+
+### Volume Management
+
+```bash
+# List volumes
+docker volume ls                        # List all volumes
+docker volume inspect tangerine_db_data # Inspect volume details
+
+# Backup/Restore database
+docker compose exec db pg_dump -U tangerine_admin tangerine_db > backup.sql
+docker compose exec -T db psql -U tangerine_admin tangerine_db < backup.sql
+
+# Reset volumes (DESTRUCTIVE)
+docker compose down --volumes           # Remove all data
+docker volume rm tangerine_db_data      # Remove specific volume
+```
+
+### Log Management
+
+```bash
+# View logs
+docker compose logs -f admin            # Follow admin logs
+docker compose logs --tail=100 tangerine # Last 100 lines
+docker compose logs --since=1h          # Logs from last hour
+
+# Log files (inside container)
+docker compose exec admin ls /app/logs
+docker compose exec admin tail -f /app/logs/etl.log
+```
+
+### Container Access
+
+```bash
+# Shell access
+docker compose exec tangerine bash      # Shell into ETL container
+docker compose exec db psql -U tangerine_admin -d tangerine_db  # DB shell
+docker compose exec admin python        # Python REPL in admin
+
+# Run one-off commands
+docker compose run --rm tangerine python -c "print('test')"
+```
+
 ## Code Style
 
 Follow these conventions when writing or modifying code:
@@ -1132,24 +1314,7 @@ Follow these conventions when writing or modifying code:
 
 ## Common Commands
 
-### Development
-```bash
-# Start all services
-docker compose up --build
-
-# Detached mode
-docker compose up -d
-
-# Rebuild specific service
-docker compose up --build -d admin
-
-# View logs
-docker compose logs -f admin
-docker compose logs -f tangerine
-
-# Reset database (WARNING: deletes all data)
-docker compose down --volumes && docker compose up --build
-```
+This section covers ETL job execution and development workflows. For Docker infrastructure commands (services, images, volumes, logs), see [Docker Management Commands](#docker-management-commands).
 
 ### Running Jobs
 ```bash
