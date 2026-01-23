@@ -60,6 +60,9 @@ regression_output.log
 .data/etl/archive/
 .data/etl/*/archive/
 
+# Test data artifacts
+.data/etl/regression/archive/
+
 # Task output files
 .data/claude/
 

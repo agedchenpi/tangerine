@@ -1,6 +1,6 @@
 """Database query helper utilities for admin interface"""
 
-from typing import List, Dict, Any, Optional
+from typing import Optional
 from common.db_utils import fetch_dict, execute_query
 
 
@@ -47,52 +47,6 @@ def table_exists(schema: str, table: str) -> bool:
     """
     result = fetch_dict(query, (schema, table))
     return result[0]['exists'] if result else False
-
-
-def get_distinct_values(table: str, column: str, where_clause: str = "") -> List[str]:
-    """
-    Get distinct values from a column.
-
-    Args:
-        table: Table name
-        column: Column name
-        where_clause: Optional WHERE clause
-
-    Returns:
-        List of distinct values
-    """
-    query = f"SELECT DISTINCT {column} FROM {table}"
-    if where_clause:
-        query += f" WHERE {where_clause}"
-    query += f" ORDER BY {column}"
-
-    result = fetch_dict(query)
-    return [row[column] for row in result] if result else []
-
-
-def get_table_columns(schema: str, table: str) -> List[Dict[str, Any]]:
-    """
-    Get column information for a table.
-
-    Args:
-        schema: Schema name
-        table: Table name
-
-    Returns:
-        List of column dictionaries with name, type, nullable info
-    """
-    query = """
-        SELECT
-            column_name,
-            data_type,
-            is_nullable,
-            column_default,
-            character_maximum_length
-        FROM information_schema.columns
-        WHERE table_schema = %s AND table_name = %s
-        ORDER BY ordinal_position
-    """
-    return fetch_dict(query, (schema, table))
 
 
 def format_sql_error(error: Exception) -> str:

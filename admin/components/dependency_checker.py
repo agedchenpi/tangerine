@@ -21,49 +21,6 @@ PAGE_PATHS = {
 }
 
 
-def render_dependency_status(dependencies: list[dict]) -> bool:
-    """
-    Render dependency status indicators.
-
-    Args:
-        dependencies: List of dicts with keys:
-            - name: Display name (e.g., "Data Sources")
-            - satisfied: Boolean indicating if dependency is met
-            - count: Number of available items (optional)
-            - entity_type: Type for navigation link (e.g., 'datasource')
-
-    Returns:
-        True if all dependencies are satisfied, False otherwise
-    """
-    all_satisfied = all(d['satisfied'] for d in dependencies)
-
-    if all_satisfied:
-        st.success("All dependencies satisfied")
-    else:
-        st.warning("Some dependencies are missing")
-
-    for dep in dependencies:
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            if dep['satisfied']:
-                count_str = f" ({dep.get('count', 0)} available)" if 'count' in dep else ""
-                st.markdown(f"**{dep['name']}:** {count_str}")
-            else:
-                st.markdown(f"**{dep['name']}:** None found")
-
-        with col2:
-            if dep['satisfied']:
-                st.markdown(":white_check_mark:")
-            else:
-                entity_type = dep.get('entity_type')
-                if entity_type:
-                    render_create_link(dep['name'], entity_type)
-                else:
-                    st.markdown(":x:")
-
-    return all_satisfied
-
-
 def render_create_link(entity_name: str, entity_type: str, inline: bool = True) -> None:
     """
     Render a navigation link to create a missing entity.

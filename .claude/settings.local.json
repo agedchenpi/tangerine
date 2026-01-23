@@ -49,7 +49,11 @@
       "Bash(SPEC_GENERATOR_DEBUG=1 python3:*)",
       "WebFetch(domain:docs.streamlit.io)",
       "WebFetch(domain:discuss.streamlit.io)",
-      "WebFetch(domain:100.67.142.87)"
+      "WebFetch(domain:100.67.142.87)",
+      "Bash(xargs:*)",
+      "Bash(pip3 install:*)",
+      "Bash(git restore:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }
