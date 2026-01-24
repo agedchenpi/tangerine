@@ -1,7 +1,16 @@
 [theme]
 # Default theme (light) - Tangerine orange accent
+base = "light"
 primaryColor = "#FF8C42"
 backgroundColor = "#F8F9FA"
 secondaryBackgroundColor = "#FFFFFF"
 textColor = "#2C3E50"
 font = "sans serif"
+
+[client]
+# Toolbar customization
+toolbarMode = "minimal"
+
+[ui]
+# Hide wide mode toggle since we always use wide mode
+hideTopBar = false

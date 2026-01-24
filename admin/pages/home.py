@@ -8,7 +8,7 @@ import streamlit as st
 from datetime import datetime, timedelta
 from common.db_utils import test_connection, fetch_dict
 from utils.db_helpers import get_count
-from utils.ui_helpers import load_custom_css, add_page_header
+from utils.ui_helpers import load_custom_css, add_page_header, render_stat_card
 
 # Load custom CSS styling
 load_custom_css()
@@ -31,14 +31,15 @@ col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     db_status = "Connected" if st.session_state.db_connected else "Disconnected"
-    st.metric("Database", db_status)
+    db_color = "#28A745" if st.session_state.db_connected else "#DC3545"
+    render_stat_card("Database", db_status, icon="🔌", color=db_color)
 
 with col2:
     try:
         active_configs = get_count("dba.timportconfig", "is_active = %s", (True,))
-        st.metric("Active Configs", active_configs)
+        render_stat_card("Active Configs", str(active_configs), icon="⚙️", color="#17A2B8")
     except Exception:
-        st.metric("Active Configs", "N/A")
+        render_stat_card("Active Configs", "N/A", icon="⚙️", color="#6C757D")
 
 with col3:
     try:
@@ -50,17 +51,17 @@ with col3:
         """
         result = fetch_dict(query, (datetime.now() - timedelta(hours=24),))
         job_count = result[0]['count'] if result else 0
-        st.metric("Jobs (24h)", job_count)
+        render_stat_card("Jobs (24h)", str(job_count), icon="🚀", color="#FFC107")
     except Exception:
-        st.metric("Jobs (24h)", "N/A")
+        render_stat_card("Jobs (24h)", "N/A", icon="🚀", color="#6C757D")
 
 with col4:
     try:
         # Count total datasets
         total_datasets = get_count("dba.tdataset")
-        st.metric("Total Datasets", total_datasets)
+        render_stat_card("Total Datasets", str(total_datasets), icon="📦", color="#28A745")
     except Exception:
-        st.metric("Total Datasets", "N/A")
+        render_stat_card("Total Datasets", "N/A", icon="📦", color="#6C757D")
 
 st.markdown("---")
 

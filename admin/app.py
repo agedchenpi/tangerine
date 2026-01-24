@@ -68,16 +68,13 @@ with st.sidebar:
     # Theme toggle at bottom
     st.markdown("---")
 
-    # Toggle switch with moon/sun label
-    theme_label = "🌙 Dark Mode" if st.session_state.theme == 'light' else "☀️ Light Mode"
+    # Toggle switch for dark mode
     dark_mode = st.toggle(
         "🌙 Dark Mode",
         value=st.session_state.theme == 'dark',
-        key="theme_toggle"
+        key="theme_toggle",
+        help="Toggle between light and dark themes"
     )
-
-    # Debug: Show current theme state
-    st.caption(f"Theme: {st.session_state.theme}")
 
     # Apply theme change on toggle
     if dark_mode and st.session_state.theme == 'light':
