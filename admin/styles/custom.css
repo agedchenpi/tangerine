@@ -1,9 +1,19 @@
 /* Tangerine Admin Interface - Custom Styling */
 
 /* ============================================================================
+   TYPOGRAPHY - Custom Fonts
+   ============================================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+/* ============================================================================
    COLOR PALETTE
    ============================================================================ */
 :root {
+    /* Typography */
+    --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-body: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
+
     /* Primary Tangerine Colors */
     --tangerine-primary: #FF8C42;
     --tangerine-secondary: #FFA45C;
@@ -44,29 +54,62 @@
     --gradient-primary: linear-gradient(135deg, #FF8C42 0%, #FFA45C 100%);
     --gradient-industrial: linear-gradient(135deg, #34495E 0%, #2C3E50 100%);
     --gradient-subtle: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(0,0,0,0.02) 100%);
+
+    /* Animated gradients */
+    --gradient-animated: linear-gradient(270deg, #FF8C42, #FFA45C, #FFB87A, #FFA45C, #FF8C42);
+
+    /* Mesh gradients for hero sections */
+    --mesh-gradient-light:
+        radial-gradient(at 40% 20%, rgba(255, 140, 66, 0.3) 0px, transparent 50%),
+        radial-gradient(at 80% 0%, rgba(52, 73, 94, 0.3) 0px, transparent 50%),
+        radial-gradient(at 0% 50%, rgba(255, 164, 92, 0.2) 0px, transparent 50%),
+        linear-gradient(135deg, #F8F9FA 0%, #FFFFFF 100%);
 }
 
 /* ============================================================================
    GLOBAL STYLES
    ============================================================================ */
-.main {
-    background-color: var(--bg-light);
+/* Apply custom fonts globally */
+body, .stApp, .main, p, div, span, li, td, th, .stMarkdown {
+    font-family: var(--font-body);
 }
 
-/* Headers - Enhanced industrial typography */
+.main {
+    background: linear-gradient(180deg, #FFFFFF 0%, #F8F9FA 50%, #EEEEF0 100%);
+    position: relative;
+}
+
+/* Hero gradient overlay for top of page */
+.main::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 300px;
+    background: var(--mesh-gradient-light);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.6;
+}
+
+/* Headers - Enhanced typography with Outfit font */
 h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
     color: var(--industrial-charcoal);
     font-weight: 700;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.02em;
 }
 
 h1 {
+    font-family: var(--font-display);
     border-bottom: none;
     padding-bottom: 0.75rem;
     margin-bottom: 1.75rem;
     position: relative;
     font-size: 2.5rem;
     font-weight: 800;
+    letter-spacing: -0.03em;
 }
 
 h1::after {
@@ -97,8 +140,10 @@ h3 {
    BUTTONS
    ============================================================================ */
 .stButton > button {
+    font-family: var(--font-display);
     border-radius: 8px;
     font-weight: 600;
+    letter-spacing: 0.3px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: var(--shadow-sm);
     position: relative;
@@ -129,21 +174,63 @@ h3 {
 }
 
 .stButton > button:active {
-    transform: translateY(-1px);
+    transform: translateY(-1px) scale(0.98);
     box-shadow: var(--shadow-sm);
 }
 
-/* Primary buttons - Enhanced with gradient */
+/* Click ripple effect */
+@keyframes ripple {
+    0% {
+        transform: scale(0);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+.stButton > button:active::before {
+    animation: ripple 0.6s ease-out;
+}
+
+/* Primary buttons - Enhanced with animated gradient */
 .stButton > button[kind="primary"] {
-    background: var(--gradient-primary);
+    background: var(--gradient-animated);
+    background-size: 200% 200%;
+    animation: gradient-shift 3s ease infinite;
     border: none;
     color: white;
     text-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .stButton > button[kind="primary"]:hover {
-    background: linear-gradient(135deg, #D67130 0%, #FF8C42 100%);
+    background-size: 200% 200%;
+    animation: gradient-shift 2s ease infinite;
     box-shadow: var(--shadow-glow);
+}
+
+/* Button shimmer effect on hover */
+.stButton > button::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    bottom: -50%;
+    left: -50%;
+    background: linear-gradient(
+        to bottom,
+        transparent,
+        rgba(255, 255, 255, 0.3) 50%,
+        transparent
+    );
+    transform: translateX(-100%) rotate(45deg);
+    transition: transform 0.6s;
+    pointer-events: none;
+}
+
+.stButton > button:hover::after {
+    transform: translateX(100%) rotate(45deg);
 }
 
 /* Secondary buttons - Industrial border treatment */
@@ -218,12 +305,13 @@ h3 {
     border-color: var(--industrial-metal);
 }
 
-/* Form labels - Enhanced typography */
+/* Form labels - Enhanced typography with Outfit */
 label {
+    font-family: var(--font-display);
     color: var(--industrial-slate);
     font-weight: 600;
     font-size: 0.9rem;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.5px;
     text-transform: uppercase;
 }
 
@@ -242,54 +330,77 @@ label {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Metric cards - Enhanced industrial design */
+/* Metric cards - Enhanced with gradient border animation */
 [data-testid="stMetric"] {
     background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%);
     padding: 1.75rem;
     border-radius: 14px;
     box-shadow: var(--shadow-md);
-    border-left: 5px solid var(--tangerine-primary);
-    border-top: 1px solid rgba(255, 140, 66, 0.2);
-    border-right: 1px solid rgba(0, 0, 0, 0.05);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    border: 2px solid transparent;
+    background-clip: padding-box;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 }
 
+/* Gradient border effect */
 [data-testid="stMetric"]::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 14px;
+    padding: 2px;
+    background: linear-gradient(135deg, #FF8C42, #FFA45C, #FFB87A);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+
+[data-testid="stMetric"]:hover::before {
+    opacity: 1;
+}
+
+/* Radial glow in corner */
+[data-testid="stMetric"]::after {
     content: '';
     position: absolute;
     top: 0;
     right: 0;
     width: 100px;
     height: 100px;
-    background: radial-gradient(circle, rgba(255, 140, 66, 0.1) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(255, 140, 66, 0.15) 0%, transparent 70%);
     pointer-events: none;
 }
 
 [data-testid="stMetric"]:hover {
     transform: translateY(-6px) scale(1.02);
-    box-shadow: var(--shadow-lg);
-    border-left-width: 6px;
+    box-shadow:
+        var(--shadow-lg),
+        0 0 30px rgba(255, 140, 66, 0.2);
 }
 
-/* Metric label - Industrial typography */
+/* Metric label - Industrial typography with Outfit */
 [data-testid="stMetric"] > div:first-child {
+    font-family: var(--font-display);
     color: var(--industrial-slate);
     font-size: 0.8rem;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
     font-weight: 700;
     margin-bottom: 0.75rem;
 }
 
-/* Metric value - Bold industrial aesthetic */
+/* Metric value - Bold industrial aesthetic with Outfit */
 [data-testid="stMetric"] > div:last-child {
+    font-family: var(--font-display);
     color: var(--tangerine-primary);
     font-size: 2.25rem;
     font-weight: 800;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.02em;
     text-shadow: 0 2px 4px rgba(255, 140, 66, 0.1);
 }
 
@@ -303,18 +414,33 @@ label {
     border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-/* Table headers - Enhanced gradient and industrial styling */
+/* Table headers - Enhanced with animated gradient flow and Outfit font */
 .stDataFrame thead tr th {
-    background: var(--gradient-primary) !important;
+    font-family: var(--font-display) !important;
+    background: linear-gradient(
+        90deg,
+        #FF8C42 0%,
+        #FFA45C 25%,
+        #FFB87A 50%,
+        #FFA45C 75%,
+        #FF8C42 100%
+    ) !important;
+    background-size: 200% 100% !important;
+    animation: gradient-flow 8s ease infinite;
     color: white !important;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1.2px;
+    letter-spacing: 1.5px;
     font-size: 0.8rem;
     padding: 1.25rem 1rem;
     text-shadow: 0 1px 2px rgba(0,0,0,0.2);
     border-bottom: 3px solid var(--tangerine-dark);
     position: relative;
+}
+
+@keyframes gradient-flow {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
 }
 
 .stDataFrame thead tr th::after {
@@ -330,9 +456,10 @@ label {
         transparent 100%);
 }
 
-/* Table rows - Improved contrast and hover effects */
+/* Table rows - Enhanced hover effects with lift */
 .stDataFrame tbody tr {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
 }
 
 .stDataFrame tbody tr:nth-child(even) {
@@ -343,9 +470,10 @@ label {
     background: linear-gradient(90deg,
         var(--tangerine-light) 0%,
         rgba(255, 228, 208, 0.5) 100%);
-    transform: scale(1.01);
-    box-shadow: 0 2px 8px rgba(255, 140, 66, 0.2);
+    transform: translateY(-2px) scale(1.005);
+    box-shadow: 0 4px 12px rgba(255, 140, 66, 0.25);
     cursor: pointer;
+    z-index: 1;
 }
 
 /* Table cells - Enhanced padding and typography */
@@ -369,11 +497,12 @@ label {
 }
 
 .stTabs [data-baseweb="tab"] {
+    font-family: var(--font-display);
     border-radius: 8px;
     padding: 0.875rem 1.75rem;
     font-weight: 600;
     font-size: 0.9rem;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.5px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     border: 2px solid transparent;
@@ -397,7 +526,7 @@ label {
     color: white;
     box-shadow: var(--shadow-md);
     text-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    transform: translateY(-2px);
+    transform: translateY(-2px) scale(1.02);
 }
 
 .stTabs [aria-selected="true"]::before {
@@ -407,17 +536,23 @@ label {
 .stTabs [data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     background-color: var(--tangerine-light);
     border-color: var(--tangerine-primary);
-    transform: translateY(-1px);
+    transform: translateY(-1px) scale(1.01);
 }
 
 .stTabs [data-baseweb="tab"]:hover::before {
     transform: scaleX(1);
 }
 
+/* Tab transition animation */
+.stTabs [data-baseweb="tab-panel"] {
+    animation: fadeIn 0.4s ease-out;
+}
+
 /* ============================================================================
    EXPANDERS
    ============================================================================ */
 .streamlit-expanderHeader {
+    font-family: var(--font-display);
     background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%);
     border-radius: 10px;
     border: 2px solid var(--border-color);
@@ -432,8 +567,13 @@ label {
 .streamlit-expanderHeader:hover {
     border-color: var(--tangerine-primary);
     background: linear-gradient(135deg, var(--tangerine-light) 0%, #FFFFFF 100%);
-    transform: translateX(4px);
+    transform: translateX(4px) scale(1.01);
     box-shadow: var(--shadow-md);
+}
+
+/* Expander content animation */
+.streamlit-expanderContent {
+    animation: fadeIn 0.3s ease-out;
 }
 
 .streamlit-expanderContent {
@@ -452,6 +592,7 @@ label {
     border-left: 4px solid;
     padding: 1rem 1.25rem;
     margin: 1rem 0;
+    animation: fadeInUp 0.4s ease-out;
 }
 
 /* Success alerts */
@@ -510,12 +651,28 @@ label {
    PROGRESS BARS & SPINNERS
    ============================================================================ */
 .stProgress > div > div {
-    background-color: var(--tangerine-primary);
+    background: var(--gradient-primary);
+    transition: width 0.3s ease-out;
 }
 
-/* Spinner */
+/* Spinner with gradient */
 [data-testid="stSpinner"] > div {
     border-top-color: var(--tangerine-primary) !important;
+    border-right-color: var(--tangerine-secondary) !important;
+}
+
+/* Pulse animation for loading */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.stSpinner {
+    animation: pulse 1.5s ease-in-out infinite;
 }
 
 /* ============================================================================
@@ -546,13 +703,13 @@ pre,
     overflow-x: auto;
 }
 
-/* Inline code - improved contrast for light mode */
+/* Inline code - improved contrast with JetBrains Mono */
 code {
+    font-family: var(--font-mono);
     background-color: #E8E8E8;
     padding: 0.2rem 0.5rem;
     border-radius: 4px;
     color: #C25A00;
-    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
     font-size: 0.9em;
     font-weight: 500;
     border: 1px solid #D0D0D0;
@@ -565,7 +722,7 @@ table code, td code, th code {
     border: 1px solid #D0D0D0;
 }
 
-/* Code inside pre blocks (fenced code blocks) - light text on dark background */
+/* Code inside pre blocks (fenced code blocks) - light text on dark background with JetBrains Mono */
 pre code,
 .stMarkdown pre code,
 .stExpander pre code,
@@ -575,6 +732,7 @@ pre code,
 .streamlit-expanderContent pre code,
 .element-container pre code,
 .stApp pre code {
+    font-family: var(--font-mono);
     background-color: transparent !important;
     background: none !important;
     padding: 0 !important;
@@ -641,18 +799,26 @@ hr::after {
 .stCheckbox > label > div:first-child,
 .stRadio > label > div:first-child {
     border-color: var(--tangerine-primary);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .stCheckbox > label > div:first-child[aria-checked="true"],
 .stRadio > label > div:first-child[aria-checked="true"] {
-    background-color: var(--tangerine-primary);
+    background: var(--gradient-primary);
+    transform: scale(1.05);
+}
+
+.stCheckbox > label:hover > div:first-child,
+.stRadio > label:hover > div:first-child {
+    border-color: var(--tangerine-dark);
+    box-shadow: 0 0 8px rgba(255, 140, 66, 0.3);
 }
 
 /* ============================================================================
-   DOWNLOAD BUTTON
+   DOWNLOAD BUTTON - Fixed to use Tangerine theme
    ============================================================================ */
 .stDownloadButton > button {
-    background: linear-gradient(135deg, #28A745 0%, #20C997 100%);
+    background: var(--gradient-primary);
     color: white;
     border: none;
     border-radius: 8px;
@@ -663,9 +829,9 @@ hr::after {
 }
 
 .stDownloadButton > button:hover {
-    background: linear-gradient(135deg, #218838 0%, #1AA179 100%);
+    background: linear-gradient(135deg, #D67130 0%, #FF8C42 100%);
     transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+    box-shadow: var(--shadow-glow);
 }
 
 .stDownloadButton > button:active {
@@ -693,6 +859,40 @@ hr::after {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Staggered card entrance animations */
+[data-testid="stMetric"]:nth-child(1) {
+    animation: fadeInUp 0.5s ease-out 0.1s backwards;
+}
+
+[data-testid="stMetric"]:nth-child(2) {
+    animation: fadeInUp 0.5s ease-out 0.2s backwards;
+}
+
+[data-testid="stMetric"]:nth-child(3) {
+    animation: fadeInUp 0.5s ease-out 0.3s backwards;
+}
+
+[data-testid="stMetric"]:nth-child(4) {
+    animation: fadeInUp 0.5s ease-out 0.4s backwards;
 }
 
 .element-container {
@@ -807,6 +1007,16 @@ hr::after {
     --gradient-primary: linear-gradient(135deg, #FFA05C 0%, #FFB87A 100%);
     --gradient-industrial: linear-gradient(135deg, #1A1F2E 0%, #0F1419 100%);
     --gradient-subtle: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.02) 100%);
+
+    /* Dark mode animated gradient */
+    --gradient-animated: linear-gradient(270deg, #FFA05C, #FFB87A, #FFC892, #FFB87A, #FFA05C);
+
+    /* Dark mode ambient lighting */
+    --ambient-light: radial-gradient(
+        circle at 50% 0%,
+        rgba(255, 160, 92, 0.08) 0%,
+        transparent 50%
+    );
 }
 
 /* Dark mode detection via prefers-color-scheme */
@@ -819,10 +1029,25 @@ hr::after {
     }
 }
 
-/* Dark mode - main background */
+/* Dark mode - main background with ambient lighting */
 [data-theme="dark"] .main,
 .stApp[data-theme="dark"] .main {
-    background-color: #121212;
+    background: linear-gradient(180deg, #0F0F1E 0%, #121212 50%, #0A0A12 100%);
+    position: relative;
+}
+
+/* Ambient light effect at top of dark mode pages */
+[data-theme="dark"] .main::before,
+.stApp[data-theme="dark"] .main::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 400px;
+    background: var(--ambient-light);
+    pointer-events: none;
+    z-index: 0;
 }
 
 /* Dark mode - sidebar */
@@ -830,6 +1055,118 @@ hr::after {
 .stApp[data-theme="dark"] [data-testid="stSidebar"] {
     background-color: #1E1E2E;
     border-right-color: #2D2D3D;
+}
+
+/* Dark mode - sidebar navigation group headers (Home, Configuration, Operations, System) */
+/* Enhanced selectors with bright white for maximum visibility */
+[data-theme="dark"] [data-testid="stSidebar"] [data-testid="stNavSectionHeader"],
+[data-theme="dark"] [data-testid="stSidebar"] header[data-testid="stNavSectionHeader"],
+[data-theme="dark"] [data-testid="stNavSectionHeader"],
+.stApp[data-theme="dark"] [data-testid="stSidebar"] [data-testid="stNavSectionHeader"],
+.stApp[data-theme="dark"] [data-testid="stNavSectionHeader"],
+[data-theme="dark"] [data-testid="stSidebar"] [data-testid="stSidebarNav"] ul li p,
+[data-theme="dark"] [data-testid="stSidebar"] [data-testid="stSidebarNav"] > div > ul > li > div,
+[data-theme="dark"] [data-testid="stSidebar"] [data-testid="stSidebarNav"] > div > div > div:first-child,
+[data-theme="dark"] [data-testid="stSidebar"] [role="list"] > div,
+[data-theme="dark"] [data-testid="stSidebar"] div[data-testid="stSidebarNavItems"] > div > div,
+[data-theme="dark"] [data-testid="stSidebar"] nav[role="navigation"] > div > div > span,
+[data-theme="dark"] [data-testid="stSidebar"] span[role="heading"],
+.stApp[data-theme="dark"] [data-testid="stSidebar"] [data-testid="stSidebarNav"] ul li p,
+.stApp[data-theme="dark"] [data-testid="stSidebar"] [data-testid="stSidebarNav"] > div > ul > li > div {
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    letter-spacing: 0.5px !important;
+    text-transform: uppercase !important;
+    opacity: 1 !important;
+}
+
+/* Dark mode - sidebar regular text (non-header elements) */
+[data-theme="dark"] [data-testid="stSidebar"] p:not([data-testid="stSidebarNav"] p),
+[data-theme="dark"] [data-testid="stSidebar"] span:not([role="heading"]),
+[data-theme="dark"] [data-testid="stSidebar"] div:not([data-testid="stSidebarNav"] div) {
+    color: #E8E8E8 !important;
+}
+
+/* Dark mode - sidebar navigation links */
+[data-theme="dark"] [data-testid="stSidebar"] a,
+[data-theme="dark"] [data-testid="stSidebar"] a span,
+[data-theme="dark"] [data-testid="stSidebar"] a p,
+.stApp[data-theme="dark"] [data-testid="stSidebar"] a,
+.stApp[data-theme="dark"] [data-testid="stSidebar"] a span,
+.stApp[data-theme="dark"] [data-testid="stSidebar"] a p {
+    color: #E8E8E8 !important;
+}
+
+[data-theme="dark"] [data-testid="stSidebar"] a:hover,
+[data-theme="dark"] [data-testid="stSidebar"] a:hover span,
+[data-theme="dark"] [data-testid="stSidebar"] a:hover p,
+.stApp[data-theme="dark"] [data-testid="stSidebar"] a:hover,
+.stApp[data-theme="dark"] [data-testid="stSidebar"] a:hover span,
+.stApp[data-theme="dark"] [data-testid="stSidebar"] a:hover p {
+    color: #FFA05C !important;
+}
+
+/* Dark mode - sidebar section dividers and text */
+[data-theme="dark"] [data-testid="stSidebar"] p,
+[data-theme="dark"] [data-testid="stSidebar"] span,
+[data-theme="dark"] [data-testid="stSidebar"] div,
+.stApp[data-theme="dark"] [data-testid="stSidebar"] p,
+.stApp[data-theme="dark"] [data-testid="stSidebar"] span {
+    color: #E8E8E8 !important;
+}
+
+/* ============================================
+   DARK MODE FIX: Navigation Section Headers
+   ============================================
+   NOTE: These rules may not work alone due to Streamlit Emotion CSS,
+   but provide fallback coverage. JavaScript in app.py handles primary fix.
+*/
+
+/* Target stNavSectionHeader with maximum specificity */
+[data-theme="dark"] [data-testid="stSidebar"] [data-testid="stNavSectionHeader"],
+[data-theme="dark"] header[data-testid="stNavSectionHeader"],
+.stApp[data-theme="dark"] [data-testid="stSidebar"] [data-testid="stNavSectionHeader"],
+.stApp[data-theme="dark"] header[data-testid="stNavSectionHeader"] {
+    color: #FFFFFF !important;
+    opacity: 1 !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    letter-spacing: 0.5px !important;
+    text-transform: uppercase !important;
+    background-color: transparent !important;
+
+    /* Disable transitions/animations */
+    transition: none !important;
+    transform: none !important;
+    animation: none !important;
+}
+
+/* ============================================
+   DARK MODE FIX: Disable Sidebar Movement
+   ============================================
+   Prevent unwanted CSS animations/transitions on click
+*/
+
+/* Disable ALL transitions in sidebar to prevent movement */
+[data-testid="stSidebar"],
+[data-testid="stSidebar"] *,
+[data-testid="stSidebar"] [data-testid="stNavSectionHeader"],
+[data-testid="stSidebar"] [data-testid="stSidebarNavLink"],
+[data-testid="stSidebar"] a,
+.stApp[data-theme="dark"] [data-testid="stSidebar"],
+.stApp[data-theme="dark"] [data-testid="stSidebar"] * {
+    transition: none !important;
+    transform: none !important;
+    animation: none !important;
+}
+
+/* Specifically override element-container transitions in sidebar */
+[data-testid="stSidebar"] .element-container,
+.stApp[data-theme="dark"] [data-testid="stSidebar"] .element-container {
+    transition: none !important;
+    transform: none !important;
+    animation: none !important;
 }
 
 /* Streamlit dark mode - inline code */
@@ -1044,33 +1381,41 @@ hr::after {
     background: linear-gradient(to right, #FFA05C, #3D2A1A);
 }
 
-/* Dark mode - alerts - WCAG compliant backgrounds */
+/* Dark mode - alerts - Enhanced vibrancy with gradients */
 [data-theme="dark"] .stSuccess,
 .stApp[data-theme="dark"] .stSuccess {
-    background-color: #1A3D25;
+    background: linear-gradient(135deg, #1B4332 0%, #2D5A45 100%);
     border-left-color: #28A745;
-    color: #B8E6C4;
+    border-left-width: 5px;
+    color: #C8F0D8;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
 }
 
 [data-theme="dark"] .stError,
 .stApp[data-theme="dark"] .stError {
-    background-color: #3D1A1A;
+    background: linear-gradient(135deg, #5A1F1F 0%, #6D2A2A 100%);
     border-left-color: #DC3545;
-    color: #F5C6CB;
+    border-left-width: 5px;
+    color: #FFD6D9;
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
 }
 
 [data-theme="dark"] .stWarning,
 .stApp[data-theme="dark"] .stWarning {
-    background-color: #3D3D1A;
+    background: linear-gradient(135deg, #5A4419 0%, #6D5530 100%);
     border-left-color: #FFC107;
-    color: #FFEEBA;
+    border-left-width: 5px;
+    color: #FFF4D4;
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
 }
 
 [data-theme="dark"] .stInfo,
 .stApp[data-theme="dark"] .stInfo {
-    background-color: #1A2A3D;
+    background: linear-gradient(135deg, #1A3A4D 0%, #2A4A5D 100%);
     border-left-color: #17A2B8;
-    color: #BEE5EB;
+    border-left-width: 5px;
+    color: #D1F0F5;
+    box-shadow: 0 4px 12px rgba(23, 162, 184, 0.2);
 }
 
 /* Dark mode - tooltips */

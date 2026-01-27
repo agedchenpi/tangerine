@@ -95,6 +95,25 @@ def load_custom_css():
             visibility: visible !important;
         }
 
+        /* Force sidebar to stay expanded - prevent collapse on navigation */
+        [data-testid="stSidebar"][aria-expanded="false"] {
+            transform: none !important;
+            margin-left: 0 !important;
+        }
+
+        [data-testid="stSidebar"] {
+            position: relative !important;
+            width: auto !important;
+            min-width: 244px !important;
+        }
+
+        /* Hide collapse button if it exists */
+        [data-testid="collapsedControl"],
+        button[kind="header"][aria-label*="Close sidebar"],
+        button[kind="header"][aria-label*="Open sidebar"] {
+            display: none !important;
+        }
+
         /* Hide appearance settings within settings dialog (defense in depth) */
         [data-testid="stSettingsDialog"] div[data-testid="stAppearanceSettings"],
         [data-testid="stSettingsDialog"] button[data-testid="themeSettings"],
@@ -134,7 +153,20 @@ def _apply_theme_css():
         }
 
         /* Sidebar navigation - group headers (Home, Configuration, etc.) */
-        /* More specific selectors to avoid interfering with toggle components */
+        /* CRITICAL: stNavSectionHeader is the actual header element */
+        [data-testid="stNavSectionHeader"],
+        [data-testid="stSidebar"] [data-testid="stNavSectionHeader"],
+        header[data-testid="stNavSectionHeader"],
+        [data-testid="stSidebar"] header[data-testid="stNavSectionHeader"],
+        header.st-emotion-cache-1n7fb9x,
+        header.eczjsme2 {
+            color: #FFFFFF !important;
+            opacity: 1 !important;
+            font-weight: 700 !important;
+            visibility: visible !important;
+        }
+
+        /* Other sidebar text elements */
         [data-testid="stSidebar"] [data-testid="stSidebarNavSeparator"],
         [data-testid="stSidebarNav"] > div > span,
         [data-testid="stSidebarNavItems"] > div > span,
@@ -819,3 +851,64 @@ def create_breadcrumb(items: list[str]):
 
     st.markdown(f"<div style='margin-bottom: 1.5rem; font-size: 0.9rem;'>{breadcrumb_html}</div>",
                unsafe_allow_html=True)
+
+
+def initialize_recent_items():
+    """Initialize recent items list in session state."""
+    if 'recent_items' not in st.session_state:
+        st.session_state.recent_items = []
+
+
+def add_recent_item(item_type: str, item_id: int | str, item_name: str, page: str = None):
+    """
+    Track a recently viewed/edited item.
+
+    Args:
+        item_type: Type of item (e.g., 'Import Config', 'Report', 'Schedule')
+        item_id: Unique identifier for the item
+        item_name: Display name of the item
+        page: Optional page name for navigation
+    """
+    from datetime import datetime
+
+    initialize_recent_items()
+
+    # Create item dict
+    item = {
+        'type': item_type,
+        'id': item_id,
+        'name': item_name,
+        'page': page,
+        'timestamp': datetime.now()
+    }
+
+    # Remove duplicate if exists
+    st.session_state.recent_items = [
+        i for i in st.session_state.recent_items
+        if not (i['type'] == item_type and i['id'] == item_id)
+    ]
+
+    # Add to front of list
+    st.session_state.recent_items.insert(0, item)
+
+    # Keep only last 10 items
+    st.session_state.recent_items = st.session_state.recent_items[:10]
+
+
+def get_recent_items(limit: int = 10) -> list[dict]:
+    """
+    Get recent items list.
+
+    Args:
+        limit: Maximum number of items to return
+
+    Returns:
+        List of recent item dictionaries
+    """
+    initialize_recent_items()
+    return st.session_state.recent_items[:limit]
+
+
+def clear_recent_items():
+    """Clear all recent items."""
+    st.session_state.recent_items = []

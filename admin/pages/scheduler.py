@@ -49,7 +49,7 @@ SCHEDULER_QUICK_START = """
 """
 
 load_custom_css()
-add_page_header("Job Scheduler", "Manage automated job schedules", "⏰")
+add_page_header("Job Scheduler", icon="⏰")
 
 # Statistics
 try:
@@ -317,9 +317,28 @@ with tab2:
                 show_error(f"Job name '{form_data['job_name']}' already exists")
             else:
                 new_id = create_schedule(form_data)
-                show_success(f"Schedule created successfully! (ID: {new_id})")
-                st.info("Remember to regenerate the crontab in the 'Crontab' tab to apply changes.")
+                show_success(f"✅ Schedule '{form_data['job_name']}' created successfully! (ID: {new_id})")
                 st.toast("Schedule created!", icon="✅")
+
+                # Offer to regenerate crontab immediately
+                st.divider()
+                st.markdown("#### 🔄 Apply Changes")
+                st.info("The schedule is saved in the database, but you need to regenerate the crontab to apply it.")
+
+                col1, col2 = st.columns([1, 2])
+                with col1:
+                    if st.button("🔄 Regenerate Crontab Now", type="primary", key="auto_regen_crontab"):
+                        try:
+                            success = regenerate_crontab()
+                            if success:
+                                show_success("✅ Crontab regenerated and applied! Schedule is now active.")
+                                st.rerun()
+                            else:
+                                show_error("Failed to regenerate crontab. Check container logs.")
+                        except Exception as e:
+                            show_error(f"Error regenerating crontab: {str(e)}")
+                with col2:
+                    st.caption("You can also regenerate manually in the 'Crontab' tab later.")
         except Exception as e:
             show_error(f"Failed to create schedule: {format_sql_error(e)}")
 

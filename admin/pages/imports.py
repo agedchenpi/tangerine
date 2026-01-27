@@ -13,8 +13,10 @@ from services.import_config_service import (
     toggle_active,
     get_config_stats
 )
+from services.reference_data_service import list_datasources, list_datasettypes
 from utils.db_helpers import format_sql_error
 from utils.formatters import format_timestamp, format_boolean, truncate_text
+from utils.ui_helpers import add_recent_item
 
 
 st.title("📋 Import Configuration Management")
@@ -146,6 +148,40 @@ with tab1:
 
 # TAB 2: Create New Configuration
 with tab2:
+    # Check for dependencies first
+    try:
+        datasources = list_datasources()
+        datasettypes = list_datasettypes()
+
+        missing_dependencies = []
+        if not datasources:
+            missing_dependencies.append("**Data Sources**")
+        if not datasettypes:
+            missing_dependencies.append("**Dataset Types**")
+
+        if missing_dependencies:
+            show_warning(f"⚠️ Missing Required Reference Data: {', '.join(missing_dependencies)}")
+            st.markdown("""
+            **Import configurations require reference data to be configured first.**
+
+            Please create the following in the **Reference Data** page before creating import configurations:
+            """)
+
+            if not datasources:
+                st.markdown("- 📁 **Data Sources** - Define where your data comes from (e.g., 'File Server', 'API', 'SFTP')")
+            if not datasettypes:
+                st.markdown("- 📊 **Dataset Types** - Define what type of data you're importing (e.g., 'Raw', 'Transformed', 'Imported')")
+
+            st.divider()
+
+            if st.button("📚 Go to Reference Data Page", type="primary"):
+                st.switch_page("pages/reference_data.py")
+
+            st.stop()  # Prevent form from showing
+
+    except Exception as e:
+        show_error(f"Error checking dependencies: {format_sql_error(e)}")
+
     with st.expander("Quick Start - Common Scenarios", expanded=False):
         st.markdown(IMPORT_QUICK_START)
 
@@ -198,6 +234,14 @@ with tab3:
             config_to_edit = get_config(selected_config_id)
 
             if config_to_edit:
+                # Track recent item
+                add_recent_item(
+                    item_type='Import Config',
+                    item_id=selected_config_id,
+                    item_name=config_to_edit['config_name'],
+                    page='Imports'
+                )
+
                 st.divider()
 
                 # Show current status

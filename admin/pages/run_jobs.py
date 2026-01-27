@@ -19,11 +19,7 @@ from utils.ui_helpers import load_custom_css, add_page_header, render_empty_stat
 load_custom_css()
 
 # Page header
-add_page_header(
-    title="Run Import Jobs",
-    subtitle="Execute ETL import jobs and monitor their progress in real-time.",
-    icon="▶️"
-)
+add_page_header("Run Import Jobs", icon="▶️")
 
 # Create tabs
 tab1, tab2 = st.tabs(["▶️ Execute Job", "📜 Job History"])

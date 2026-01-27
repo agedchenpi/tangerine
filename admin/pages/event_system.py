@@ -20,7 +20,7 @@ from utils.ui_helpers import load_custom_css, add_page_header
 from components.dependency_checker import render_missing_config_link
 
 load_custom_css()
-add_page_header("Event System", "Manage pub-sub events and subscribers", "🔔")
+add_page_header("Event System", icon="🔔")
 
 # Main tabs
 tab1, tab2, tab3, tab4 = st.tabs([

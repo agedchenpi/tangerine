@@ -14,8 +14,20 @@ from services.monitoring_service import (
     get_jobs_per_day,
     get_process_type_distribution,
     get_runtime_statistics,
-    export_logs_to_csv
+    export_logs_to_csv,
+    get_dataset_by_id,
+    create_dataset,
+    update_dataset,
+    delete_dataset,
+    archive_dataset,
+    get_dataset_dependencies,
+    get_all_data_statuses,
+    preview_log_purge,
+    purge_logs,
+    export_logs_for_purge,
+    get_log_statistics
 )
+from services.reference_data_service import list_datasources, list_datasettypes
 from utils.db_helpers import format_sql_error
 from utils.formatters import format_datetime, format_duration, format_boolean
 from utils.ui_helpers import load_custom_css, add_page_header, render_empty_state, with_loading
@@ -24,14 +36,10 @@ from utils.ui_helpers import load_custom_css, add_page_header, render_empty_stat
 load_custom_css()
 
 # Page header
-add_page_header(
-    title="System Monitoring",
-    subtitle="Monitor ETL pipeline activity, view logs, browse datasets, and analyze system statistics.",
-    icon="📊"
-)
+add_page_header("System Monitoring", icon="📊")
 
 # Create tabs
-tab1, tab2, tab3 = st.tabs(["📜 Logs", "📦 Datasets", "📈 Statistics"])
+tab1, tab2, tab3, tab4 = st.tabs(["📜 Logs", "📦 View Datasets", "🔧 Manage Datasets", "📈 Statistics"])
 
 # ============================================================================
 # TAB 1: LOGS
@@ -178,6 +186,104 @@ with tab1:
         else:
             show_info("No logs found matching the specified filters.")
             st.info("💡 Try adjusting your filters or expanding the time range.")
+
+    # LOG PURGE SECTION
+    st.divider()
+    st.markdown("### 🗑️ Log Purge")
+    st.markdown("Delete old logs to prevent database growth. **Warning:** This action is permanent!")
+
+    with st.expander("📊 Log Statistics", expanded=False):
+        try:
+            log_stats = get_log_statistics()
+            if log_stats:
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Total Logs", f"{log_stats.get('total_logs', 0):,}")
+                with col2:
+                    st.metric("Total Runs", f"{log_stats.get('total_runs', 0):,}")
+                with col3:
+                    st.metric("Last 7 Days", f"{log_stats.get('logs_last_7_days', 0):,}")
+                with col4:
+                    st.metric("Last 30 Days", f"{log_stats.get('logs_last_30_days', 0):,}")
+
+                if log_stats.get('oldest_log'):
+                    st.caption(f"Oldest log: {format_datetime(log_stats['oldest_log'])}")
+                if log_stats.get('newest_log'):
+                    st.caption(f"Newest log: {format_datetime(log_stats['newest_log'])}")
+        except Exception as e:
+            show_error(f"Error loading log statistics: {format_sql_error(e)}")
+
+    col1, col2 = st.columns([2, 1])
+
+    with col1:
+        days_old = st.number_input(
+            "Delete logs older than (days)",
+            min_value=1,
+            max_value=730,
+            value=90,
+            help="Logs older than this many days will be permanently deleted"
+        )
+
+    with col2:
+        st.markdown("&nbsp;")  # Spacer
+        if st.button("🔍 Preview Purge", key="preview_purge_btn"):
+            try:
+                preview = preview_log_purge(days_old)
+                if preview and preview.get('log_count', 0) > 0:
+                    show_warning(f"⚠️ **{preview['log_count']:,} logs** would be deleted")
+                    st.caption(f"Date range: {format_datetime(preview['oldest_log'])} to {format_datetime(preview['newest_log'])}")
+                    st.session_state.purge_preview_done = True
+                    st.session_state.purge_days = days_old
+                else:
+                    show_info(f"No logs found older than {days_old} days")
+                    st.session_state.purge_preview_done = False
+            except Exception as e:
+                show_error(f"Error previewing purge: {format_sql_error(e)}")
+                st.session_state.purge_preview_done = False
+
+    # Show purge options if preview was done
+    if st.session_state.get('purge_preview_done', False) and st.session_state.get('purge_days') == days_old:
+        st.divider()
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("#### 📁 Archive Before Delete (Optional)")
+            if st.button("📥 Export Logs to CSV", key="export_purge_logs"):
+                try:
+                    logs_to_purge = export_logs_for_purge(days_old)
+                    if logs_to_purge:
+                        csv_data = export_logs_to_csv(logs_to_purge)
+                        st.download_button(
+                            label="⬇️ Download Archive CSV",
+                            data=csv_data,
+                            file_name=f"tangerine_logs_archive_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                            mime="text/csv",
+                            key="download_purge_csv"
+                        )
+                        show_success(f"Archive ready! {len(logs_to_purge):,} logs exported to CSV")
+                    else:
+                        show_info("No logs to export")
+                except Exception as e:
+                    show_error(f"Error exporting logs: {format_sql_error(e)}")
+
+        with col2:
+            st.markdown("#### 🗑️ Confirm Deletion")
+            confirm_purge = st.checkbox(
+                f"I confirm I want to permanently delete logs older than {days_old} days",
+                key="confirm_purge_checkbox"
+            )
+
+            if confirm_purge:
+                if st.button("🗑️ DELETE LOGS PERMANENTLY", type="primary", key="execute_purge_btn"):
+                    try:
+                        deleted_count = purge_logs(days_old)
+                        show_success(f"✅ Successfully deleted {deleted_count:,} log entries!")
+                        st.toast(f"Deleted {deleted_count:,} logs", icon="🗑️")
+                        st.session_state.purge_preview_done = False
+                        st.rerun()
+                    except Exception as e:
+                        show_error(f"Error purging logs: {format_sql_error(e)}")
 
 
 # ============================================================================
@@ -472,9 +578,332 @@ with tab3:
         show_error(f"Error loading statistics: {format_sql_error(e)}")
 
 
+# ============================================================================
+# TAB 4: DATASET MANAGEMENT
+# ============================================================================
+with tab4:
+    st.subheader("Dataset Management")
+    st.markdown("Create, edit, archive, or delete dataset records.")
+
+    # Sub-tabs for different operations
+    ds_tab1, ds_tab2, ds_tab3, ds_tab4 = st.tabs(["➕ Create", "✏️ Edit", "📦 Archive", "🗑️ Delete"])
+
+    # CREATE DATASET
+    with ds_tab1:
+        st.markdown("#### Create New Dataset")
+
+        with st.form("create_dataset_form", clear_on_submit=True):
+            col1, col2 = st.columns(2)
+
+            with col1:
+                label = st.text_input(
+                    "Dataset Label",
+                    max_chars=100,
+                    help="Unique identifier for this dataset"
+                )
+                datasetdate = st.date_input(
+                    "Dataset Date",
+                    value=date.today(),
+                    help="Date associated with this dataset"
+                )
+
+            with col2:
+                # Get datasources
+                try:
+                    datasources = list_datasources()
+                    ds_options = {f"{ds['datasourceid']} - {ds['sourcename']}": ds['datasourceid'] for ds in datasources}
+                    if not ds_options:
+                        st.warning("No datasources available. Create one in Reference Data first.")
+                        datasourceid = None
+                    else:
+                        selected_ds = st.selectbox("Data Source", options=list(ds_options.keys()))
+                        datasourceid = ds_options[selected_ds]
+                except Exception as e:
+                    st.error(f"Error loading datasources: {format_sql_error(e)}")
+                    datasourceid = None
+
+                # Get dataset types
+                try:
+                    datasettypes = list_datasettypes()
+                    dt_options = {f"{dt['datasettypeid']} - {dt['typename']}": dt['datasettypeid'] for dt in datasettypes}
+                    if not dt_options:
+                        st.warning("No dataset types available. Create one in Reference Data first.")
+                        datasettypeid = None
+                    else:
+                        selected_dt = st.selectbox("Dataset Type", options=list(dt_options.keys()))
+                        datasettypeid = dt_options[selected_dt]
+                except Exception as e:
+                    st.error(f"Error loading dataset types: {format_sql_error(e)}")
+                    datasettypeid = None
+
+            # Get status options
+            try:
+                statuses = get_all_data_statuses()
+                status_options = {f"{s['datastatusid']} - {s['statusname']}": s['datastatusid'] for s in statuses}
+                if status_options:
+                    selected_status = st.selectbox("Status", options=list(status_options.keys()), index=0)
+                    datastatusid = status_options[selected_status]
+                else:
+                    datastatusid = 1  # Default to Active
+            except Exception as e:
+                st.error(f"Error loading statuses: {format_sql_error(e)}")
+                datastatusid = 1
+
+            if st.form_submit_button("➕ Create Dataset", type="primary"):
+                if not label:
+                    show_error("Dataset label is required")
+                elif not datasourceid or not datasettypeid:
+                    show_error("Datasource and Dataset Type are required")
+                else:
+                    try:
+                        new_id = create_dataset(label, datasetdate, datasourceid, datasettypeid, datastatusid)
+                        show_success(f"✅ Dataset '{label}' created successfully! (ID: {new_id})")
+                        st.toast("Dataset created!", icon="✅")
+                        st.rerun()
+                    except Exception as e:
+                        show_error(f"Failed to create dataset: {format_sql_error(e)}")
+
+    # EDIT DATASET
+    with ds_tab2:
+        st.markdown("#### Edit Dataset")
+
+        # Show success message if exists
+        if 'dataset_update_success' in st.session_state:
+            show_success(st.session_state.dataset_update_success)
+            del st.session_state.dataset_update_success
+
+        try:
+            # Get datasets for selection
+            datasets = get_datasets(limit=500)
+
+            if datasets:
+                dataset_options = {
+                    f"{d['datasetid']} - {d['label']} ({d['datasettype']})": d['datasetid']
+                    for d in datasets
+                }
+
+                selected_dataset_str = st.selectbox(
+                    "Select Dataset to Edit",
+                    options=list(dataset_options.keys()),
+                    key="edit_dataset_select"
+                )
+
+                selected_dataset_id = dataset_options[selected_dataset_str]
+                dataset_to_edit = get_dataset_by_id(selected_dataset_id)
+
+                if dataset_to_edit:
+                    st.divider()
+
+                    # Show current info
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Dataset ID", dataset_to_edit['datasetid'])
+                    with col2:
+                        st.metric("Current Status", dataset_to_edit['status'])
+                    with col3:
+                        st.metric("Active", "✅ Yes" if dataset_to_edit['isactive'] else "❌ No")
+
+                    st.divider()
+
+                    # Edit form
+                    with st.form("edit_dataset_form"):
+                        col1, col2 = st.columns(2)
+
+                        with col1:
+                            new_label = st.text_input("Dataset Label", value=dataset_to_edit['label'], max_chars=100)
+                            new_datasetdate = st.date_input(
+                                "Dataset Date",
+                                value=datetime.strptime(str(dataset_to_edit['datasetdate']), '%Y-%m-%d').date()
+                            )
+
+                        with col2:
+                            # Datasources
+                            datasources = list_datasources()
+                            ds_options = {f"{ds['datasourceid']} - {ds['sourcename']}": ds['datasourceid'] for ds in datasources}
+                            current_ds_key = f"{dataset_to_edit['datasourceid']} - {dataset_to_edit['datasource']}"
+                            new_datasourceid = ds_options[st.selectbox(
+                                "Data Source",
+                                options=list(ds_options.keys()),
+                                index=list(ds_options.keys()).index(current_ds_key) if current_ds_key in ds_options else 0
+                            )]
+
+                            # Dataset types
+                            datasettypes = list_datasettypes()
+                            dt_options = {f"{dt['datasettypeid']} - {dt['typename']}": dt['datasettypeid'] for dt in datasettypes}
+                            current_dt_key = f"{dataset_to_edit['datasettypeid']} - {dataset_to_edit['datasettype']}"
+                            new_datasettypeid = dt_options[st.selectbox(
+                                "Dataset Type",
+                                options=list(dt_options.keys()),
+                                index=list(dt_options.keys()).index(current_dt_key) if current_dt_key in dt_options else 0
+                            )]
+
+                        # Status and active flag
+                        col3, col4 = st.columns(2)
+                        with col3:
+                            statuses = get_all_data_statuses()
+                            status_options = {f"{s['datastatusid']} - {s['statusname']}": s['datastatusid'] for s in statuses}
+                            current_status_key = f"{dataset_to_edit['datastatusid']} - {dataset_to_edit['status']}"
+                            new_datastatusid = status_options[st.selectbox(
+                                "Status",
+                                options=list(status_options.keys()),
+                                index=list(status_options.keys()).index(current_status_key) if current_status_key in status_options else 0
+                            )]
+
+                        with col4:
+                            new_isactive = st.checkbox("Is Active", value=dataset_to_edit['isactive'])
+
+                        if st.form_submit_button("💾 Update Dataset", type="primary"):
+                            try:
+                                update_dataset(
+                                    selected_dataset_id,
+                                    new_label,
+                                    new_datasetdate,
+                                    new_datasourceid,
+                                    new_datasettypeid,
+                                    new_datastatusid,
+                                    new_isactive
+                                )
+                                st.session_state.dataset_update_success = f"✅ Dataset '{new_label}' updated successfully!"
+                                st.rerun()
+                            except Exception as e:
+                                show_error(f"Failed to update dataset: {format_sql_error(e)}")
+            else:
+                show_info("No datasets available to edit.")
+
+        except Exception as e:
+            show_error(f"Error loading datasets: {format_sql_error(e)}")
+
+    # ARCHIVE DATASET
+    with ds_tab3:
+        st.markdown("#### Archive Dataset")
+        show_info("ℹ️ Archiving sets the dataset status to 'Inactive' and marks it as not active (soft delete).")
+
+        try:
+            datasets = get_datasets(limit=500)
+
+            if datasets:
+                active_datasets = [d for d in datasets if d.get('isactive', False)]
+
+                if active_datasets:
+                    dataset_options = {
+                        f"{d['datasetid']} - {d['label']} ({d['datasettype']})": d['datasetid']
+                        for d in active_datasets
+                    }
+
+                    selected_dataset_str = st.selectbox(
+                        "Select Dataset to Archive",
+                        options=list(dataset_options.keys()),
+                        key="archive_dataset_select"
+                    )
+
+                    selected_dataset_id = dataset_options[selected_dataset_str]
+                    dataset_to_archive = get_dataset_by_id(selected_dataset_id)
+
+                    if dataset_to_archive:
+                        st.divider()
+
+                        # Show details
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.text_input("Label", value=dataset_to_archive['label'], disabled=True)
+                        with col2:
+                            st.text_input("Type", value=dataset_to_archive['datasettype'], disabled=True)
+                        with col3:
+                            st.text_input("Source", value=dataset_to_archive['datasource'], disabled=True)
+
+                        st.divider()
+
+                        confirm = st.checkbox(
+                            f"I confirm I want to archive dataset '{dataset_to_archive['label']}'",
+                            key="archive_dataset_confirm"
+                        )
+
+                        if confirm:
+                            if st.button("📦 Archive Dataset", type="primary", key="archive_dataset_button"):
+                                try:
+                                    archive_dataset(selected_dataset_id)
+                                    show_success(f"Dataset '{dataset_to_archive['label']}' archived successfully")
+                                    st.rerun()
+                                except Exception as e:
+                                    show_error(f"Failed to archive dataset: {format_sql_error(e)}")
+                else:
+                    show_info("No active datasets available to archive.")
+            else:
+                show_info("No datasets found.")
+
+        except Exception as e:
+            show_error(f"Error loading datasets: {format_sql_error(e)}")
+
+    # DELETE DATASET
+    with ds_tab4:
+        st.markdown("#### Delete Dataset")
+        show_warning("⚠️ **Warning:** Deletion is permanent. Datasets referenced by regression tests cannot be deleted.")
+
+        try:
+            datasets = get_datasets(limit=500)
+
+            if datasets:
+                dataset_options = {
+                    f"{d['datasetid']} - {d['label']} ({d['datasettype']})": d['datasetid']
+                    for d in datasets
+                }
+
+                selected_dataset_str = st.selectbox(
+                    "Select Dataset to Delete",
+                    options=list(dataset_options.keys()),
+                    key="delete_dataset_select"
+                )
+
+                selected_dataset_id = dataset_options[selected_dataset_str]
+                dataset_to_delete = get_dataset_by_id(selected_dataset_id)
+
+                if dataset_to_delete:
+                    st.divider()
+
+                    # Show details
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.text_input("Label", value=dataset_to_delete['label'], disabled=True)
+                        st.text_input("Date", value=str(dataset_to_delete['datasetdate']), disabled=True)
+                    with col2:
+                        st.text_input("Type", value=dataset_to_delete['datasettype'], disabled=True)
+                        st.text_input("Source", value=dataset_to_delete['datasource'], disabled=True)
+
+                    # Check for dependencies
+                    dependencies = get_dataset_dependencies(selected_dataset_id)
+
+                    st.divider()
+
+                    if dependencies:
+                        show_error(f"❌ Cannot delete dataset '{dataset_to_delete['label']}' - it is referenced by:")
+                        for dep in dependencies:
+                            st.caption(f"• {dep['dependency_type']}: {dep['dependency_name']} (ID: {dep['dependency_id']})")
+                        st.info("Delete or update the referencing records before deleting this dataset.")
+                    else:
+                        confirm = st.checkbox(
+                            f"I confirm I want to permanently delete dataset '{dataset_to_delete['label']}'",
+                            key="delete_dataset_confirm"
+                        )
+
+                        if confirm:
+                            if st.button("🗑️ Delete Dataset Permanently", type="primary", key="delete_dataset_button"):
+                                try:
+                                    delete_dataset(selected_dataset_id)
+                                    show_success(f"Dataset '{dataset_to_delete['label']}' deleted successfully")
+                                    st.rerun()
+                                except Exception as e:
+                                    show_error(f"Failed to delete dataset: {format_sql_error(e)}")
+            else:
+                show_info("No datasets available to delete.")
+
+        except Exception as e:
+            show_error(f"Error loading datasets: {format_sql_error(e)}")
+
+
 # Footer
 st.divider()
 st.caption("💡 **Tips:**")
 st.caption("• Use **Logs** tab to troubleshoot ETL job execution issues")
-st.caption("• Use **Datasets** tab to track data lineage and dataset status")
+st.caption("• Use **View Datasets** tab to track data lineage and dataset status")
+st.caption("• Use **Manage Datasets** tab to create, edit, archive, or delete datasets")
 st.caption("• Use **Statistics** tab to monitor system health and performance trends")

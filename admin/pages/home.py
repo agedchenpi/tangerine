@@ -18,11 +18,7 @@ if 'db_connected' not in st.session_state:
     st.session_state.db_connected = test_connection()
 
 # Main page content
-add_page_header(
-    title="Tangerine ETL Administration",
-    subtitle="Manage ETL configurations, execute jobs, and monitor pipeline health.",
-    icon="🍊"
-)
+add_page_header("Tangerine ETL Administration", icon="🍊")
 
 # System Status Metrics
 st.markdown("### System Status")

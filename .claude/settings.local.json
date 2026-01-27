@@ -53,7 +53,10 @@
       "Bash(xargs:*)",
       "Bash(pip3 install:*)",
       "Bash(git restore:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(pytest:*)",
+      "Bash(/tmp/test_venv/bin/pip install:*)",
+      "Bash(/tmp/test_venv/bin/python -m pytest:*)"
     ]
   }
 }

@@ -64,7 +64,7 @@ REPORTS_QUICK_START = """
 """
 
 load_custom_css()
-add_page_header("Report Manager", "Configure automated email reports", "📊")
+add_page_header("Report Manager", icon="📊")
 
 # Statistics
 try:

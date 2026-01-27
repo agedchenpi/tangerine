@@ -352,3 +352,288 @@ def export_logs_to_csv(logs: List[Dict[str, Any]]) -> str:
         csv_lines.append(','.join(row))
 
     return '\n'.join(csv_lines)
+
+
+# ============================================================================
+# Dataset CRUD Operations
+# ============================================================================
+
+def get_dataset_by_id(dataset_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Get a single dataset by ID with all details.
+
+    Args:
+        dataset_id: Dataset ID
+
+    Returns:
+        Dataset dictionary or None if not found
+    """
+    query = """
+        SELECT
+            d.datasetid,
+            d.label,
+            d.datasetdate,
+            d.datasourceid,
+            src.sourcename as datasource,
+            d.datasettypeid,
+            typ.typename as datasettype,
+            d.datastatusid,
+            stat.statusname as status,
+            d.efffromdate,
+            d.effthrudate,
+            d.isactive,
+            d.createddate,
+            d.createdby
+        FROM dba.tdataset d
+        LEFT JOIN dba.tdatasource src ON d.datasourceid = src.datasourceid
+        LEFT JOIN dba.tdatasettype typ ON d.datasettypeid = typ.datasettypeid
+        LEFT JOIN dba.tdatastatus stat ON d.datastatusid = stat.datastatusid
+        WHERE d.datasetid = %s
+    """
+    results = fetch_dict(query, (dataset_id,))
+    return results[0] if results else None
+
+
+def create_dataset(
+    label: str,
+    datasetdate: Any,
+    datasourceid: int,
+    datasettypeid: int,
+    datastatusid: int = 1
+) -> int:
+    """
+    Create a new dataset record.
+
+    Args:
+        label: Dataset label
+        datasetdate: Dataset date
+        datasourceid: Data source ID
+        datasettypeid: Dataset type ID
+        datastatusid: Data status ID (default: 1 = Active)
+
+    Returns:
+        New dataset ID
+    """
+    from common.db_utils import db_transaction
+
+    with db_transaction() as cursor:
+        cursor.execute("""
+            INSERT INTO dba.tdataset (
+                label, datasetdate, datasourceid, datasettypeid, datastatusid
+            )
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING datasetid
+        """, (label, datasetdate, datasourceid, datasettypeid, datastatusid))
+        return cursor.fetchone()['datasetid']
+
+
+def update_dataset(
+    dataset_id: int,
+    label: str,
+    datasetdate: Any,
+    datasourceid: int,
+    datasettypeid: int,
+    datastatusid: int,
+    isactive: bool = True
+) -> bool:
+    """
+    Update an existing dataset.
+
+    Args:
+        dataset_id: Dataset ID to update
+        label: New label
+        datasetdate: New dataset date
+        datasourceid: New data source ID
+        datasettypeid: New dataset type ID
+        datastatusid: New data status ID
+        isactive: Active flag
+
+    Returns:
+        True if updated successfully
+    """
+    from common.db_utils import db_transaction
+
+    with db_transaction() as cursor:
+        cursor.execute("""
+            UPDATE dba.tdataset
+            SET label = %s,
+                datasetdate = %s,
+                datasourceid = %s,
+                datasettypeid = %s,
+                datastatusid = %s,
+                isactive = %s
+            WHERE datasetid = %s
+        """, (label, datasetdate, datasourceid, datasettypeid, datastatusid, isactive, dataset_id))
+        return cursor.rowcount > 0
+
+
+def delete_dataset(dataset_id: int) -> bool:
+    """
+    Delete a dataset record.
+
+    Args:
+        dataset_id: Dataset ID to delete
+
+    Returns:
+        True if deleted successfully
+    """
+    from common.db_utils import db_transaction
+
+    with db_transaction() as cursor:
+        cursor.execute(
+            "DELETE FROM dba.tdataset WHERE datasetid = %s",
+            (dataset_id,)
+        )
+        return cursor.rowcount > 0
+
+
+def get_dataset_dependencies(dataset_id: int) -> List[Dict[str, Any]]:
+    """
+    Check for dependencies on a dataset (e.g., regression tests).
+
+    Args:
+        dataset_id: Dataset ID to check
+
+    Returns:
+        List of dependent records
+    """
+    query = """
+        SELECT
+            'Regression Test' as dependency_type,
+            testid as dependency_id,
+            testname as dependency_name
+        FROM dba.tregressiontest
+        WHERE datasetid = %s
+    """
+    return fetch_dict(query, (dataset_id,)) or []
+
+
+def get_all_data_statuses() -> List[Dict[str, Any]]:
+    """
+    Get all available data statuses.
+
+    Returns:
+        List of status dictionaries
+    """
+    query = """
+        SELECT datastatusid, statusname
+        FROM dba.tdatastatus
+        ORDER BY datastatusid
+    """
+    return fetch_dict(query) or []
+
+
+def archive_dataset(dataset_id: int) -> bool:
+    """
+    Archive a dataset (soft delete by setting status to Inactive).
+
+    Args:
+        dataset_id: Dataset ID to archive
+
+    Returns:
+        True if archived successfully
+    """
+    from common.db_utils import db_transaction
+
+    with db_transaction() as cursor:
+        # Status 2 = Inactive
+        cursor.execute("""
+            UPDATE dba.tdataset
+            SET datastatusid = 2,
+                isactive = FALSE
+            WHERE datasetid = %s
+        """, (dataset_id,))
+        return cursor.rowcount > 0
+
+
+# ============================================================================
+# Log Purge Operations
+# ============================================================================
+
+def preview_log_purge(days_old: int) -> Dict[str, Any]:
+    """
+    Preview how many logs would be deleted.
+
+    Args:
+        days_old: Delete logs older than this many days
+
+    Returns:
+        Dictionary with count and date range info
+    """
+    query = """
+        SELECT
+            COUNT(*) as log_count,
+            MIN(timestamp) as oldest_log,
+            MAX(timestamp) as newest_log
+        FROM dba.tlogentry
+        WHERE timestamp < NOW() - INTERVAL '%s days'
+    """
+    results = fetch_dict(query, (days_old,))
+    return results[0] if results else {'log_count': 0, 'oldest_log': None, 'newest_log': None}
+
+
+def purge_logs(days_old: int) -> int:
+    """
+    Delete logs older than specified days.
+
+    Args:
+        days_old: Delete logs older than this many days
+
+    Returns:
+        Number of logs deleted
+    """
+    from common.db_utils import db_transaction
+
+    with db_transaction() as cursor:
+        cursor.execute("""
+            DELETE FROM dba.tlogentry
+            WHERE timestamp < NOW() - INTERVAL '%s days'
+        """, (days_old,))
+        return cursor.rowcount
+
+
+def export_logs_for_purge(days_old: int) -> List[Dict[str, Any]]:
+    """
+    Export logs that would be purged (for archival before deletion).
+
+    Args:
+        days_old: Get logs older than this many days
+
+    Returns:
+        List of log dictionaries
+    """
+    query = """
+        SELECT
+            logentryid,
+            run_uuid,
+            processtype,
+            stepcounter,
+            message,
+            stepruntime,
+            timestamp
+        FROM dba.tlogentry
+        WHERE timestamp < NOW() - INTERVAL '%s days'
+        ORDER BY timestamp DESC
+    """
+    return fetch_dict(query, (days_old,)) or []
+
+
+def get_log_statistics() -> Dict[str, Any]:
+    """
+    Get statistics about log entries.
+
+    Returns:
+        Dictionary with log statistics
+    """
+    query = """
+        SELECT
+            COUNT(*) as total_logs,
+            COUNT(DISTINCT run_uuid) as total_runs,
+            MIN(timestamp) as oldest_log,
+            MAX(timestamp) as newest_log,
+            SUM(CASE WHEN timestamp >= NOW() - INTERVAL '7 days' THEN 1 ELSE 0 END) as logs_last_7_days,
+            SUM(CASE WHEN timestamp >= NOW() - INTERVAL '30 days' THEN 1 ELSE 0 END) as logs_last_30_days
+        FROM dba.tlogentry
+    """
+    results = fetch_dict(query)
+    return results[0] if results else {}

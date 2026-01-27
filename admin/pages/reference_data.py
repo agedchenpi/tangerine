@@ -2,6 +2,9 @@
 
 import streamlit as st
 import pandas as pd
+import io
+import csv
+from datetime import datetime, date
 from components.forms import render_datasource_form, render_datasettype_form
 from components.notifications import show_success, show_error, show_info, show_warning
 from services.reference_data_service import (
@@ -24,6 +27,16 @@ from services.reference_data_service import (
     get_datasource_usage_count,
     get_datasettype_usage_count
 )
+from services.holiday_service import (
+    get_all_holidays,
+    get_holiday_by_date,
+    create_holiday,
+    update_holiday,
+    delete_holiday,
+    holiday_exists,
+    bulk_create_holidays,
+    get_holiday_stats
+)
 from components.dependency_checker import render_usage_badge, get_usage_warning_message
 from utils.db_helpers import format_sql_error
 from utils.formatters import format_timestamp
@@ -33,18 +46,21 @@ st.markdown("Manage data sources, dataset types, and view import strategies.")
 
 # Display statistics
 stats = get_reference_stats()
-col1, col2, col3 = st.columns(3)
+holiday_stats = get_holiday_stats()
+col1, col2, col3, col4 = st.columns(4)
 with col1:
     st.metric("Data Sources", stats['datasources'])
 with col2:
     st.metric("Dataset Types", stats['datasettypes'])
 with col3:
     st.metric("Import Strategies", stats['strategies'])
+with col4:
+    st.metric("Holidays", holiday_stats['total'])
 
 st.divider()
 
 # Create tabs for different reference tables
-tab1, tab2, tab3 = st.tabs(["🗂️ Data Sources", "📊 Dataset Types", "⚙️ Import Strategies"])
+tab1, tab2, tab3, tab4 = st.tabs(["🗂️ Data Sources", "📊 Dataset Types", "📅 Holidays", "⚙️ Import Strategies"])
 
 # ============================================================================
 # TAB 1: DATA SOURCES
@@ -465,9 +481,301 @@ with tab2:
 
 
 # ============================================================================
-# TAB 3: IMPORT STRATEGIES (READ-ONLY)
+# TAB 3: HOLIDAYS
 # ============================================================================
 with tab3:
+    st.subheader("Holiday Management")
+    st.markdown("Manage holidays used for business day calculations in ETL processes.")
+
+    # Sub-tabs for different operations
+    hol_tab1, hol_tab2, hol_tab3, hol_tab4, hol_tab5 = st.tabs(["📋 View All", "➕ Add Single", "📁 Bulk Upload", "✏️ Edit", "🗑️ Delete"])
+
+    # VIEW ALL HOLIDAYS
+    with hol_tab1:
+        try:
+            holidays = get_all_holidays()
+
+            if holidays:
+                df = pd.DataFrame(holidays)
+
+                # Format dates
+                if 'holiday_date' in df.columns:
+                    df['holiday_date'] = pd.to_datetime(df['holiday_date']).dt.strftime('%Y-%m-%d')
+
+                if 'createddate' in df.columns:
+                    df['createddate'] = df['createddate'].apply(
+                        lambda x: format_timestamp(x) if pd.notna(x) else 'N/A'
+                    )
+
+                # Select columns to display
+                display_columns = ['holiday_date', 'holiday_name', 'createddate', 'createdby']
+                display_columns = [col for col in display_columns if col in df.columns]
+
+                st.dataframe(
+                    df[display_columns],
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        'holiday_date': st.column_config.DateColumn('Date', format="YYYY-MM-DD", width="medium"),
+                        'holiday_name': st.column_config.TextColumn('Holiday Name', width="large"),
+                        'createddate': st.column_config.TextColumn('Created', width="medium"),
+                        'createdby': st.column_config.TextColumn('Created By', width="small")
+                    }
+                )
+
+                st.caption(f"Showing {len(holidays)} holiday(s)")
+
+                # Download as CSV
+                csv_buffer = io.StringIO()
+                df[['holiday_date', 'holiday_name']].to_csv(csv_buffer, index=False)
+                st.download_button(
+                    label="📥 Download as CSV",
+                    data=csv_buffer.getvalue(),
+                    file_name=f"holidays_{datetime.now().strftime('%Y%m%d')}.csv",
+                    mime="text/csv"
+                )
+            else:
+                show_info("No holidays found. Add holidays in the 'Add Single' or 'Bulk Upload' tabs.")
+
+        except Exception as e:
+            show_error(f"Error loading holidays: {format_sql_error(e)}")
+
+    # ADD SINGLE HOLIDAY
+    with hol_tab2:
+        st.markdown("#### Add a Single Holiday")
+
+        with st.form("add_holiday_form", clear_on_submit=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                holiday_date = st.date_input(
+                    "Holiday Date",
+                    value=None,
+                    help="Select the date of the holiday"
+                )
+            with col2:
+                holiday_name = st.text_input(
+                    "Holiday Name (Optional)",
+                    max_chars=100,
+                    help="E.g., 'New Year's Day', 'Independence Day'"
+                )
+
+            if st.form_submit_button("➕ Add Holiday", type="primary"):
+                if not holiday_date:
+                    show_error("Please select a holiday date")
+                elif holiday_exists(holiday_date):
+                    show_error(f"Holiday on {holiday_date} already exists")
+                else:
+                    try:
+                        create_holiday(holiday_date, holiday_name if holiday_name else None)
+                        show_success(f"✅ Holiday on {holiday_date} added successfully!")
+                        st.toast("Holiday added!", icon="✅")
+                        st.rerun()
+                    except Exception as e:
+                        show_error(f"Failed to add holiday: {format_sql_error(e)}")
+
+    # BULK UPLOAD
+    with hol_tab3:
+        st.markdown("#### Bulk Upload Holidays from CSV")
+
+        show_info("📋 **CSV Format:** Upload a CSV file with columns `holiday_date` (YYYY-MM-DD) and optional `holiday_name`")
+
+        with st.expander("📖 CSV Template & Example", expanded=False):
+            st.markdown("""
+            **Required columns:**
+            - `holiday_date` - Date in YYYY-MM-DD format (required)
+            - `holiday_name` - Description of the holiday (optional)
+
+            **Example CSV:**
+            ```
+            holiday_date,holiday_name
+            2026-01-01,New Year's Day
+            2026-07-04,Independence Day
+            2026-12-25,Christmas Day
+            ```
+            """)
+
+            # Provide template download
+            template_data = "holiday_date,holiday_name\n2026-01-01,New Year's Day\n2026-07-04,Independence Day\n"
+            st.download_button(
+                label="📥 Download CSV Template",
+                data=template_data,
+                file_name="holiday_template.csv",
+                mime="text/csv"
+            )
+
+        uploaded_file = st.file_uploader(
+            "Upload CSV File",
+            type=['csv'],
+            help="Upload a CSV file containing holiday dates"
+        )
+
+        if uploaded_file is not None:
+            try:
+                # Read CSV
+                csv_data = uploaded_file.read().decode('utf-8')
+                csv_reader = csv.DictReader(io.StringIO(csv_data))
+
+                holidays_to_import = []
+                for row in csv_reader:
+                    if 'holiday_date' in row and row['holiday_date']:
+                        holidays_to_import.append({
+                            'holiday_date': row['holiday_date'],
+                            'holiday_name': row.get('holiday_name', '')
+                        })
+
+                if holidays_to_import:
+                    st.info(f"📊 Preview: {len(holidays_to_import)} holidays found in CSV")
+
+                    # Show preview
+                    preview_df = pd.DataFrame(holidays_to_import[:10])
+                    st.dataframe(preview_df, use_container_width=True)
+
+                    if len(holidays_to_import) > 10:
+                        st.caption(f"Showing first 10 of {len(holidays_to_import)} rows...")
+
+                    if st.button("📁 Import All Holidays", type="primary"):
+                        success_count, errors = bulk_create_holidays(holidays_to_import)
+
+                        if success_count > 0:
+                            show_success(f"✅ Successfully imported {success_count} holiday(s)!")
+
+                        if errors:
+                            show_warning(f"⚠️ {len(errors)} error(s) occurred:")
+                            for error in errors[:5]:  # Show first 5 errors
+                                st.caption(f"• {error}")
+                            if len(errors) > 5:
+                                st.caption(f"... and {len(errors) - 5} more errors")
+
+                        if success_count > 0:
+                            st.rerun()
+                else:
+                    show_error("No valid holiday data found in CSV")
+
+            except Exception as e:
+                show_error(f"Error processing CSV: {format_sql_error(e)}")
+
+    # EDIT HOLIDAY
+    with hol_tab4:
+        st.markdown("#### Edit Holiday")
+
+        # Show success message if exists
+        if 'holiday_update_success' in st.session_state:
+            show_success(st.session_state.holiday_update_success)
+            del st.session_state.holiday_update_success
+
+        try:
+            all_holidays = get_all_holidays()
+
+            if all_holidays:
+                # Create options for selectbox
+                holiday_options = {
+                    f"{h['holiday_date']} - {h.get('holiday_name', 'Unnamed')}": h['holiday_date']
+                    for h in all_holidays
+                }
+
+                selected_holiday_str = st.selectbox(
+                    "Select Holiday to Edit",
+                    options=list(holiday_options.keys()),
+                    key="edit_holiday_select"
+                )
+
+                selected_date = holiday_options[selected_holiday_str]
+                holiday_to_edit = get_holiday_by_date(selected_date)
+
+                if holiday_to_edit:
+                    st.divider()
+
+                    # Show current info
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.metric("Holiday Date", holiday_to_edit['holiday_date'])
+                    with col2:
+                        st.metric("Created", format_timestamp(holiday_to_edit.get('createddate')))
+
+                    st.divider()
+
+                    # Edit form
+                    with st.form("edit_holiday_form"):
+                        st.text_input("Date (Cannot be changed)", value=str(holiday_to_edit['holiday_date']), disabled=True)
+
+                        new_holiday_name = st.text_input(
+                            "Holiday Name",
+                            value=holiday_to_edit.get('holiday_name', ''),
+                            max_chars=100
+                        )
+
+                        if st.form_submit_button("💾 Update Holiday", type="primary"):
+                            try:
+                                update_holiday(holiday_to_edit['holiday_date'], new_holiday_name if new_holiday_name else None)
+                                st.session_state.holiday_update_success = f"✅ Holiday on {holiday_to_edit['holiday_date']} updated successfully!"
+                                st.rerun()
+                            except Exception as e:
+                                show_error(f"Failed to update holiday: {format_sql_error(e)}")
+            else:
+                show_info("No holidays available to edit.")
+
+        except Exception as e:
+            show_error(f"Error loading holidays: {format_sql_error(e)}")
+
+    # DELETE HOLIDAY
+    with hol_tab5:
+        st.markdown("#### Delete Holiday")
+        show_warning("⚠️ **Warning:** Deletion is permanent and may affect business day calculations.")
+
+        try:
+            all_holidays = get_all_holidays()
+
+            if all_holidays:
+                holiday_options = {
+                    f"{h['holiday_date']} - {h.get('holiday_name', 'Unnamed')}": h['holiday_date']
+                    for h in all_holidays
+                }
+
+                selected_holiday_str = st.selectbox(
+                    "Select Holiday to Delete",
+                    options=list(holiday_options.keys()),
+                    key="delete_holiday_select"
+                )
+
+                selected_date = holiday_options[selected_holiday_str]
+                holiday_to_delete = get_holiday_by_date(selected_date)
+
+                if holiday_to_delete:
+                    st.divider()
+
+                    # Show details
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.text_input("Date", value=str(holiday_to_delete['holiday_date']), disabled=True)
+                    with col2:
+                        st.text_input("Holiday Name", value=holiday_to_delete.get('holiday_name', 'Unnamed'), disabled=True)
+
+                    st.divider()
+
+                    confirm = st.checkbox(
+                        f"I confirm I want to permanently delete holiday on {holiday_to_delete['holiday_date']}",
+                        key="delete_holiday_confirm"
+                    )
+
+                    if confirm:
+                        if st.button("🗑️ Delete Holiday Permanently", type="primary", key="delete_holiday_button"):
+                            try:
+                                delete_holiday(holiday_to_delete['holiday_date'])
+                                show_success(f"Holiday on {holiday_to_delete['holiday_date']} deleted successfully")
+                                st.rerun()
+                            except Exception as e:
+                                show_error(f"Failed to delete holiday: {format_sql_error(e)}")
+            else:
+                show_info("No holidays available to delete.")
+
+        except Exception as e:
+            show_error(f"Error loading holidays: {format_sql_error(e)}")
+
+
+# ============================================================================
+# TAB 4: IMPORT STRATEGIES (READ-ONLY)
+# ============================================================================
+with tab4:
     st.subheader("Import Strategies (Read-Only)")
     st.markdown("Import strategies define how the system handles column mismatches during data imports.")
 

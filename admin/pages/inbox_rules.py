@@ -65,7 +65,7 @@ QUICK_START_SCENARIOS = """
 """
 
 load_custom_css()
-add_page_header("Inbox Configuration", "Manage Gmail inbox processing rules", "📧")
+add_page_header("Inbox Configuration", icon="📧")
 
 # Statistics
 try:
@@ -105,15 +105,69 @@ def render_inbox_config_form(
                 value=config_data.get('subject_pattern', '') if config_data else '',
                 help="Leave blank to match all. See examples below."
             )
-            with st.expander("Common examples", expanded=False):
+            with st.expander("ℹ️ Common examples", expanded=False):
                 st.markdown(SUBJECT_PATTERN_HINTS)
+
+            # Inline pattern testing
+            if subject_pattern:
+                with st.expander("🧪 Test Subject Pattern", expanded=False):
+                    test_subject_input = st.text_area(
+                        "Test Subjects (one per line)",
+                        value="Daily Sales Report\nWeekly Summary\nMonthly Stats",
+                        height=80,
+                        key=f"test_subject_{form_key}"
+                    )
+                    if test_subject_input:
+                        test_subjects = [s.strip() for s in test_subject_input.split('\n') if s.strip()]
+                        try:
+                            results = validate_subject_pattern(subject_pattern, test_subjects)
+                            summary = get_pattern_test_summary(results)
+
+                            if summary['has_error']:
+                                st.error(f"❌ Invalid pattern: {results[0].get('error', 'Unknown error')}")
+                            else:
+                                st.success(f"✅ {summary['matches']}/{summary['total']} matched ({summary['match_rate']:.0f}%)")
+                                for r in results:
+                                    if r['matches']:
+                                        st.caption(f"✓ {r['input']}")
+                                    else:
+                                        st.caption(f"✗ {r['input']}")
+                        except Exception as e:
+                            st.error(f"Error testing pattern: {str(e)}")
             attachment_pattern = st.text_input(
                 "Attachment Pattern *",
                 value=config_data.get('attachment_pattern', '*.csv') if config_data else '*.csv',
                 help="Use * as wildcard. Example: *.csv for all CSV files"
             )
-            with st.expander("Common examples", expanded=False):
+            with st.expander("ℹ️ Common examples", expanded=False):
                 st.markdown(ATTACHMENT_PATTERN_HINTS)
+
+            # Inline pattern testing
+            if attachment_pattern:
+                with st.expander("🧪 Test Attachment Pattern", expanded=False):
+                    test_attachment_input = st.text_area(
+                        "Test Filenames (one per line)",
+                        value="report.csv\ndata_20260126.csv\ninvoice.xlsx",
+                        height=80,
+                        key=f"test_attachment_{form_key}"
+                    )
+                    if test_attachment_input:
+                        test_files = [f.strip() for f in test_attachment_input.split('\n') if f.strip()]
+                        try:
+                            results = validate_attachment_pattern(attachment_pattern, test_files)
+                            summary = get_pattern_test_summary(results)
+
+                            if summary['has_error']:
+                                st.error(f"❌ Invalid pattern: {results[0].get('error', 'Unknown error')}")
+                            else:
+                                st.success(f"✅ {summary['matches']}/{summary['total']} matched ({summary['match_rate']:.0f}%)")
+                                for r in results:
+                                    if r['matches']:
+                                        st.caption(f"✓ {r['input']}")
+                                    else:
+                                        st.caption(f"✗ {r['input']}")
+                        except Exception as e:
+                            st.error(f"Error testing pattern: {str(e)}")
 
         with col2:
             description = st.text_area(
@@ -127,8 +181,35 @@ def render_inbox_config_form(
                 value=config_data.get('sender_pattern', '') if config_data else '',
                 help="Leave blank to match all senders. See examples below."
             )
-            with st.expander("Common examples", expanded=False):
+            with st.expander("ℹ️ Common examples", expanded=False):
                 st.markdown(SENDER_PATTERN_HINTS)
+
+            # Inline pattern testing
+            if sender_pattern:
+                with st.expander("🧪 Test Sender Pattern", expanded=False):
+                    test_sender_input = st.text_area(
+                        "Test Senders (one per line)",
+                        value="john@company.com\nsales@example.com\nreports@corp.net",
+                        height=80,
+                        key=f"test_sender_{form_key}"
+                    )
+                    if test_sender_input:
+                        test_senders = [s.strip() for s in test_sender_input.split('\n') if s.strip()]
+                        try:
+                            results = validate_sender_pattern(sender_pattern, test_senders)
+                            summary = get_pattern_test_summary(results)
+
+                            if summary['has_error']:
+                                st.error(f"❌ Invalid pattern: {results[0].get('error', 'Unknown error')}")
+                            else:
+                                st.success(f"✅ {summary['matches']}/{summary['total']} matched ({summary['match_rate']:.0f}%)")
+                                for r in results:
+                                    if r['matches']:
+                                        st.caption(f"✓ {r['input']}")
+                                    else:
+                                        st.caption(f"✗ {r['input']}")
+                        except Exception as e:
+                            st.error(f"Error testing pattern: {str(e)}")
 
         st.markdown("### File Settings")
         col1, col2 = st.columns(2)

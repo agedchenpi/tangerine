@@ -114,7 +114,7 @@ def db_connection():
 
 
 @contextmanager
-def db_transaction():
+def db_transaction(dict_cursor: bool = True):
     """
     Context manager for database transactions.
 
@@ -123,16 +123,24 @@ def db_transaction():
             cursor.execute("INSERT INTO table VALUES (%s)", (value,))
             # Automatically commits on success, rolls back on exception
 
+    Args:
+        dict_cursor: If True, use RealDictCursor to return rows as dicts.
+                     If False, use regular cursor that returns tuples.
+
     Features:
     - Automatic commit on success
     - Automatic rollback on exception
     - Returns connection to pool
+    - Returns dictionaries by default for easier access
     """
     conn = get_connection()
     cursor = None
 
     try:
-        cursor = conn.cursor()
+        if dict_cursor:
+            cursor = conn.cursor(cursor_factory=extras.RealDictCursor)
+        else:
+            cursor = conn.cursor()
         yield cursor
         conn.commit()
     except Exception:
