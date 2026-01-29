@@ -19,7 +19,7 @@ from services.scheduler_service import (
     calculate_next_run, job_name_exists as schedule_name_exists
 )
 from utils.db_helpers import format_sql_error
-from utils.ui_helpers import load_custom_css, add_page_header
+from utils.ui_helpers import load_custom_css, add_page_header, render_stat_card
 
 # Template hint constants for user guidance
 SQL_TEMPLATE_HINTS = """
@@ -71,13 +71,13 @@ try:
     stats = get_report_stats()
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Total Reports", stats['total'])
+        render_stat_card("Total Reports", str(stats['total']), icon="📊", color="#17A2B8")
     with col2:
-        st.metric("Active", stats['active'])
+        render_stat_card("Active", str(stats['active']), icon="✅", color="#28A745")
     with col3:
-        st.metric("Last Run Success", stats['success'])
+        render_stat_card("Last Run Success", str(stats['success']), icon="✅", color="#28A745")
     with col4:
-        st.metric("Last Run Failed", stats['failed'])
+        render_stat_card("Last Run Failed", str(stats['failed']), icon="❌", color="#DC3545")
 except Exception as e:
     show_error(f"Failed to load statistics: {format_sql_error(e)}")
 

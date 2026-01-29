@@ -40,6 +40,9 @@ from services.holiday_service import (
 from components.dependency_checker import render_usage_badge, get_usage_warning_message
 from utils.db_helpers import format_sql_error
 from utils.formatters import format_timestamp
+from utils.ui_helpers import load_custom_css, render_stat_card
+
+load_custom_css()
 
 st.title("📚 Reference Data Management")
 st.markdown("Manage data sources, dataset types, and view import strategies.")
@@ -49,13 +52,13 @@ stats = get_reference_stats()
 holiday_stats = get_holiday_stats()
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    st.metric("Data Sources", stats['datasources'])
+    render_stat_card("Data Sources", str(stats['datasources']), icon="📊", color="#17A2B8")
 with col2:
-    st.metric("Dataset Types", stats['datasettypes'])
+    render_stat_card("Dataset Types", str(stats['datasettypes']), icon="📋", color="#28A745")
 with col3:
-    st.metric("Import Strategies", stats['strategies'])
+    render_stat_card("Import Strategies", str(stats['strategies']), icon="⚙️", color="#6F42C1")
 with col4:
-    st.metric("Holidays", holiday_stats['total'])
+    render_stat_card("Holidays", str(holiday_stats['total']), icon="📅", color="#FFC107")
 
 st.divider()
 

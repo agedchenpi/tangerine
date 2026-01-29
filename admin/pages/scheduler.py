@@ -15,7 +15,7 @@ from services.scheduler_service import (
     build_cron_expression, calculate_next_run
 )
 from utils.db_helpers import format_sql_error
-from utils.ui_helpers import load_custom_css, add_page_header
+from utils.ui_helpers import load_custom_css, add_page_header, render_stat_card
 from components.dependency_checker import render_missing_config_link
 
 # Cron hint constants for user guidance
@@ -56,15 +56,15 @@ try:
     stats = get_scheduler_stats()
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
-        st.metric("Total Schedules", stats['total'])
+        render_stat_card("Total Schedules", str(stats['total']), icon="📅", color="#17A2B8")
     with col2:
-        st.metric("Active", stats['active'])
+        render_stat_card("Active", str(stats['active']), icon="✅", color="#28A745")
     with col3:
-        st.metric("Inbox Jobs", stats['inbox_count'])
+        render_stat_card("Inbox Jobs", str(stats['inbox_count']), icon="📥", color="#6F42C1")
     with col4:
-        st.metric("Report Jobs", stats['report_count'])
+        render_stat_card("Report Jobs", str(stats['report_count']), icon="📊", color="#FFC107")
     with col5:
-        st.metric("Import Jobs", stats['import_count'])
+        render_stat_card("Import Jobs", str(stats['import_count']), icon="📤", color="#FF8C42")
 except Exception as e:
     show_error(f"Failed to load statistics: {format_sql_error(e)}")
 

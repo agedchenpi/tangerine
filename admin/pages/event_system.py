@@ -16,7 +16,7 @@ from services.pubsub_service import (
     get_report_configs, get_event_types, get_job_types
 )
 from utils.db_helpers import format_sql_error
-from utils.ui_helpers import load_custom_css, add_page_header
+from utils.ui_helpers import load_custom_css, add_page_header, render_stat_card
 from components.dependency_checker import render_missing_config_link
 
 load_custom_css()
@@ -41,15 +41,15 @@ with tab1:
         stats = get_event_stats()
         col1, col2, col3, col4, col5 = st.columns(5)
         with col1:
-            st.metric("Pending", stats['pending'])
+            render_stat_card("Pending", str(stats['pending']), icon="⏳", color="#FFC107")
         with col2:
-            st.metric("Processing", stats['processing'])
+            render_stat_card("Processing", str(stats['processing']), icon="⚙️", color="#17A2B8")
         with col3:
-            st.metric("Completed", stats['completed'])
+            render_stat_card("Completed", str(stats['completed']), icon="✅", color="#28A745")
         with col4:
-            st.metric("Failed", stats['failed'])
+            render_stat_card("Failed", str(stats['failed']), icon="❌", color="#DC3545")
         with col5:
-            st.metric("Total", stats['total'])
+            render_stat_card("Total", str(stats['total']), icon="📊", color="#6C757D")
     except Exception as e:
         show_error(f"Failed to load statistics: {format_sql_error(e)}")
 
@@ -206,13 +206,13 @@ with tab2:
         sub_stats = get_subscriber_stats()
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("Total", sub_stats['total'])
+            render_stat_card("Total", str(sub_stats['total']), icon="📧", color="#17A2B8")
         with col2:
-            st.metric("Active", sub_stats['active'])
+            render_stat_card("Active", str(sub_stats['active']), icon="✅", color="#28A745")
         with col3:
-            st.metric("Inactive", sub_stats['inactive'])
+            render_stat_card("Inactive", str(sub_stats['inactive']), icon="⏸️", color="#6C757D")
         with col4:
-            st.metric("Total Triggers", sub_stats['total_triggers'])
+            render_stat_card("Total Triggers", str(sub_stats['total_triggers']), icon="🔔", color="#FFC107")
     except Exception as e:
         show_error(f"Failed to load statistics: {format_sql_error(e)}")
 

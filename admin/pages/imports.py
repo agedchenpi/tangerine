@@ -16,8 +16,9 @@ from services.import_config_service import (
 from services.reference_data_service import list_datasources, list_datasettypes
 from utils.db_helpers import format_sql_error
 from utils.formatters import format_timestamp, format_boolean, truncate_text
-from utils.ui_helpers import add_recent_item
+from utils.ui_helpers import add_recent_item, load_custom_css, render_stat_card
 
+load_custom_css()
 
 st.title("📋 Import Configuration Management")
 st.markdown("Create, view, edit, and delete import configurations for the ETL pipeline.")
@@ -26,11 +27,11 @@ st.markdown("Create, view, edit, and delete import configurations for the ETL pi
 stats = get_config_stats()
 col1, col2, col3 = st.columns(3)
 with col1:
-    st.metric("Total Configurations", stats['total'])
+    render_stat_card("Total Configurations", str(stats['total']), icon="📋", color="#17A2B8")
 with col2:
-    st.metric("Active", stats['active'])
+    render_stat_card("Active", str(stats['active']), icon="✅", color="#28A745")
 with col3:
-    st.metric("Inactive", stats['inactive'])
+    render_stat_card("Inactive", str(stats['inactive']), icon="⏸️", color="#6C757D")
 
 st.divider()
 

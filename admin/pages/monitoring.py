@@ -30,7 +30,7 @@ from services.monitoring_service import (
 from services.reference_data_service import list_datasources, list_datasettypes
 from utils.db_helpers import format_sql_error
 from utils.formatters import format_datetime, format_duration, format_boolean
-from utils.ui_helpers import load_custom_css, add_page_header, render_empty_state, with_loading
+from utils.ui_helpers import load_custom_css, add_page_header, render_empty_state, with_loading, render_stat_card
 
 # Load custom CSS
 load_custom_css()
@@ -198,13 +198,13 @@ with tab1:
             if log_stats:
                 col1, col2, col3, col4 = st.columns(4)
                 with col1:
-                    st.metric("Total Logs", f"{log_stats.get('total_logs', 0):,}")
+                    render_stat_card("Total Logs", f"{log_stats.get('total_logs', 0):,}", icon="📝", color="#17A2B8")
                 with col2:
-                    st.metric("Total Runs", f"{log_stats.get('total_runs', 0):,}")
+                    render_stat_card("Total Runs", f"{log_stats.get('total_runs', 0):,}", icon="▶️", color="#6F42C1")
                 with col3:
-                    st.metric("Last 7 Days", f"{log_stats.get('logs_last_7_days', 0):,}")
+                    render_stat_card("Last 7 Days", f"{log_stats.get('logs_last_7_days', 0):,}", icon="📅", color="#28A745")
                 with col4:
-                    st.metric("Last 30 Days", f"{log_stats.get('logs_last_30_days', 0):,}")
+                    render_stat_card("Last 30 Days", f"{log_stats.get('logs_last_30_days', 0):,}", icon="📆", color="#FFC107")
 
                 if log_stats.get('oldest_log'):
                     st.caption(f"Oldest log: {format_datetime(log_stats['oldest_log'])}")
@@ -446,40 +446,16 @@ with tab3:
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            st.metric(
-                label="Total Logs (24h)",
-                value=f"{metrics['total_logs_24h']:,}",
-                help="Number of log entries in the last 24 hours"
-            )
-            st.metric(
-                label="Unique Processes (24h)",
-                value=metrics['unique_processes'],
-                help="Number of distinct process types in the last 24 hours"
-            )
+            render_stat_card("Total Logs (24h)", f"{metrics['total_logs_24h']:,}", icon="📝", color="#17A2B8")
+            render_stat_card("Unique Processes (24h)", str(metrics['unique_processes']), icon="🔄", color="#6F42C1")
 
         with col2:
-            st.metric(
-                label="Avg Step Runtime",
-                value=f"{metrics['avg_runtime']}s",
-                help="Average step runtime in the last 24 hours"
-            )
-            st.metric(
-                label="Datasets (30d)",
-                value=f"{metrics['total_datasets_30d']:,}",
-                help="Number of datasets created in the last 30 days"
-            )
+            render_stat_card("Avg Step Runtime", f"{metrics['avg_runtime']}s", icon="⏱️", color="#FFC107")
+            render_stat_card("Datasets (30d)", f"{metrics['total_datasets_30d']:,}", icon="📊", color="#28A745")
 
         with col3:
-            st.metric(
-                label="Active Datasets",
-                value=f"{metrics['total_active_datasets']:,}",
-                help="Number of currently active datasets"
-            )
-            st.metric(
-                label="Active Import Configs",
-                value=metrics['total_active_configs'],
-                help="Number of active import configurations"
-            )
+            render_stat_card("Active Datasets", f"{metrics['total_active_datasets']:,}", icon="✅", color="#28A745")
+            render_stat_card("Active Import Configs", str(metrics['total_active_configs']), icon="⚙️", color="#17A2B8")
 
         st.divider()
 

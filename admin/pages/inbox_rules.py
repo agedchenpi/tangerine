@@ -17,7 +17,7 @@ from services.inbox_config_service import (
     get_pattern_test_summary
 )
 from utils.db_helpers import format_sql_error
-from utils.ui_helpers import load_custom_css, add_page_header
+from utils.ui_helpers import load_custom_css, add_page_header, render_stat_card
 
 # Pattern hint constants for user guidance
 SUBJECT_PATTERN_HINTS = """
@@ -72,11 +72,11 @@ try:
     stats = get_inbox_stats()
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Total Configurations", stats['total'])
+        render_stat_card("Total Configurations", str(stats['total']), icon="📋", color="#17A2B8")
     with col2:
-        st.metric("Active", stats['active'])
+        render_stat_card("Active", str(stats['active']), icon="✅", color="#28A745")
     with col3:
-        st.metric("Inactive", stats['inactive'])
+        render_stat_card("Inactive", str(stats['inactive']), icon="⏸️", color="#6C757D")
 except Exception as e:
     show_error(f"Failed to load statistics: {format_sql_error(e)}")
 

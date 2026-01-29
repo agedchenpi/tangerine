@@ -56,7 +56,9 @@
       "Bash(git checkout:*)",
       "Bash(pytest:*)",
       "Bash(/tmp/test_venv/bin/pip install:*)",
-      "Bash(/tmp/test_venv/bin/python -m pytest:*)"
+      "Bash(/tmp/test_venv/bin/python -m pytest:*)",
+      "Bash(docker-compose restart:*)",
+      "Bash(docker restart:*)"
     ]
   }
 }

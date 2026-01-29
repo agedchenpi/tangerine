@@ -384,7 +384,9 @@ label {
 }
 
 /* Metric label - Industrial typography with Outfit */
-[data-testid="stMetric"] > div:first-child {
+[data-testid="stMetric"] > div:first-child,
+[data-testid="stMetric"] label,
+[data-testid="stMetric"] p {
     font-family: var(--font-display);
     color: var(--industrial-slate);
     font-size: 0.8rem;
@@ -963,470 +965,346 @@ hr::after {
 .mt-3 {
     margin-top: 1.5rem;
 }
-
-
 /* ============================================================================
-   DARK MODE SUPPORT
+   DARK MODE - WCAG AA/AAA ACCESSIBILITY
+   Conservative approach: dimmer than ui_helpers.py but still compliant
+   These rules have final say over dynamic CSS injection
    ============================================================================ */
-/* Dark mode CSS variables - WCAG compliant contrast */
+
 [data-theme="dark"],
 .stApp[data-theme="dark"] {
-    /* Dark mode backgrounds */
-    --bg-light: #0F1419;
-    --bg-card: #1A1F2E;
+    /* Background-aware CSS variables */
 
-    /* Dark mode text */
-    --text-dark: #E8E8E8;
-    --text-light: #B0B0B0;
-    --text-muted: #8A8F98;
+    /* For dark backgrounds (#121212, #1E1E2E) */
+    --text-on-dark-bg: #E0E0E0;        /* 7.5:1 on #121212 */
+    --text-on-dark-bg-bright: #F0F0F0; /* 9.8:1 on #121212 */
+    --text-on-dark-bg-muted: #D0D0D0;  /* 6.3:1 on #121212 */
 
-    /* Dark mode borders */
-    --border-color: #2D2D3D;
+    /* For light backgrounds (#FFFFFF, #F8F9FA) */
+    --text-on-light-bg: #2C3E50;       /* 12.6:1 on #FFFFFF */
+    --text-on-light-bg-secondary: #34495E; /* 10.2:1 on #FFFFFF */
+    --text-on-light-bg-muted: #6C757D; /* 5.9:1 on #FFFFFF */
 
-    /* Dark mode Tangerine colors - adjusted for dark backgrounds */
-    --tangerine-primary: #FFA05C;
-    --tangerine-secondary: #FFB87A;
-    --tangerine-dark: #E07830;
-    --tangerine-light: #3D2A1A;
+    /* Background colors */
+    --bg-body: #121212;
+    --bg-card-dark: #1E1E2E;
+    --bg-card-light: #FFFFFF;
 
-    /* Dark mode industrial colors */
-    --industrial-metal: #8A8F98;
-    --industrial-slate: #D1D5DB;
-    --industrial-charcoal: #E8E8E8;
-    --industrial-steel: #6B7280;
-    --industrial-concrete: #4B5563;
-
-    /* Dark mode shadows - more pronounced */
-    --shadow-sm: 0 2px 8px rgba(0,0,0,0.4);
-    --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
-    --shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
-    --shadow-industrial: 0 4px 20px rgba(0, 0, 0, 0.7);
-    --shadow-glow: 0 0 24px rgba(255, 160, 92, 0.4);
-
-    /* Dark mode gradients */
-    --gradient-primary: linear-gradient(135deg, #FFA05C 0%, #FFB87A 100%);
-    --gradient-industrial: linear-gradient(135deg, #1A1F2E 0%, #0F1419 100%);
-    --gradient-subtle: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.02) 100%);
-
-    /* Dark mode animated gradient */
-    --gradient-animated: linear-gradient(270deg, #FFA05C, #FFB87A, #FFC892, #FFB87A, #FFA05C);
-
-    /* Dark mode ambient lighting */
-    --ambient-light: radial-gradient(
-        circle at 50% 0%,
-        rgba(255, 160, 92, 0.08) 0%,
-        transparent 50%
-    );
+    /* Keep light mode text variables for light backgrounds in dark mode */
+    /* DO NOT override --industrial-slate, --text-dark, etc. */
+    /* Components with dark backgrounds use --text-on-dark-bg-* directly */
 }
 
-/* Dark mode detection via prefers-color-scheme */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg-light: #121212;
-        --text-dark: #E8E8E8;
-        --text-light: #B0B0B0;
-        --border-color: #2D2D3D;
-    }
-}
+/* ============================================================================
+   DARK MODE - BACKGROUND-AWARE COMPONENTS
+   Default: Dark backgrounds for all components
+   Override: Use .light-bg-in-dark class for light backgrounds
+   ============================================================================ */
 
-/* Dark mode - main background with ambient lighting */
+/* Main containers - dark background */
+[data-theme="dark"] .stApp,
 [data-theme="dark"] .main,
-.stApp[data-theme="dark"] .main {
-    background: linear-gradient(180deg, #0F0F1E 0%, #121212 50%, #0A0A12 100%);
-    position: relative;
+[data-theme="dark"] .block-container {
+    background-color: var(--bg-body) !important;
+    color: var(--text-on-dark-bg) !important;
 }
 
-/* Ambient light effect at top of dark mode pages */
-[data-theme="dark"] .main::before,
-.stApp[data-theme="dark"] .main::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 400px;
-    background: var(--ambient-light);
-    pointer-events: none;
-    z-index: 0;
+/* Dark mesh overlay for hero sections */
+[data-theme="dark"] .main::before {
+    background:
+        radial-gradient(at 40% 20%, rgba(255, 140, 66, 0.15) 0px, transparent 50%),
+        radial-gradient(at 80% 0%, rgba(52, 73, 94, 0.2) 0px, transparent 50%),
+        radial-gradient(at 0% 50%, rgba(255, 164, 92, 0.1) 0px, transparent 50%),
+        linear-gradient(135deg, #1E1E2E 0%, #121212 100%) !important;
+    opacity: 0.5 !important;
 }
 
-/* Dark mode - sidebar */
-[data-theme="dark"] [data-testid="stSidebar"],
-.stApp[data-theme="dark"] [data-testid="stSidebar"] {
-    background-color: #1E1E2E;
-    border-right-color: #2D2D3D;
+/* ===== METRIC CARDS ===== */
+
+/* Metric card backgrounds - nuclear option with maximum specificity */
+[data-theme="dark"] [data-testid="stMetric"],
+[data-theme="dark"] div[data-testid="stMetric"],
+[data-theme="dark"] .stApp [data-testid="stMetric"],
+[data-theme="dark"] .main [data-testid="stMetric"],
+[data-theme="dark"] [data-testid="column"] [data-testid="stMetric"],
+[data-theme="dark"] [data-testid="stHorizontalBlock"] [data-testid="stMetric"] {
+    background: #1E1E2E !important;
+    background-color: #1E1E2E !important;
+    background-image: none !important;
+    border: 1px solid #2D2D3D !important;
+    border-left: 4px solid #FFA05C !important;
 }
 
-/* Dark mode - sidebar navigation group headers (Home, Configuration, Operations, System) */
-/* Enhanced selectors with bright white for maximum visibility */
-[data-theme="dark"] [data-testid="stSidebar"] [data-testid="stNavSectionHeader"],
-[data-theme="dark"] [data-testid="stSidebar"] header[data-testid="stNavSectionHeader"],
-[data-theme="dark"] [data-testid="stNavSectionHeader"],
-.stApp[data-theme="dark"] [data-testid="stSidebar"] [data-testid="stNavSectionHeader"],
-.stApp[data-theme="dark"] [data-testid="stNavSectionHeader"],
-[data-theme="dark"] [data-testid="stSidebar"] [data-testid="stSidebarNav"] ul li p,
-[data-theme="dark"] [data-testid="stSidebar"] [data-testid="stSidebarNav"] > div > ul > li > div,
-[data-theme="dark"] [data-testid="stSidebar"] [data-testid="stSidebarNav"] > div > div > div:first-child,
-[data-theme="dark"] [data-testid="stSidebar"] [role="list"] > div,
-[data-theme="dark"] [data-testid="stSidebar"] div[data-testid="stSidebarNavItems"] > div > div,
-[data-theme="dark"] [data-testid="stSidebar"] nav[role="navigation"] > div > div > span,
-[data-theme="dark"] [data-testid="stSidebar"] span[role="heading"],
-.stApp[data-theme="dark"] [data-testid="stSidebar"] [data-testid="stSidebarNav"] ul li p,
-.stApp[data-theme="dark"] [data-testid="stSidebar"] [data-testid="stSidebarNav"] > div > ul > li > div {
-    color: #FFFFFF !important;
-    font-weight: 700 !important;
-    font-size: 0.95rem !important;
-    letter-spacing: 0.5px !important;
-    text-transform: uppercase !important;
-    opacity: 1 !important;
-}
-
-/* Dark mode - sidebar regular text (non-header elements) */
-[data-theme="dark"] [data-testid="stSidebar"] p:not([data-testid="stSidebarNav"] p),
-[data-theme="dark"] [data-testid="stSidebar"] span:not([role="heading"]),
-[data-theme="dark"] [data-testid="stSidebar"] div:not([data-testid="stSidebarNav"] div) {
-    color: #E8E8E8 !important;
-}
-
-/* Dark mode - sidebar navigation links */
-[data-theme="dark"] [data-testid="stSidebar"] a,
-[data-theme="dark"] [data-testid="stSidebar"] a span,
-[data-theme="dark"] [data-testid="stSidebar"] a p,
-.stApp[data-theme="dark"] [data-testid="stSidebar"] a,
-.stApp[data-theme="dark"] [data-testid="stSidebar"] a span,
-.stApp[data-theme="dark"] [data-testid="stSidebar"] a p {
-    color: #E8E8E8 !important;
-}
-
-[data-theme="dark"] [data-testid="stSidebar"] a:hover,
-[data-theme="dark"] [data-testid="stSidebar"] a:hover span,
-[data-theme="dark"] [data-testid="stSidebar"] a:hover p,
-.stApp[data-theme="dark"] [data-testid="stSidebar"] a:hover,
-.stApp[data-theme="dark"] [data-testid="stSidebar"] a:hover span,
-.stApp[data-theme="dark"] [data-testid="stSidebar"] a:hover p {
-    color: #FFA05C !important;
-}
-
-/* Dark mode - sidebar section dividers and text */
-[data-theme="dark"] [data-testid="stSidebar"] p,
-[data-theme="dark"] [data-testid="stSidebar"] span,
-[data-theme="dark"] [data-testid="stSidebar"] div,
-.stApp[data-theme="dark"] [data-testid="stSidebar"] p,
-.stApp[data-theme="dark"] [data-testid="stSidebar"] span {
-    color: #E8E8E8 !important;
-}
-
-/* ============================================
-   DARK MODE FIX: Navigation Section Headers
-   ============================================
-   NOTE: These rules may not work alone due to Streamlit Emotion CSS,
-   but provide fallback coverage. JavaScript in app.py handles primary fix.
-*/
-
-/* Target stNavSectionHeader with maximum specificity */
-[data-theme="dark"] [data-testid="stSidebar"] [data-testid="stNavSectionHeader"],
-[data-theme="dark"] header[data-testid="stNavSectionHeader"],
-.stApp[data-theme="dark"] [data-testid="stSidebar"] [data-testid="stNavSectionHeader"],
-.stApp[data-theme="dark"] header[data-testid="stNavSectionHeader"] {
-    color: #FFFFFF !important;
-    opacity: 1 !important;
-    font-weight: 700 !important;
-    font-size: 0.95rem !important;
-    letter-spacing: 0.5px !important;
-    text-transform: uppercase !important;
+/* Metric card ALL nested divs - force dark backgrounds */
+[data-theme="dark"] [data-testid="stMetric"] div,
+[data-theme="dark"] [data-testid="stMetric"] > div,
+[data-theme="dark"] [data-testid="stMetric"] > div > div {
+    background: transparent !important;
     background-color: transparent !important;
-
-    /* Disable transitions/animations */
-    transition: none !important;
-    transform: none !important;
-    animation: none !important;
+    background-image: none !important;
 }
 
-/* ============================================
-   DARK MODE FIX: Disable Sidebar Movement
-   ============================================
-   Prevent unwanted CSS animations/transitions on click
-*/
-
-/* Disable ALL transitions in sidebar to prevent movement */
-[data-testid="stSidebar"],
-[data-testid="stSidebar"] *,
-[data-testid="stSidebar"] [data-testid="stNavSectionHeader"],
-[data-testid="stSidebar"] [data-testid="stSidebarNavLink"],
-[data-testid="stSidebar"] a,
-.stApp[data-theme="dark"] [data-testid="stSidebar"],
-.stApp[data-theme="dark"] [data-testid="stSidebar"] * {
-    transition: none !important;
-    transform: none !important;
-    animation: none !important;
+/* Metric labels (e.g., "Data Sources", "Dataset Types") - force bright text */
+[data-theme="dark"] [data-testid="stMetric"] > div:first-child,
+[data-theme="dark"] [data-testid="stMetric"] label,
+[data-theme="dark"] [data-testid="stMetric"] p:first-of-type,
+[data-theme="dark"] [data-testid="stMetric"] [data-testid="stMetricLabel"],
+[data-theme="dark"] [data-testid="stMetric"] div[data-testid="stMetricLabel"] {
+    color: #F0F0F0 !important;
+    font-weight: 700 !important;
 }
 
-/* Specifically override element-container transitions in sidebar */
-[data-testid="stSidebar"] .element-container,
-.stApp[data-theme="dark"] [data-testid="stSidebar"] .element-container {
-    transition: none !important;
-    transform: none !important;
-    animation: none !important;
+/* Metric values (the numbers) - force orange */
+[data-theme="dark"] [data-testid="stMetric"] [data-testid="stMetricValue"],
+[data-theme="dark"] [data-testid="stMetric"] div[data-testid="stMetricValue"],
+[data-theme="dark"] [data-testid="stMetric"] [data-testid="stMetricValue"] div,
+[data-theme="dark"] [data-testid="stMetric"] [data-testid="stMetricValue"] p {
+    color: #FFA05C !important;
+    font-weight: 600 !important;
 }
 
-/* Streamlit dark mode - inline code */
-[data-theme="dark"] code,
-.stApp[data-theme="dark"] code {
-    background-color: #2D2D3D;
-    color: #FFA05C;
-    border-color: #3D3D4D;
+/* Metric delta (change indicators) */
+[data-theme="dark"] [data-testid="stMetric"] [data-testid="stMetricDelta"],
+[data-theme="dark"] [data-testid="stMetric"] div[data-testid="stMetricDelta"] {
+    color: #90EE90 !important;
 }
 
-[data-theme="dark"] table code,
-[data-theme="dark"] td code,
-[data-theme="dark"] th code,
-.stApp[data-theme="dark"] table code {
-    background-color: #2D2D3D;
-    color: #FFA05C;
-    border-color: #3D3D4D;
+/* Catch-all for any text inside metrics */
+[data-theme="dark"] [data-testid="stMetric"] *:not([data-testid="stMetricValue"]):not([data-testid="stMetricDelta"]) {
+    color: #E8E8E8 !important;
 }
 
-/* Dark mode pre code blocks stay the same (already dark) */
-[data-theme="dark"] pre code,
-.stApp[data-theme="dark"] pre code {
-    background-color: transparent;
-    color: inherit;
-    border: none;
+/* ===== CONTAINERS & WRAPPERS ===== */
+
+/* Vertical block containers (from st.container, default layout) */
+[data-theme="dark"] [data-testid="stVerticalBlock"],
+[data-theme="dark"] div[data-testid="stVerticalBlock"] > div {
+    background-color: transparent !important;
+    background-image: none !important;
 }
 
-/* Dark mode - markdown tables */
-[data-theme="dark"] table,
-.stApp[data-theme="dark"] table {
-    border-color: #2D2D3D;
+/* Horizontal block containers (from st.columns) */
+[data-theme="dark"] [data-testid="stHorizontalBlock"],
+[data-theme="dark"] div[data-testid="stHorizontalBlock"] > div {
+    background-color: transparent !important;
+    background-image: none !important;
 }
 
-[data-theme="dark"] th,
-[data-theme="dark"] td,
-.stApp[data-theme="dark"] th,
-.stApp[data-theme="dark"] td {
-    border-color: #2D2D3D;
+/* Individual columns - aggressive targeting */
+[data-theme="dark"] [data-testid="column"],
+[data-theme="dark"] div[data-testid="column"],
+[data-theme="dark"] [data-testid="column"] > div,
+[data-theme="dark"] [data-testid="column"] > div > div,
+[data-theme="dark"] [data-testid="column"] div[class*="st-emotion-cache"] {
+    background-color: transparent !important;
+    background-image: none !important;
+    background: transparent !important;
 }
 
-/* Dark mode - headers */
+/* Block container and element wrappers */
+[data-theme="dark"] .block-container,
+[data-theme="dark"] .element-container,
+[data-theme="dark"] .row-widget.stHorizontal {
+    background-color: transparent !important;
+    background-image: none !important;
+}
+
+/* Nested container wrappers (catches deeply nested divs) */
+[data-theme="dark"] .stApp > div > div > div {
+    background-color: transparent !important;
+    background-image: none !important;
+}
+
+/* Generic Streamlit container wrappers - catch-all for any missed containers */
+[data-theme="dark"] div[data-testid^="st"]:not([data-testid="stMetric"]):not([data-testid="stDataFrame"]):not([data-testid="stSidebar"]) {
+    background-color: transparent !important;
+    background-image: none !important;
+}
+
+/* Streamlit emotion-cache classes (dynamically generated) */
+[data-theme="dark"] div[class*="st-emotion-cache"] {
+    background-color: transparent !important;
+    background-image: none !important;
+}
+
+/* ===== TABS ===== */
+
+/* Tab container - dark background */
+[data-theme="dark"] .stTabs [data-baseweb="tab-list"] {
+    background-color: var(--bg-card-dark) !important;
+    background-image: none !important;
+}
+
+/* Inactive tabs */
+[data-theme="dark"] .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) {
+    color: var(--text-on-dark-bg-bright) !important;
+    background-color: transparent !important;
+    background-image: none !important;
+}
+
+/* Active tab */
+[data-theme="dark"] .stTabs [aria-selected="true"] {
+    background-color: #FFA05C !important;
+    background-image: none !important;
+    color: #121212 !important;
+}
+
+/* ===== FORM LABELS ===== */
+
+[data-theme="dark"] label,
+[data-theme="dark"] label p,
+[data-theme="dark"] label span {
+    color: var(--text-on-dark-bg-bright) !important;
+}
+
+/* ===== SIDEBAR ===== */
+
+[data-theme="dark"] [data-testid="stSidebar"] {
+    background-color: var(--bg-card-dark) !important;
+}
+
+/* Sidebar navigation links */
+[data-theme="dark"] [data-testid="stSidebar"] a,
+[data-theme="dark"] [data-testid="stSidebarNavLink"] {
+    color: var(--text-on-dark-bg-bright) !important;
+}
+
+/* Sidebar navigation group headers (Home, Configuration, Operations, etc.) */
+[data-theme="dark"] [data-testid="stNavSectionHeader"],
+[data-theme="dark"] header[data-testid="stNavSectionHeader"],
+[data-theme="dark"] [data-testid="stSidebar"] [data-testid="stNavSectionHeader"],
+[data-theme="dark"] [data-testid="stSidebar"] header,
+[data-theme="dark"] [data-testid="stSidebar"] header *,
+[data-theme="dark"] [data-testid="stSidebar"] header p,
+[data-theme="dark"] [data-testid="stSidebar"] header span,
+[data-theme="dark"] [data-testid="stSidebar"] header div,
+[data-theme="dark"] [data-testid="stSidebar"] header[class*="st-emotion-cache"],
+[data-theme="dark"] [data-testid="stSidebar"] header[class*="eczjsme"],
+[data-theme="dark"] section[data-testid="stSidebar"] header,
+[data-theme="dark"] section[data-testid="stSidebar"] header * {
+    color: #F0F0F0 !important;
+    font-weight: 700 !important;
+}
+
+/* Additional specificity for emotion-cache wrapped headers */
+[data-theme="dark"] header.st-emotion-cache-1n7fb9x,
+[data-theme="dark"] header.st-emotion-cache-1n7fb9x.eczjsme2,
+[data-theme="dark"] header[class*="st-emotion-cache"][class*="eczjsme"],
+[data-theme="dark"] [data-testid="stSidebar"] header[class*="st-emotion"],
+[data-theme="dark"] [data-testid="stSidebar"] div[class*="st-emotion"] header {
+    color: #F0F0F0 !important;
+}
+
+/* ===== GENERAL TEXT ===== */
+
+[data-theme="dark"] p,
+[data-theme="dark"] span {
+    color: var(--text-on-dark-bg) !important;
+}
+
 [data-theme="dark"] h1,
 [data-theme="dark"] h2,
 [data-theme="dark"] h3,
 [data-theme="dark"] h4,
 [data-theme="dark"] h5,
-[data-theme="dark"] h6,
-.stApp[data-theme="dark"] h1,
-.stApp[data-theme="dark"] h2,
-.stApp[data-theme="dark"] h3,
-.stApp[data-theme="dark"] h4,
-.stApp[data-theme="dark"] h5,
-.stApp[data-theme="dark"] h6 {
-    color: #E8E8E8;
+[data-theme="dark"] h6 {
+    color: var(--text-on-dark-bg-bright) !important;
 }
 
-[data-theme="dark"] h1,
-.stApp[data-theme="dark"] h1 {
-    border-bottom-color: #FFA05C;
-}
+/* ===== DATAFRAMES ===== */
 
-/* Dark mode - expander */
-[data-theme="dark"] .streamlit-expanderHeader,
-.stApp[data-theme="dark"] .streamlit-expanderHeader {
-    background-color: #1E1E2E;
-    border-color: #2D2D3D;
-    color: #E8E8E8;
-}
-
-[data-theme="dark"] .streamlit-expanderHeader:hover,
-.stApp[data-theme="dark"] .streamlit-expanderHeader:hover {
-    border-color: #FFA05C;
-    background-color: #2D2A3A;
-}
-
-[data-theme="dark"] .streamlit-expanderContent,
-.stApp[data-theme="dark"] .streamlit-expanderContent {
-    background-color: #1A1A2A;
-}
-
-/* Dark mode - metric cards */
-[data-theme="dark"] [data-testid="stMetric"],
-.stApp[data-theme="dark"] [data-testid="stMetric"] {
-    background-color: #1E1E2E;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    border-left-color: #FFA05C;
-}
-
-[data-theme="dark"] [data-testid="stMetric"] > div:first-child,
-.stApp[data-theme="dark"] [data-testid="stMetric"] > div:first-child {
-    color: #B0B0B0;
-}
-
-[data-theme="dark"] [data-testid="stMetric"] > div:last-child,
-.stApp[data-theme="dark"] [data-testid="stMetric"] > div:last-child {
-    color: #FFA05C;
-}
-
-/* Dark mode - tabs */
-[data-theme="dark"] .stTabs [data-baseweb="tab-list"],
-.stApp[data-theme="dark"] .stTabs [data-baseweb="tab-list"] {
-    background-color: #1E1E2E;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-[data-theme="dark"] .stTabs [data-baseweb="tab"],
-.stApp[data-theme="dark"] .stTabs [data-baseweb="tab"] {
-    color: #B0B0B0;
-}
-
-[data-theme="dark"] .stTabs [aria-selected="true"],
-.stApp[data-theme="dark"] .stTabs [aria-selected="true"] {
-    background-color: #FFA05C;
-    color: #121212;
-}
-
-[data-theme="dark"] .stTabs [data-baseweb="tab"]:hover,
-.stApp[data-theme="dark"] .stTabs [data-baseweb="tab"]:hover {
-    background-color: #2D2A3A;
-}
-
-/* Dark mode - buttons */
-[data-theme="dark"] .stButton > button,
-.stApp[data-theme="dark"] .stButton > button {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-[data-theme="dark"] .stButton > button[kind="primary"],
-.stApp[data-theme="dark"] .stButton > button[kind="primary"] {
-    background-color: #FFA05C;
-    color: #121212;
-}
-
-[data-theme="dark"] .stButton > button[kind="primary"]:hover,
-.stApp[data-theme="dark"] .stButton > button[kind="primary"]:hover {
-    background-color: #E07830;
-}
-
-[data-theme="dark"] .stButton > button[kind="secondary"],
-.stApp[data-theme="dark"] .stButton > button[kind="secondary"] {
-    background-color: #1E1E2E;
-    border-color: #FFA05C;
-    color: #FFA05C;
-}
-
-[data-theme="dark"] .stButton > button[kind="secondary"]:hover,
-.stApp[data-theme="dark"] .stButton > button[kind="secondary"]:hover {
-    background-color: #2D2A3A;
-}
-
-/* Dark mode - forms & inputs */
-[data-theme="dark"] .stTextInput > div > div > input,
-[data-theme="dark"] .stTextArea > div > div > textarea,
-[data-theme="dark"] .stSelectbox > div > div > select,
-[data-theme="dark"] .stNumberInput > div > div > input,
-[data-theme="dark"] .stDateInput > div > div > input,
-.stApp[data-theme="dark"] .stTextInput > div > div > input,
-.stApp[data-theme="dark"] .stTextArea > div > div > textarea,
-.stApp[data-theme="dark"] .stSelectbox > div > div > select,
-.stApp[data-theme="dark"] .stNumberInput > div > div > input,
-.stApp[data-theme="dark"] .stDateInput > div > div > input {
-    background-color: #1E1E2E;
-    border-color: #2D2D3D;
-    color: #E8E8E8;
-}
-
-[data-theme="dark"] .stTextInput > div > div > input:focus,
-[data-theme="dark"] .stTextArea > div > div > textarea:focus,
-.stApp[data-theme="dark"] .stTextInput > div > div > input:focus,
-.stApp[data-theme="dark"] .stTextArea > div > div > textarea:focus {
-    border-color: #FFA05C;
-    box-shadow: 0 0 0 3px rgba(255, 160, 92, 0.15);
-}
-
-[data-theme="dark"] label,
-.stApp[data-theme="dark"] label {
-    color: #E8E8E8;
-}
-
-/* Dark mode - dataframes */
 [data-theme="dark"] .stDataFrame,
-.stApp[data-theme="dark"] .stDataFrame {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+[data-theme="dark"] [data-testid="stDataFrame"] {
+    background-color: var(--bg-card-dark) !important;
 }
 
-[data-theme="dark"] .stDataFrame thead tr th,
-.stApp[data-theme="dark"] .stDataFrame thead tr th {
+[data-theme="dark"] .stDataFrame thead tr th {
     background-color: #FFA05C !important;
     color: #121212 !important;
 }
 
-[data-theme="dark"] .stDataFrame tbody tr:nth-child(even),
-.stApp[data-theme="dark"] .stDataFrame tbody tr:nth-child(even) {
-    background-color: #1A1A2A;
+[data-theme="dark"] .stDataFrame tbody tr:nth-child(even) {
+    background-color: #1A1A2A !important;
 }
 
-[data-theme="dark"] .stDataFrame tbody tr:hover,
-.stApp[data-theme="dark"] .stDataFrame tbody tr:hover {
-    background-color: #2D2A3A;
+[data-theme="dark"] .stDataFrame tbody tr:hover {
+    background-color: #2D2A3A !important;
 }
 
-/* Dark mode - charts */
-[data-theme="dark"] .stPlotlyChart,
-.stApp[data-theme="dark"] .stPlotlyChart {
-    background-color: #1E1E2E;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+/* ===== FORM INPUTS ===== */
+
+[data-theme="dark"] .stTextInput > div > div > input,
+[data-theme="dark"] .stTextArea > div > div > textarea,
+[data-theme="dark"] .stSelectbox > div > div,
+[data-theme="dark"] .stNumberInput > div > div > input,
+[data-theme="dark"] .stDateInput > div > div > input {
+    background-color: var(--bg-card-dark) !important;
+    color: var(--text-on-dark-bg-bright) !important;
+    border-color: #4A4A5A !important;
 }
 
-/* Dark mode - dividers */
-[data-theme="dark"] hr,
-.stApp[data-theme="dark"] hr {
-    background: linear-gradient(to right, #FFA05C, #3D2A1A);
+/* ===== BUTTONS ===== */
+
+[data-theme="dark"] .stButton > button[kind="primary"] {
+    background-color: #FFA05C !important;
+    color: #121212 !important;
 }
 
-/* Dark mode - alerts - Enhanced vibrancy with gradients */
-[data-theme="dark"] .stSuccess,
-.stApp[data-theme="dark"] .stSuccess {
-    background: linear-gradient(135deg, #1B4332 0%, #2D5A45 100%);
-    border-left-color: #28A745;
-    border-left-width: 5px;
-    color: #C8F0D8;
-    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+[data-theme="dark"] .stButton > button[kind="secondary"] {
+    background-color: var(--bg-card-dark) !important;
+    border-color: var(--text-on-dark-bg-bright) !important;
+    color: var(--text-on-dark-bg-bright) !important;
 }
 
-[data-theme="dark"] .stError,
-.stApp[data-theme="dark"] .stError {
-    background: linear-gradient(135deg, #5A1F1F 0%, #6D2A2A 100%);
-    border-left-color: #DC3545;
-    border-left-width: 5px;
-    color: #FFD6D9;
-    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
+/* ===== EXPANDERS ===== */
+
+[data-theme="dark"] .streamlit-expanderHeader,
+[data-theme="dark"] [data-testid="stExpander"] {
+    background-color: var(--bg-card-dark) !important;
+    background-image: none !important;
+    color: var(--text-on-dark-bg-bright) !important;
 }
 
-[data-theme="dark"] .stWarning,
-.stApp[data-theme="dark"] .stWarning {
-    background: linear-gradient(135deg, #5A4419 0%, #6D5530 100%);
-    border-left-color: #FFC107;
-    border-left-width: 5px;
-    color: #FFF4D4;
-    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
+/* ===== EXPANDERS - CONTENT ===== */
+
+[data-theme="dark"] .streamlit-expanderContent {
+    background-color: var(--bg-card-dark) !important;
+    background-image: none !important;
+    border-color: #4A4A5A !important;
 }
 
-[data-theme="dark"] .stInfo,
-.stApp[data-theme="dark"] .stInfo {
-    background: linear-gradient(135deg, #1A3A4D 0%, #2A4A5D 100%);
-    border-left-color: #17A2B8;
-    border-left-width: 5px;
-    color: #D1F0F5;
-    box-shadow: 0 4px 12px rgba(23, 162, 184, 0.2);
+/* ===== CHARTS ===== */
+
+[data-theme="dark"] .stPlotlyChart {
+    background-color: var(--bg-card-dark) !important;
 }
 
-/* Dark mode - tooltips */
-[data-theme="dark"] [data-baseweb="tooltip"],
-.stApp[data-theme="dark"] [data-baseweb="tooltip"] {
-    background-color: #2D2D3D;
-    color: #E8E8E8;
+/* ===== CODE BLOCKS ===== */
+
+[data-theme="dark"] .stCodeBlock {
+    background-color: #1E1E1E !important;
+    border-color: #444444 !important;
 }
 
-/* Dark mode - captions */
-[data-theme="dark"] .stCaption,
-.stApp[data-theme="dark"] .stCaption {
-    color: #B0B0B0;
+/* ===== ALERTS ===== */
+
+[data-theme="dark"] .stSuccess {
+    background-color: #1A3D25 !important;
+    color: #D4F4DD !important;
 }
+
+[data-theme="dark"] .stError {
+    background-color: #3D1A1A !important;
+    color: #FFD4D8 !important;
+}
+
+[data-theme="dark"] .stWarning {
+    background-color: #3D3D1A !important;
+    color: #FFF8D1 !important;
+}
+
+[data-theme="dark"] .stInfo {
+    background-color: #1A2A3D !important;
+    color: #D4EBFF !important;
+}
+
