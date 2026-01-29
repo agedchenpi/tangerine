@@ -56,6 +56,9 @@ Thumbs.db
 regression_test_output.txt
 regression_output.log
 
+# Spec directory
+spec/
+
 # ETL archived files
 .data/etl/archive/
 .data/etl/*/archive/

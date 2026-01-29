@@ -463,6 +463,90 @@ def _apply_theme_css():
             color: #F0F0F0 !important;
             font-weight: 700 !important;
         }
+
+        /* ===== SELECTBOX COMPONENTS (BaseWeb) ===== */
+
+        /* Selectbox trigger button (the clickable area) */
+        [data-baseweb="select"],
+        .stSelectbox [data-baseweb="select"],
+        [data-baseweb="select"] > div,
+        .stSelectbox [data-baseweb="select"] > div,
+        .stSelectbox div[data-baseweb="select"] {
+            background-color: #2D2D3D !important;
+            border-color: #4A4A5A !important;
+        }
+
+        /* Selectbox display text (selected value shown in trigger) */
+        [data-baseweb="select"] input,
+        [data-baseweb="select"] div[role="button"],
+        [data-baseweb="select"] > div > div,
+        .stSelectbox [data-baseweb="select"] input,
+        .stSelectbox [data-baseweb="select"] div {
+            background-color: #2D2D3D !important;
+            color: #F0F0F0 !important;
+        }
+
+        /* Dropdown menu container (the popup that appears) */
+        [data-baseweb="menu"],
+        div[data-baseweb="menu"],
+        [data-baseweb="popover"],
+        div[data-baseweb="popover"],
+        ul[role="listbox"],
+        .stSelectbox ul[role="listbox"] {
+            background-color: #2D2D3D !important;
+            border: 1px solid #4A4A5A !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+        }
+
+        /* Individual option items in dropdown */
+        [data-baseweb="option"],
+        li[data-baseweb="option"],
+        li[role="option"],
+        [data-baseweb="menu"] li,
+        ul[role="listbox"] li {
+            background-color: #2D2D3D !important;
+            color: #F0F0F0 !important;
+        }
+
+        /* Hovered option (hover state) */
+        [data-baseweb="option"]:hover,
+        li[data-baseweb="option"]:hover,
+        li[role="option"]:hover,
+        [aria-selected="true"] {
+            background-color: #3D3D4D !important;
+            color: #FFFFFF !important;
+        }
+
+        /* Selected option (currently selected) */
+        [data-baseweb="option"][aria-selected="true"],
+        li[data-baseweb="option"][aria-selected="true"],
+        li[role="option"][aria-selected="true"] {
+            background-color: #FFA05C !important;
+            color: #121212 !important;
+        }
+
+        /* Dropdown arrow icon */
+        [data-baseweb="select"] svg,
+        .stSelectbox svg {
+            color: #F0F0F0 !important;
+            fill: #F0F0F0 !important;
+        }
+
+        /* Fallback for deeply nested selectbox elements */
+        .stSelectbox,
+        .stSelectbox > div,
+        .stSelectbox > div > div,
+        .stSelectbox > div > div > div {
+            background-color: transparent !important;
+        }
+
+        /* Selectbox input field (for searchable selects) */
+        .stSelectbox input[type="text"],
+        [data-baseweb="select"] input[type="text"] {
+            background-color: #2D2D3D !important;
+            color: #F0F0F0 !important;
+            border-color: #4A4A5A !important;
+        }
         </style>
         """, unsafe_allow_html=True)
     else:
