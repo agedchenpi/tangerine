@@ -2,10 +2,10 @@
 -r base.txt
 
 # Core testing framework
-pytest==7.4.3
-pytest-cov==4.1.0
-pytest-mock==3.12.0
-pytest-env==1.1.3
+pytest==9.0.2
+pytest-cov==6.0.0
+pytest-mock==3.14.0
+pytest-env==1.1.5
 
 # Additional testing utilities
 pytest-xdist>=3.3.1         # Parallel test execution

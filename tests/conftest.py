@@ -77,7 +77,7 @@ def db_transaction(db_connection):
 def clean_test_data(db_transaction):
     """Clean up test data before and after each test
 
-    Removes any records with names starting with 'AdminTest_' to ensure
+    Removes any records with names starting with 'AdminTest_' or 'UITest_' to ensure
     clean state even if transaction rollback fails.
     """
     def cleanup():
@@ -103,7 +103,13 @@ def clean_test_data(db_transaction):
             # Clean import configs
             cursor.execute("""
                 DELETE FROM dba.timportconfig
-                WHERE config_name LIKE 'AdminTest_%%'
+                WHERE config_name LIKE 'AdminTest_%%' OR config_name LIKE 'UITest_%%'
+            """)
+
+            # Clean schedules (for UITest_* scheduler tests)
+            cursor.execute("""
+                DELETE FROM dba.tscheduler
+                WHERE job_name LIKE 'UITest_%%'
             """)
 
             # Clean datasets FIRST (before datasources due to FK constraint)
@@ -115,13 +121,13 @@ def clean_test_data(db_transaction):
             # Clean datasources (after datasets)
             cursor.execute("""
                 DELETE FROM dba.tdatasource
-                WHERE sourcename LIKE 'AdminTest_%%'
+                WHERE sourcename LIKE 'AdminTest_%%' OR sourcename LIKE 'UITest_%%'
             """)
 
             # Clean dataset types (after datasets)
             cursor.execute("""
                 DELETE FROM dba.tdatasettype
-                WHERE typename LIKE 'AdminTest_%%'
+                WHERE typename LIKE 'AdminTest_%%' OR typename LIKE 'UITest_%%'
             """)
 
     # Cleanup before test

@@ -195,7 +195,8 @@ class BaseETLJob(ABC):
             label = self.dataset_label or f"{self.dataset_type}_{self.run_date}_{self.run_uuid[:8]}"
 
             # Call f_dataset_iu function to create dataset
-            with db_transaction() as cursor:
+            # Use dict_cursor=False to get tuple results for integer indexing
+            with db_transaction(dict_cursor=False) as cursor:
                 cursor.execute("""
                     SELECT dba.f_dataset_iu(
                         p_datasetid := NULL,

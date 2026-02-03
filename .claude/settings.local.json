@@ -58,7 +58,9 @@
       "Bash(/tmp/test_venv/bin/pip install:*)",
       "Bash(/tmp/test_venv/bin/python -m pytest:*)",
       "Bash(docker-compose restart:*)",
-      "Bash(docker restart:*)"
+      "Bash(docker restart:*)",
+      "Bash(chmod:*)",
+      "Bash(./run_ui_regression.sh:*)"
     ]
   }
 }

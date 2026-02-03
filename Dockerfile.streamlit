@@ -22,13 +22,16 @@ RUN apt-get update && \
 # Install dependencies
 COPY requirements/base.txt /app/requirements/base.txt
 COPY requirements/admin.txt /app/requirements/admin.txt
+COPY requirements/test.txt /app/requirements/test.txt
 RUN pip install --no-cache-dir -r requirements/base.txt && \
-    pip install --no-cache-dir -r requirements/admin.txt
+    pip install --no-cache-dir -r requirements/admin.txt && \
+    pip install --no-cache-dir -r requirements/test.txt
 
 # Copy application code
 COPY common/ /app/common/
 COPY admin/ /app/admin/
 COPY etl/ /app/etl/
+COPY tests/ /app/tests/
 
 # Streamlit configuration directory
 RUN mkdir -p /root/.streamlit
