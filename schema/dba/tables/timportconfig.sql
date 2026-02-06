@@ -22,11 +22,29 @@ BEGIN
             is_blob BOOLEAN DEFAULT FALSE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+            -- API import columns (nullable for backward compatibility)
+            import_mode VARCHAR(20) DEFAULT 'file' CHECK (import_mode IN ('file', 'api')),
+            api_base_url VARCHAR(255),
+            api_endpoint_path VARCHAR(255),
+            api_http_method VARCHAR(10) DEFAULT 'GET',
+            api_response_format VARCHAR(10) DEFAULT 'json',
+            api_query_params JSONB,
+            api_request_headers JSONB,
+            api_auth_type VARCHAR(50) DEFAULT 'none',
+            api_auth_credentials JSONB,
+            api_rate_limit_rpm INT,
+            api_response_root_path VARCHAR(255),
+
             CONSTRAINT fk_importstrategyid FOREIGN KEY (importstrategyid) REFERENCES dba.timportstrategy(importstrategyid),
             CONSTRAINT valid_directories CHECK (
-                source_directory != archive_directory
-                AND source_directory ~ '^/.*[^/]$'
-                AND archive_directory ~ '^/.*[^/]$'
+                (import_mode = 'file' AND source_directory != archive_directory
+                    AND source_directory ~ '^/.*[^/]$' AND archive_directory ~ '^/.*[^/]$')
+                OR (import_mode = 'api')
+            ),
+            CONSTRAINT valid_api_config CHECK (
+                (import_mode = 'file') OR
+                (import_mode = 'api' AND api_base_url IS NOT NULL AND api_endpoint_path IS NOT NULL)
             ),
             CONSTRAINT valid_date CHECK (
                 (dateconfig = 'filename' AND datelocation ~ '^[0-9]+$' AND delimiter IS NOT NULL AND dateformat IS NOT NULL)
@@ -55,6 +73,19 @@ BEGIN
         COMMENT ON COLUMN dba.timportconfig.is_blob IS 'Flag indicating whether JSON/XML files should be stored as blobs (TRUE) or parsed as relational data (FALSE). Only applies to JSON and XML file types.';
         COMMENT ON COLUMN dba.timportconfig.created_at IS 'Timestamp when the configuration was created.';
         COMMENT ON COLUMN dba.timportconfig.last_modified_at IS 'Timestamp when the configuration was last modified.';
+
+        -- API column comments
+        COMMENT ON COLUMN dba.timportconfig.import_mode IS 'Import mode: "file" for file-based imports, "api" for API-based imports';
+        COMMENT ON COLUMN dba.timportconfig.api_base_url IS 'Base URL for API (e.g., "https://api.example.com")';
+        COMMENT ON COLUMN dba.timportconfig.api_endpoint_path IS 'API endpoint path (e.g., "/v1/data" or "/api/rates/{format}")';
+        COMMENT ON COLUMN dba.timportconfig.api_http_method IS 'HTTP method (GET, POST, PUT, DELETE)';
+        COMMENT ON COLUMN dba.timportconfig.api_response_format IS 'Expected response format (json, xml, csv)';
+        COMMENT ON COLUMN dba.timportconfig.api_query_params IS 'Query parameters as JSON object';
+        COMMENT ON COLUMN dba.timportconfig.api_request_headers IS 'Custom request headers as JSON object';
+        COMMENT ON COLUMN dba.timportconfig.api_auth_type IS 'Authentication type (none, api_key, oauth, bearer)';
+        COMMENT ON COLUMN dba.timportconfig.api_auth_credentials IS 'Authentication credentials as JSON object';
+        COMMENT ON COLUMN dba.timportconfig.api_rate_limit_rpm IS 'Rate limit in requests per minute';
+        COMMENT ON COLUMN dba.timportconfig.api_response_root_path IS 'JSON path to extract data (e.g., "data.results")';
     END IF;
 END $$;
 GRANT SELECT ON dba.timportconfig TO app_ro;

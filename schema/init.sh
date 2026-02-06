@@ -56,6 +56,8 @@ $PSQL -f /app/schema/dba/data/tholidays_inserts.sql
 $PSQL -f /app/schema/dba/data/tcalendardays_population.sql
 $PSQL -f /app/schema/dba/data/example_reference_data.sql
 $PSQL -f /app/schema/dba/data/regression_test_configs.sql
+$PSQL -f /app/schema/dba/data/newyorkfed_reference_data.sql
+$PSQL -f /app/schema/dba/data/newyorkfed_scheduler_jobs.sql
 
 # Execute DBA views (after data is loaded)
 $PSQL -f /app/schema/dba/views/vdataset.sql
@@ -63,6 +65,16 @@ $PSQL -f /app/schema/dba/views/vregressiontest_summary.sql
 
 # Execute feeds schema files in order
 $PSQL -f /app/schema/feeds/schema.sql
+$PSQL -f /app/schema/feeds/newyorkfed_reference_rates.sql
+$PSQL -f /app/schema/feeds/newyorkfed_soma_holdings.sql
+$PSQL -f /app/schema/feeds/newyorkfed_repo_operations.sql
+$PSQL -f /app/schema/feeds/newyorkfed_agency_mbs.sql
+$PSQL -f /app/schema/feeds/newyorkfed_fx_swaps.sql
+$PSQL -f /app/schema/feeds/newyorkfed_guide_sheets.sql
+$PSQL -f /app/schema/feeds/newyorkfed_pd_statistics.sql
+$PSQL -f /app/schema/feeds/newyorkfed_market_share.sql
+$PSQL -f /app/schema/feeds/newyorkfed_securities_lending.sql
+$PSQL -f /app/schema/feeds/newyorkfed_treasury_operations.sql
 
 # Optional: Execute shared_queries.sql last
 $PSQL -f /app/schema/shared_queries.sql

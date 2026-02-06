@@ -60,7 +60,9 @@
       "Bash(docker-compose restart:*)",
       "Bash(docker restart:*)",
       "Bash(chmod:*)",
-      "Bash(./run_ui_regression.sh:*)"
+      "Bash(./run_ui_regression.sh:*)",
+      "WebFetch(domain:markets.newyorkfed.org)",
+      "Bash(docker volume:*)"
     ]
   }
 }
