@@ -55,8 +55,9 @@ $PSQL -f /app/schema/dba/data/timportstrategy_inserts.sql
 $PSQL -f /app/schema/dba/data/tholidays_inserts.sql
 $PSQL -f /app/schema/dba/data/tcalendardays_population.sql
 $PSQL -f /app/schema/dba/data/example_reference_data.sql
-$PSQL -f /app/schema/dba/data/regression_test_configs.sql
+# $PSQL -f /app/schema/dba/data/regression_test_configs.sql  # Commented out - test configs not needed
 $PSQL -f /app/schema/dba/data/newyorkfed_reference_data.sql
+$PSQL -f /app/schema/dba/data/newyorkfed_import_configs.sql
 $PSQL -f /app/schema/dba/data/newyorkfed_scheduler_jobs.sql
 
 # Execute DBA views (after data is loaded)
@@ -68,16 +69,20 @@ $PSQL -f /app/schema/feeds/schema.sql
 $PSQL -f /app/schema/feeds/newyorkfed_reference_rates.sql
 $PSQL -f /app/schema/feeds/newyorkfed_soma_holdings.sql
 $PSQL -f /app/schema/feeds/newyorkfed_repo_operations.sql
+$PSQL -f /app/schema/feeds/newyorkfed_counterparties.sql
 $PSQL -f /app/schema/feeds/newyorkfed_agency_mbs.sql
 $PSQL -f /app/schema/feeds/newyorkfed_fx_swaps.sql
 $PSQL -f /app/schema/feeds/newyorkfed_guide_sheets.sql
-$PSQL -f /app/schema/feeds/newyorkfed_pd_statistics.sql
-$PSQL -f /app/schema/feeds/newyorkfed_market_share.sql
 $PSQL -f /app/schema/feeds/newyorkfed_securities_lending.sql
 $PSQL -f /app/schema/feeds/newyorkfed_treasury_operations.sql
 
-# Optional: Execute shared_queries.sql last
-$PSQL -f /app/schema/shared_queries.sql
+# Optional: Execute shared_queries.sql last (if exists)
+if [ -f /app/schema/shared_queries.sql ]; then
+    echo "Loading shared queries..."
+    $PSQL -f /app/schema/shared_queries.sql
+else
+    echo "Shared queries file not found (optional) - skipping"
+fi
 
 # Grant broad read access to PUBLIC (after schema/tables exist)
 $PSQL -c "GRANT USAGE ON SCHEMA dba TO PUBLIC;"
