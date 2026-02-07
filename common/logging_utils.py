@@ -99,7 +99,7 @@ class DatabaseLogHandler(logging.Handler):
         self.batch_size = batch_size
         self.flush_interval = flush_interval
         self.buffer: List[Dict[str, Any]] = []
-        self.buffer_lock = threading.Lock()
+        self.buffer_lock = threading.RLock()
         self.last_flush = time.time()
 
     def emit(self, record: logging.LogRecord):

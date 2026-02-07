@@ -12,7 +12,7 @@ from services.scheduler_service import (
     list_schedules, get_schedule, create_schedule, update_schedule,
     delete_schedule, toggle_active, get_scheduler_stats, job_name_exists,
     get_job_types, get_config_options, regenerate_crontab, get_crontab_preview,
-    build_cron_expression, calculate_next_run
+    build_cron_expression, calculate_next_run, execute_schedule_adhoc
 )
 from utils.db_helpers import format_sql_error
 from utils.ui_helpers import load_custom_css, add_page_header, render_stat_card
@@ -310,7 +310,40 @@ with tab1:
             if 'script_path' in df_display.columns:
                 df_display['script_path'] = df_display['script_path'].str.replace('python /app/', '', regex=False)
 
-            st.dataframe(df_display, use_container_width=True, hide_index=True)
+            # Add Run Now checkbox column
+            df_display.insert(0, 'Run Now', False)
+
+            edited_df = st.data_editor(
+                df_display,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    'Run Now': st.column_config.CheckboxColumn('Run Now', default=False),
+                },
+                disabled=[c for c in df_display.columns if c != 'Run Now'],
+                key="scheduler_data_editor"
+            )
+
+            # Run Selected button
+            selected_rows = edited_df[edited_df['Run Now'] == True]
+            selected_count = len(selected_rows)
+
+            if selected_count > 0:
+                if st.button(
+                    f"▶️ Run Selected ({selected_count} job{'s' if selected_count > 1 else ''})",
+                    type="primary",
+                    key="run_selected_jobs"
+                ):
+                    for _, row in selected_rows.iterrows():
+                        sid = int(row['scheduler_id'])
+                        job_name = row['job_name']
+                        with st.expander(f"📋 {job_name} (ID: {sid})", expanded=True):
+                            output_area = st.empty()
+                            output_lines = []
+                            for line in execute_schedule_adhoc(sid):
+                                output_lines.append(line)
+                                output_area.code('\n'.join(output_lines), language='log')
+                    st.rerun()
         else:
             show_info("No scheduled jobs found. Create one in the 'Create New' tab.")
     except Exception as e:

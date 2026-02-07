@@ -1,6 +1,6 @@
 """Business logic for scheduler management"""
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Generator
 from datetime import datetime
 from common.db_utils import fetch_dict, db_transaction
 import subprocess
@@ -411,6 +411,110 @@ def get_config_options(job_type: str) -> List[Dict[str, Any]]:
         return []
 
     return fetch_dict(query) or []
+
+
+def build_job_command(schedule: Dict[str, Any]) -> Optional[str]:
+    """
+    Build the shell command for a schedule based on job_type.
+
+    Args:
+        schedule: Schedule dictionary with job_type, config_id, script_path
+
+    Returns:
+        Command string, or None if required fields are missing
+    """
+    job_type = schedule.get('job_type')
+    config_id = schedule.get('config_id')
+    script_path = schedule.get('script_path')
+
+    if job_type == 'inbox_processor':
+        if config_id:
+            return f'python etl/jobs/run_gmail_inbox_processor.py --config-id {config_id}'
+        return 'python etl/jobs/run_gmail_inbox_processor.py'
+
+    elif job_type == 'report':
+        if config_id:
+            return f'python etl/jobs/run_report_generator.py --report-id {config_id}'
+        return 'python etl/jobs/run_report_generator.py'
+
+    elif job_type == 'import':
+        if config_id:
+            return f'python etl/jobs/generic_import.py --config-id {config_id}'
+        return None  # Import requires config_id
+
+    elif job_type == 'custom':
+        if script_path:
+            # script_path may already contain 'python', so return as-is
+            return script_path
+        return None  # Custom requires script_path
+
+    return None
+
+
+def execute_schedule_adhoc(scheduler_id: int, timeout: int = 300) -> Generator[str, None, None]:
+    """
+    Execute a scheduled job ad-hoc and stream output.
+
+    Args:
+        scheduler_id: ID of the schedule to execute
+        timeout: Maximum execution time in seconds
+
+    Yields:
+        Output lines from the job execution
+    """
+    schedule = get_schedule(scheduler_id)
+    if not schedule:
+        yield f"Schedule {scheduler_id} not found"
+        return
+
+    cmd_str = build_job_command(schedule)
+    if not cmd_str:
+        yield f"Cannot build command for schedule {scheduler_id} ({schedule.get('job_type')}): missing required fields"
+        return
+
+    # Set status to Running
+    with db_transaction() as cursor:
+        cursor.execute(
+            "UPDATE dba.tscheduler SET last_run_status = 'Running' WHERE scheduler_id = %s",
+            (scheduler_id,)
+        )
+
+    cmd = ["docker", "compose", "exec", "-T", "tangerine"] + cmd_str.split()
+    exit_code = -1
+
+    try:
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            universal_newlines=True
+        )
+
+        for line in process.stdout:
+            yield line.rstrip('\n')
+
+        process.wait(timeout=timeout)
+        exit_code = process.returncode
+
+        if exit_code != 0:
+            yield f"\n❌ Job failed with exit code {exit_code}"
+        else:
+            yield f"\n✅ Job completed successfully"
+
+    except subprocess.TimeoutExpired:
+        process.kill()
+        yield f"\n⏱️ Job exceeded timeout of {timeout} seconds"
+    except Exception as e:
+        yield f"\n❌ Error executing job: {str(e)}"
+    finally:
+        status = 'Success' if exit_code == 0 else 'Failed'
+        with db_transaction() as cursor:
+            cursor.execute(
+                "UPDATE dba.tscheduler SET last_run_at = %s, last_run_status = %s WHERE scheduler_id = %s",
+                (datetime.now(), status, scheduler_id)
+            )
 
 
 def create_schedule_for_report(
