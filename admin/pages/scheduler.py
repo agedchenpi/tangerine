@@ -54,7 +54,7 @@ add_page_header("Job Scheduler", icon="⏰")
 # Statistics
 try:
     stats = get_scheduler_stats()
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
     with col1:
         render_stat_card("Total Schedules", str(stats['total']), icon="📅", color="#17A2B8")
     with col2:
@@ -65,6 +65,8 @@ try:
         render_stat_card("Report Jobs", str(stats['report_count']), icon="📊", color="#FFC107")
     with col5:
         render_stat_card("Import Jobs", str(stats['import_count']), icon="📤", color="#FF8C42")
+    with col6:
+        render_stat_card("Custom Jobs", str(stats['custom_count']), icon="⚙️", color="#E83E8C")
 except Exception as e:
     show_error(f"Failed to load statistics: {format_sql_error(e)}")
 
@@ -258,7 +260,12 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # TAB 1: VIEW ALL
 # ============================================================================
 with tab1:
-    st.subheader("All Scheduled Jobs")
+    col_header1, col_header2 = st.columns([3, 1])
+    with col_header1:
+        st.subheader("All Scheduled Jobs")
+    with col_header2:
+        if st.button("🔄 Refresh", key="refresh_schedules", use_container_width=True):
+            st.rerun()
 
     col1, col2 = st.columns([3, 1])
     with col2:
@@ -266,6 +273,11 @@ with tab1:
 
     try:
         schedules = list_schedules(active_only=show_active_only)
+
+        # Debug info
+        filter_text = "active jobs" if show_active_only else "total jobs"
+        st.caption(f"Loaded {len(schedules)} {filter_text} from database")
+
         if schedules:
             df = pd.DataFrame(schedules)
 
@@ -277,7 +289,7 @@ with tab1:
                 )
 
             display_cols = [
-                'scheduler_id', 'job_name', 'job_type', 'cron_expression',
+                'scheduler_id', 'job_name', 'job_type', 'script_path', 'cron_expression',
                 'is_active', 'last_run_at', 'last_run_status', 'next_run_at'
             ]
             display_cols = [c for c in display_cols if c in df.columns]
@@ -294,12 +306,18 @@ with tab1:
                 df_display['last_run_status'] = df_display['last_run_status'].map(
                     {'Success': '✅', 'Failed': '❌', 'Running': '🔄', None: '-'}
                 )
+            # Shorten script_path for better readability - remove 'python /app/' prefix
+            if 'script_path' in df_display.columns:
+                df_display['script_path'] = df_display['script_path'].str.replace('python /app/', '', regex=False)
 
             st.dataframe(df_display, use_container_width=True, hide_index=True)
         else:
             show_info("No scheduled jobs found. Create one in the 'Create New' tab.")
     except Exception as e:
         show_error(f"Failed to load schedules: {format_sql_error(e)}")
+        # Show full exception details for debugging
+        with st.expander("🔍 View detailed error"):
+            st.exception(e)
 
 # ============================================================================
 # TAB 2: CREATE NEW
