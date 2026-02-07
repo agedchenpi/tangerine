@@ -1,0 +1,97 @@
+{
+  "reference_rates_latest": {
+    "refRates": [
+      {
+        "type": "SOFR",
+        "effectiveDate": "2026-02-04",
+        "percentRate": 5.32,
+        "volumeInBillions": 1542.0,
+        "percentile1": 5.30,
+        "percentile25": 5.31,
+        "percentile75": 5.33,
+        "percentile99": 5.35
+      },
+      {
+        "type": "EFFR",
+        "effectiveDate": "2026-02-04",
+        "percentRate": 5.33,
+        "volumeInBillions": 98.0,
+        "targetRangeFrom": 5.25,
+        "targetRangeTo": 5.50,
+        "percentile1": 5.31,
+        "percentile25": 5.32,
+        "percentile75": 5.34,
+        "percentile99": 5.36
+      },
+      {
+        "type": "OBFR",
+        "effectiveDate": "2026-02-04",
+        "percentRate": 5.31,
+        "volumeInBillions": 12.5
+      }
+    ]
+  },
+  "reference_rates_search": {
+    "refRates": [
+      {
+        "type": "SOFR",
+        "effectiveDate": "2026-01-31",
+        "percentRate": 5.30,
+        "volumeInBillions": 1500.0
+      },
+      {
+        "type": "SOFR",
+        "effectiveDate": "2026-02-01",
+        "percentRate": 5.31,
+        "volumeInBillions": 1520.0
+      }
+    ]
+  },
+  "soma_holdings": {
+    "soma": [
+      {
+        "asOfDate": "2026-02-04",
+        "securityType": "Treasury",
+        "cusip": "912828YM0",
+        "securityDescription": "T 4 1/4 11/15/2040",
+        "maturityDate": "2040-11-15",
+        "parValue": 25000000.00,
+        "currentFaceValue": 25000000.00
+      },
+      {
+        "asOfDate": "2026-02-04",
+        "securityType": "Agency MBS",
+        "cusip": "31371H2A6",
+        "securityDescription": "FN MA1234",
+        "parValue": 5000000.00,
+        "currentFaceValue": 4950000.00
+      }
+    ]
+  },
+  "repo_operations": {
+    "repo": [
+      {
+        "operationDate": "2026-02-04",
+        "operationId": "REPO-001",
+        "maturityDate": "2026-02-05",
+        "termDays": 1,
+        "operationStatus": "Completed",
+        "amountSubmitted": 50000000000.00,
+        "amountAccepted": 25000000000.00,
+        "awardRate": 5.30
+      }
+    ]
+  },
+  "empty_response": {
+    "refRates": []
+  },
+  "nested_deep": {
+    "data": {
+      "results": {
+        "items": [
+          {"id": 1, "value": "test"}
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,112 @@
+[
+  {
+    "si": {
+      "title": "FR 2004SI Guide Sheet",
+      "guideMsg": "Report the following \"On the Run\" Treasury securities on the FR 2004SI in ascending \"NEW YORK FED SECURITY ID\" order. \"On the Run\" Treasury securities are the newest securities to be issued for a specific issue, maturity date and CUSIP number. Include the maturity date and coupon rate for the reportable issue under the column heading \"Security\" on the FR 2004SI. For assistance in completing the FR 2004SI, contact your New York Fed Reports Analyst.",
+      "reportWeeksFromDate": "2026-02-04",
+      "reportWeeksToDate": "2026-02-11",
+      "nextDistributionDate": "2026-02-12",
+      "details": [
+        {
+          "formLine": "1",
+          "secType": "2 YEAR NOTE",
+          "nyFedSecId": "2 YR",
+          "cusip": "91282CGH8",
+          "issueDate": "2026-02-02",
+          "maturityDate": "2028-01-31",
+          "percentCouponRate": 3.5
+        },
+        {
+          "formLine": "2",
+          "secType": "3 YEAR NOTE",
+          "nyFedSecId": "3 YR",
+          "cusip": "91282CPT2",
+          "issueDate": "2026-01-15",
+          "maturityDate": "2029-01-15",
+          "percentCouponRate": 3.5
+        },
+        {
+          "formLine": "3",
+          "secType": "5 YEAR NOTE",
+          "nyFedSecId": "5 YR",
+          "cusip": "91282CPW5",
+          "issueDate": "2026-02-02",
+          "maturityDate": "2031-01-31",
+          "percentCouponRate": 3.75
+        },
+        {
+          "formLine": "4",
+          "secType": "7 YEAR NOTE",
+          "nyFedSecId": "7 YR",
+          "cusip": "91282CPY1",
+          "issueDate": "2026-02-02",
+          "maturityDate": "2033-01-31",
+          "percentCouponRate": 4.0
+        },
+        {
+          "formLine": "5",
+          "secType": "10 YEAR NOTE",
+          "nyFedSecId": "10 YR",
+          "cusip": "91282CPJ4",
+          "issueDate": "2026-01-15",
+          "maturityDate": "2035-11-15",
+          "percentCouponRate": 4.0
+        },
+        {
+          "formLine": "6",
+          "secType": "20 YEAR BOND",
+          "nyFedSecId": "20 YR",
+          "cusip": "912810UQ9",
+          "issueDate": "2026-02-02",
+          "maturityDate": "2045-11-15",
+          "percentCouponRate": 4.625
+        },
+        {
+          "formLine": "7",
+          "secType": "30 YEAR BOND",
+          "nyFedSecId": "30 YR",
+          "cusip": "912810UP1",
+          "issueDate": "2026-01-15",
+          "maturityDate": "2055-11-15",
+          "percentCouponRate": 4.625
+        },
+        {
+          "formLine": "8",
+          "secType": "5 YEAR TIPS",
+          "nyFedSecId": "55",
+          "cusip": "91282CPH8",
+          "issueDate": "2025-12-31",
+          "maturityDate": "2030-10-15",
+          "percentCouponRate": 1.125
+        },
+        {
+          "formLine": "9",
+          "secType": "10 YEAR TIPS",
+          "nyFedSecId": "60",
+          "cusip": "91282CPU9",
+          "issueDate": "2026-01-30",
+          "maturityDate": "2036-01-15",
+          "percentCouponRate": 1.875
+        },
+        {
+          "formLine": "10",
+          "secType": "30 YEAR TIPS",
+          "nyFedSecId": "80",
+          "cusip": "912810UH9",
+          "issueDate": "2025-08-29",
+          "maturityDate": "2055-02-15",
+          "percentCouponRate": 2.375
+        },
+        {
+          "formLine": "11",
+          "secType": "2 YEAR FRN",
+          "nyFedSecId": "102",
+          "cusip": "91282CPX3",
+          "issueDate": "2026-02-02",
+          "maturityDate": "2028-01-31",
+          "percentCouponRate": 0.099
+        }
+      ]
+    }
+  }
+]

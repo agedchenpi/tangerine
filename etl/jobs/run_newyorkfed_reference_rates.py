@@ -60,13 +60,15 @@ class NewYorkFedReferenceRatesJob(BaseETLJob):
             dry_run: If True, fetch and transform but don't load to database
             run_uuid: Optional run UUID for tracing
         """
+        run_date_val = run_date or date.today()
         super().__init__(
-            run_date=run_date or date.today(),
+            run_date=run_date_val,
             dataset_type='ReferenceRates',
             data_source='NewYorkFed',
             dry_run=dry_run,
             run_uuid=run_uuid,
-            username='etl_user'
+            username='etl_user',
+            dataset_label=f'ReferenceRates_{run_date_val}_{endpoint_type}'
         )
         self.endpoint_type = endpoint_type
         self.client = None

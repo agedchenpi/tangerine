@@ -219,28 +219,107 @@ class NewYorkFedAPIClient(BaseAPIClient):
 
     def get_soma_holdings(self) -> List[Dict]:
         """
-        Fetch System Open Market Account (SOMA) holdings.
+        Fetch System Open Market Account (SOMA) monthly Treasury holdings.
 
         Returns:
-            List of holdings dictionaries
+            List of holdings dictionaries with CUSIPs, par values, etc.
         """
         return self.fetch_endpoint(
-            endpoint_path='/api/soma/summary.{format}',
-            response_root_path='soma'
+            endpoint_path='/api/soma/tsy/get/monthly.{format}',
+            response_root_path='soma.holdings'
         )
 
-    def get_repo_operations(self, operation_type: str = 'repo') -> List[Dict]:
+    def get_repo_operations(self) -> List[Dict]:
         """
-        Fetch repo or reverse repo operations.
-
-        Args:
-            operation_type: 'repo' or 'reverserepo'
+        Fetch last two weeks of repo and reverse repo operations from NewYorkFed API.
 
         Returns:
             List of operation dictionaries
         """
-        endpoint = f'/api/{operation_type}/results/search.{{format}}'
         return self.fetch_endpoint(
-            endpoint_path=endpoint,
-            response_root_path='repo' if operation_type == 'repo' else 'reverserepo'
+            endpoint_path='/api/rp/all/all/results/lastTwoWeeks.{format}',
+            response_root_path='repo.operations'
         )
+
+    def get_agency_mbs(self) -> List[Dict]:
+        """
+        Fetch latest Agency MBS operation announcements.
+
+        Returns:
+            List of Agency MBS operation dictionaries
+        """
+        return self.fetch_endpoint(
+            endpoint_path='/api/ambs/all/announcements/summary/latest.{format}',
+            response_root_path='ambs.auctions'
+        )
+
+    def get_fx_swaps(self) -> List[Dict]:
+        """
+        Fetch latest FX swap operations.
+
+        Returns:
+            List of FX swap operation dictionaries
+        """
+        return self.fetch_endpoint(
+            endpoint_path='/api/fxs/all/latest.{format}',
+            response_root_path='fxSwaps.operations'
+        )
+
+    def get_guide_sheets(self) -> List[Dict]:
+        """
+        Fetch latest guide sheet data.
+
+        Returns:
+            Single-element list containing the full SI object with metadata and details array
+        """
+        return self.fetch_endpoint(
+            endpoint_path='/api/guidesheets/si/latest.{format}',
+            response_root_path='guidesheet.si'
+        )
+
+    def get_securities_lending(self) -> List[Dict]:
+        """
+        Fetch latest securities lending operations summary.
+
+        Returns:
+            List of securities lending operation dictionaries
+        """
+        return self.fetch_endpoint(
+            endpoint_path='/api/seclending/all/results/summary/latest.{format}',
+            response_root_path='seclending.operations'
+        )
+
+    def get_treasury_operations(self) -> List[Dict]:
+        """
+        Fetch last two weeks of Treasury operation results.
+
+        Returns:
+            List of Treasury operation dictionaries
+        """
+        return self.fetch_endpoint(
+            endpoint_path='/api/tsy/all/results/summary/lastTwoWeeks.{format}',
+            response_root_path='treasury.auctions'
+        )
+
+    def get_counterparties(self) -> List[Dict]:
+        """
+        Fetch list of FX swap counterparties (central banks).
+
+        Returns:
+            List of counterparty name dictionaries
+        """
+        # Fetch the list of counterparty names
+        response = self.fetch_endpoint(
+            endpoint_path='/api/fxs/list/counterparties.{format}',
+            response_root_path='fxSwaps.counterparties'
+        )
+
+        # The API returns a simple list of strings, convert to list of dicts
+        if response and isinstance(response, list) and len(response) > 0:
+            # Check if already dict format
+            if isinstance(response[0], dict):
+                return response
+            # Convert string list to dict list
+            return [{'counterparty_name': name} for name in response]
+
+        return []

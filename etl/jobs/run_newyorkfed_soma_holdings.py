@@ -1,9 +1,9 @@
 """
 NewYorkFed SOMA Holdings ETL Job.
 
-Imports System Open Market Account (SOMA) holdings from NewYorkFed Markets API.
+Imports System Open Market Account (SOMA) monthly Treasury holdings from NewYorkFed Markets API.
 
-Endpoint: /api/soma/summary.json
+Endpoint: /api/soma/tsy/get/monthly.json
 
 Usage:
     python etl/jobs/run_newyorkfed_soma_holdings.py [--dry-run]
@@ -22,14 +22,15 @@ from etl.loaders.postgres_loader import PostgresLoader
 class NewYorkFedSOMAHoldingsJob(BaseETLJob):
     """Import SOMA holdings from NewYorkFed Markets API."""
 
-    def __init__(self, run_date: date = None, dry_run: bool = False, run_uuid: str = None):
+    def __init__(self, run_date: date = None, dry_run: bool = False):
+        run_date_val = run_date or date.today()
         super().__init__(
-            run_date=run_date or date.today(),
+            run_date=run_date_val,
             dataset_type='SOMAHoldings',
             data_source='NewYorkFed',
             dry_run=dry_run,
-            run_uuid=run_uuid,
-            username='etl_user'
+            username='etl_user',
+            dataset_label=f'SOMAHoldings_{run_date_val}'
         )
         self.client = None
         self.loader = None
@@ -40,7 +41,7 @@ class NewYorkFedSOMAHoldingsJob(BaseETLJob):
         self.loader = PostgresLoader(schema='feeds')
 
     def extract(self) -> List[Dict[str, Any]]:
-        self.logger.info("Fetching SOMA holdings", extra={'stepcounter': 'extract'})
+        self.logger.info("Fetching SOMA monthly Treasury holdings", extra={'stepcounter': 'extract'})
         return self.client.get_soma_holdings()
 
     def transform(self, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -51,9 +52,16 @@ class NewYorkFedSOMAHoldingsJob(BaseETLJob):
                 as_of_date_str = record.get('asOfDate')
                 as_of_date = datetime.strptime(as_of_date_str, '%Y-%m-%d').date() if as_of_date_str else None
 
-                # Parse maturity_date
+                # Parse maturity_date (optional for some holdings)
                 maturity_date_str = record.get('maturityDate')
                 maturity_date = datetime.strptime(maturity_date_str, '%Y-%m-%d').date() if maturity_date_str else None
+
+                # Parse numeric values (may be strings with commas or empty)
+                par_value_str = record.get('parValue', '').replace(',', '')
+                par_value = float(par_value_str) if par_value_str else None
+
+                current_face_value_str = record.get('currentFaceValue', '').replace(',', '')
+                current_face_value = float(current_face_value_str) if current_face_value_str else None
 
                 transformed.append({
                     'as_of_date': as_of_date,
@@ -61,8 +69,8 @@ class NewYorkFedSOMAHoldingsJob(BaseETLJob):
                     'cusip': record.get('cusip'),
                     'security_description': record.get('securityDescription'),
                     'maturity_date': maturity_date,
-                    'par_value': record.get('parValue'),
-                    'current_face_value': record.get('currentFaceValue'),
+                    'par_value': par_value,
+                    'current_face_value': current_face_value,
                     'created_date': datetime.now(),
                     'created_by': self.username
                 })
@@ -89,7 +97,7 @@ class NewYorkFedSOMAHoldingsJob(BaseETLJob):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Import SOMA holdings from NewYorkFed API')
+    parser = argparse.ArgumentParser(description='Import SOMA monthly Treasury holdings from NewYorkFed API')
     parser.add_argument('--dry-run', action='store_true', help='Dry run mode')
     parser.add_argument('--date', type=str, help='Run date (YYYY-MM-DD)')
     args = parser.parse_args()

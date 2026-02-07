@@ -1,0 +1,68 @@
+[
+  {
+    "effectiveDate": "2026-02-06",
+    "type": "SOFRAI",
+    "average30day": 3.65819,
+    "average90day": 3.80582,
+    "average180day": 4.06192,
+    "index": 1.23108807,
+    "revisionIndicator": ""
+  },
+  {
+    "effectiveDate": "2026-02-05",
+    "type": "EFFR",
+    "percentRate": 3.64,
+    "percentPercentile1": 3.6,
+    "percentPercentile25": 3.63,
+    "percentPercentile75": 3.64,
+    "percentPercentile99": 3.66,
+    "targetRateFrom": 3.5,
+    "targetRateTo": 3.75,
+    "volumeInBillions": 110,
+    "revisionIndicator": ""
+  },
+  {
+    "effectiveDate": "2026-02-05",
+    "type": "OBFR",
+    "percentRate": 3.63,
+    "percentPercentile1": 3.5,
+    "percentPercentile25": 3.63,
+    "percentPercentile75": 3.64,
+    "percentPercentile99": 3.68,
+    "volumeInBillions": 213,
+    "revisionIndicator": ""
+  },
+  {
+    "effectiveDate": "2026-02-05",
+    "type": "TGCR",
+    "percentRate": 3.63,
+    "percentPercentile1": 3.55,
+    "percentPercentile25": 3.63,
+    "percentPercentile75": 3.63,
+    "percentPercentile99": 3.66,
+    "volumeInBillions": 1290,
+    "revisionIndicator": ""
+  },
+  {
+    "effectiveDate": "2026-02-05",
+    "type": "BGCR",
+    "percentRate": 3.63,
+    "percentPercentile1": 3.55,
+    "percentPercentile25": 3.63,
+    "percentPercentile75": 3.63,
+    "percentPercentile99": 3.69,
+    "volumeInBillions": 1318,
+    "revisionIndicator": ""
+  },
+  {
+    "effectiveDate": "2026-02-05",
+    "type": "SOFR",
+    "percentRate": 3.65,
+    "percentPercentile1": 3.6,
+    "percentPercentile25": 3.63,
+    "percentPercentile75": 3.71,
+    "percentPercentile99": 3.74,
+    "volumeInBillions": 3228,
+    "revisionIndicator": ""
+  }
+]

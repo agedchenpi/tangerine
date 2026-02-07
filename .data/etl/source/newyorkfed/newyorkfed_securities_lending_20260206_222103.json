@@ -1,0 +1,16 @@
+[
+  {
+    "operationId": "SL 020626 1",
+    "auctionStatus": "Results",
+    "operationType": "Securities Lending",
+    "operationDate": "2026-02-06",
+    "settlementDate": "2026-02-06",
+    "maturityDate": "2026-02-09",
+    "releaseTime": "12:00",
+    "closeTime": "12:15",
+    "note": "",
+    "lastUpdated": "2026-02-06 12:16:44",
+    "totalParAmtSubmitted": 34732000000,
+    "totalParAmtAccepted": 34434000000
+  }
+]

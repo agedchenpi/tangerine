@@ -31,6 +31,7 @@ RUN pip install --no-cache-dir -r requirements/base.txt && \
 COPY common/ /app/common/
 COPY admin/ /app/admin/
 COPY etl/ /app/etl/
+COPY scripts/ /app/scripts/
 COPY tests/ /app/tests/
 
 # Streamlit configuration directory

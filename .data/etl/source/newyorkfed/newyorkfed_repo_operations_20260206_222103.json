@@ -1,0 +1,1221 @@
+[
+  {
+    "operationId": "RP 020626 25",
+    "auctionStatus": "Results",
+    "operationDate": "2026-02-06",
+    "settlementDate": "2026-02-06",
+    "maturityDate": "2026-02-09",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 3,
+    "term": "Overnight",
+    "releaseTime": "08:15",
+    "closeTime": "08:30",
+    "note": "",
+    "lastUpdated": "2026-02-06 08:30:44",
+    "totalAmtSubmitted": 1000000,
+    "totalAmtAccepted": 1000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 1000000,
+        "amtAccepted": 1000000,
+        "minimumBidRate": 3.75,
+        "percentHighRate": 3.75,
+        "percentLowRate": 3.75,
+        "percentStopOutRate": 3.75,
+        "percentWeightedAverageRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      }
+    ]
+  },
+  {
+    "operationId": "RP 020626 26",
+    "auctionStatus": "Results",
+    "operationDate": "2026-02-06",
+    "settlementDate": "2026-02-06",
+    "maturityDate": "2026-02-09",
+    "operationType": "Reverse Repo",
+    "operationMethod": "Fixed Rate",
+    "settlementType": "Same Day",
+    "termCalenderDays": 3,
+    "term": "Overnight",
+    "releaseTime": "12:45",
+    "closeTime": "13:15",
+    "note": "",
+    "lastUpdated": "2026-02-06 13:15:47",
+    "participatingCpty": 7,
+    "acceptedCpty": 7,
+    "totalAmtSubmitted": 3111000000,
+    "totalAmtAccepted": 3111000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 3111000000,
+        "amtAccepted": 3111000000,
+        "percentOfferingRate": 3.5,
+        "percentAwardRate": 3.5
+      }
+    ]
+  },
+  {
+    "operationId": "RP 020626 27",
+    "auctionStatus": "Results",
+    "operationDate": "2026-02-06",
+    "settlementDate": "2026-02-06",
+    "maturityDate": "2026-02-09",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 3,
+    "term": "Overnight",
+    "releaseTime": "13:30",
+    "closeTime": "13:45",
+    "note": "",
+    "lastUpdated": "2026-02-06 13:45:28",
+    "totalAmtSubmitted": 0,
+    "totalAmtAccepted": 0,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      }
+    ]
+  },
+  {
+    "operationId": "RP 020526 25",
+    "auctionStatus": "Results",
+    "operationDate": "2026-02-05",
+    "settlementDate": "2026-02-05",
+    "maturityDate": "2026-02-06",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "08:15",
+    "closeTime": "08:30",
+    "note": "",
+    "lastUpdated": "2026-02-05 08:30:36",
+    "totalAmtSubmitted": 1000000,
+    "totalAmtAccepted": 1000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 1000000,
+        "amtAccepted": 1000000,
+        "minimumBidRate": 3.75,
+        "percentHighRate": 3.75,
+        "percentLowRate": 3.75,
+        "percentStopOutRate": 3.75,
+        "percentWeightedAverageRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      }
+    ]
+  },
+  {
+    "operationId": "RP 020526 26",
+    "auctionStatus": "Results",
+    "operationDate": "2026-02-05",
+    "settlementDate": "2026-02-05",
+    "maturityDate": "2026-02-06",
+    "operationType": "Reverse Repo",
+    "operationMethod": "Fixed Rate",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "12:45",
+    "closeTime": "13:15",
+    "note": "",
+    "lastUpdated": "2026-02-05 13:15:36",
+    "participatingCpty": 6,
+    "acceptedCpty": 6,
+    "totalAmtSubmitted": 1748000000,
+    "totalAmtAccepted": 1748000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 1748000000,
+        "amtAccepted": 1748000000,
+        "percentOfferingRate": 3.5,
+        "percentAwardRate": 3.5
+      }
+    ]
+  },
+  {
+    "operationId": "RP 020526 27",
+    "auctionStatus": "Results",
+    "operationDate": "2026-02-05",
+    "settlementDate": "2026-02-05",
+    "maturityDate": "2026-02-06",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "13:30",
+    "closeTime": "13:45",
+    "note": "",
+    "lastUpdated": "2026-02-05 13:45:42",
+    "totalAmtSubmitted": 2000000,
+    "totalAmtAccepted": 2000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 1000000,
+        "amtAccepted": 1000000,
+        "minimumBidRate": 3.75,
+        "percentHighRate": 3.75,
+        "percentLowRate": 3.75,
+        "percentStopOutRate": 3.75,
+        "percentWeightedAverageRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 1000000,
+        "amtAccepted": 1000000,
+        "minimumBidRate": 3.75,
+        "percentHighRate": 3.75,
+        "percentLowRate": 3.75,
+        "percentStopOutRate": 3.75,
+        "percentWeightedAverageRate": 3.75
+      }
+    ]
+  },
+  {
+    "operationId": "RP 020426 25",
+    "auctionStatus": "Results",
+    "operationDate": "2026-02-04",
+    "settlementDate": "2026-02-04",
+    "maturityDate": "2026-02-05",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "08:15",
+    "closeTime": "08:30",
+    "note": "",
+    "lastUpdated": "2026-02-04 08:30:34",
+    "totalAmtSubmitted": 0,
+    "totalAmtAccepted": 0,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      }
+    ]
+  },
+  {
+    "operationId": "RP 020426 26",
+    "auctionStatus": "Results",
+    "operationDate": "2026-02-04",
+    "settlementDate": "2026-02-04",
+    "maturityDate": "2026-02-05",
+    "operationType": "Reverse Repo",
+    "operationMethod": "Fixed Rate",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "12:45",
+    "closeTime": "13:15",
+    "note": "",
+    "lastUpdated": "2026-02-04 13:15:41",
+    "participatingCpty": 18,
+    "acceptedCpty": 18,
+    "totalAmtSubmitted": 2414000000,
+    "totalAmtAccepted": 2414000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 2414000000,
+        "amtAccepted": 2414000000,
+        "percentOfferingRate": 3.5,
+        "percentAwardRate": 3.5
+      }
+    ]
+  },
+  {
+    "operationId": "RP 020426 27",
+    "auctionStatus": "Results",
+    "operationDate": "2026-02-04",
+    "settlementDate": "2026-02-04",
+    "maturityDate": "2026-02-05",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "13:30",
+    "closeTime": "13:45",
+    "note": "",
+    "lastUpdated": "2026-02-04 13:45:31",
+    "totalAmtSubmitted": 1000000,
+    "totalAmtAccepted": 1000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 1000000,
+        "amtAccepted": 1000000,
+        "minimumBidRate": 3.75,
+        "percentHighRate": 3.75,
+        "percentLowRate": 3.75,
+        "percentStopOutRate": 3.75,
+        "percentWeightedAverageRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      }
+    ]
+  },
+  {
+    "operationId": "RP 020326 25",
+    "auctionStatus": "Results",
+    "operationDate": "2026-02-03",
+    "settlementDate": "2026-02-03",
+    "maturityDate": "2026-02-04",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "08:15",
+    "closeTime": "08:30",
+    "note": "",
+    "lastUpdated": "2026-02-03 08:30:33",
+    "totalAmtSubmitted": 1000000,
+    "totalAmtAccepted": 1000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 1000000,
+        "amtAccepted": 1000000,
+        "minimumBidRate": 3.75,
+        "percentHighRate": 3.75,
+        "percentLowRate": 3.75,
+        "percentStopOutRate": 3.75,
+        "percentWeightedAverageRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      }
+    ]
+  },
+  {
+    "operationId": "RP 020326 26",
+    "auctionStatus": "Results",
+    "operationDate": "2026-02-03",
+    "settlementDate": "2026-02-03",
+    "maturityDate": "2026-02-04",
+    "operationType": "Reverse Repo",
+    "operationMethod": "Fixed Rate",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "12:45",
+    "closeTime": "13:15",
+    "note": "",
+    "lastUpdated": "2026-02-03 13:16:02",
+    "participatingCpty": 18,
+    "acceptedCpty": 18,
+    "totalAmtSubmitted": 1785000000,
+    "totalAmtAccepted": 1785000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 1785000000,
+        "amtAccepted": 1785000000,
+        "percentOfferingRate": 3.5,
+        "percentAwardRate": 3.5
+      }
+    ]
+  },
+  {
+    "operationId": "RP 020326 27",
+    "auctionStatus": "Results",
+    "operationDate": "2026-02-03",
+    "settlementDate": "2026-02-03",
+    "maturityDate": "2026-02-04",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "13:30",
+    "closeTime": "13:45",
+    "note": "",
+    "lastUpdated": "2026-02-03 13:45:42",
+    "totalAmtSubmitted": 1000000,
+    "totalAmtAccepted": 1000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 1000000,
+        "amtAccepted": 1000000,
+        "minimumBidRate": 3.75,
+        "percentHighRate": 3.75,
+        "percentLowRate": 3.75,
+        "percentStopOutRate": 3.75,
+        "percentWeightedAverageRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      }
+    ]
+  },
+  {
+    "operationId": "RP 020226 25",
+    "auctionStatus": "Results",
+    "operationDate": "2026-02-02",
+    "settlementDate": "2026-02-02",
+    "maturityDate": "2026-02-03",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "08:15",
+    "closeTime": "08:30",
+    "note": "",
+    "lastUpdated": "2026-02-02 08:30:31",
+    "totalAmtSubmitted": 0,
+    "totalAmtAccepted": 0,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      }
+    ]
+  },
+  {
+    "operationId": "RP 020226 26",
+    "auctionStatus": "Results",
+    "operationDate": "2026-02-02",
+    "settlementDate": "2026-02-02",
+    "maturityDate": "2026-02-03",
+    "operationType": "Reverse Repo",
+    "operationMethod": "Fixed Rate",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "12:45",
+    "closeTime": "13:15",
+    "note": "",
+    "lastUpdated": "2026-02-02 13:15:51",
+    "participatingCpty": 8,
+    "acceptedCpty": 8,
+    "totalAmtSubmitted": 10415000000,
+    "totalAmtAccepted": 10415000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 10415000000,
+        "amtAccepted": 10415000000,
+        "percentOfferingRate": 3.5,
+        "percentAwardRate": 3.5
+      }
+    ]
+  },
+  {
+    "operationId": "RP 020226 27",
+    "auctionStatus": "Results",
+    "operationDate": "2026-02-02",
+    "settlementDate": "2026-02-02",
+    "maturityDate": "2026-02-03",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "13:30",
+    "closeTime": "13:45",
+    "note": "",
+    "lastUpdated": "2026-02-02 13:45:45",
+    "totalAmtSubmitted": 25000000,
+    "totalAmtAccepted": 25000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 25000000,
+        "amtAccepted": 25000000,
+        "minimumBidRate": 3.75,
+        "percentHighRate": 3.75,
+        "percentLowRate": 3.75,
+        "percentStopOutRate": 3.75,
+        "percentWeightedAverageRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      }
+    ]
+  },
+  {
+    "operationId": "RP 013026 25",
+    "auctionStatus": "Results",
+    "operationDate": "2026-01-30",
+    "settlementDate": "2026-01-30",
+    "maturityDate": "2026-02-02",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 3,
+    "term": "Overnight",
+    "releaseTime": "08:15",
+    "closeTime": "08:30",
+    "note": "",
+    "lastUpdated": "2026-01-30 08:30:31",
+    "totalAmtSubmitted": 0,
+    "totalAmtAccepted": 0,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      }
+    ]
+  },
+  {
+    "operationId": "RP 013026 26",
+    "auctionStatus": "Results",
+    "operationDate": "2026-01-30",
+    "settlementDate": "2026-01-30",
+    "maturityDate": "2026-02-02",
+    "operationType": "Reverse Repo",
+    "operationMethod": "Fixed Rate",
+    "settlementType": "Same Day",
+    "termCalenderDays": 3,
+    "term": "Overnight",
+    "releaseTime": "12:45",
+    "closeTime": "13:15",
+    "note": "",
+    "lastUpdated": "2026-01-30 13:15:58",
+    "participatingCpty": 8,
+    "acceptedCpty": 8,
+    "totalAmtSubmitted": 9629000000,
+    "totalAmtAccepted": 9629000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 9629000000,
+        "amtAccepted": 9629000000,
+        "percentOfferingRate": 3.5,
+        "percentAwardRate": 3.5
+      }
+    ]
+  },
+  {
+    "operationId": "RP 013026 27",
+    "auctionStatus": "Results",
+    "operationDate": "2026-01-30",
+    "settlementDate": "2026-01-30",
+    "maturityDate": "2026-02-02",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 3,
+    "term": "Overnight",
+    "releaseTime": "13:30",
+    "closeTime": "13:45",
+    "note": "",
+    "lastUpdated": "2026-01-30 13:45:39",
+    "totalAmtSubmitted": 0,
+    "totalAmtAccepted": 0,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      }
+    ]
+  },
+  {
+    "operationId": "RP 012926 25",
+    "auctionStatus": "Results",
+    "operationDate": "2026-01-29",
+    "settlementDate": "2026-01-29",
+    "maturityDate": "2026-01-30",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "08:15",
+    "closeTime": "08:30",
+    "note": "",
+    "lastUpdated": "2026-01-29 08:30:35",
+    "totalAmtSubmitted": 0,
+    "totalAmtAccepted": 0,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      }
+    ]
+  },
+  {
+    "operationId": "RP 012926 26",
+    "auctionStatus": "Results",
+    "operationDate": "2026-01-29",
+    "settlementDate": "2026-01-29",
+    "maturityDate": "2026-01-30",
+    "operationType": "Reverse Repo",
+    "operationMethod": "Fixed Rate",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "12:45",
+    "closeTime": "13:15",
+    "note": "",
+    "lastUpdated": "2026-01-29 13:16:07",
+    "participatingCpty": 4,
+    "acceptedCpty": 4,
+    "totalAmtSubmitted": 2852000000,
+    "totalAmtAccepted": 2852000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 2852000000,
+        "amtAccepted": 2852000000,
+        "percentOfferingRate": 3.5,
+        "percentAwardRate": 3.5
+      }
+    ]
+  },
+  {
+    "operationId": "RP 012926 27",
+    "auctionStatus": "Results",
+    "operationDate": "2026-01-29",
+    "settlementDate": "2026-01-29",
+    "maturityDate": "2026-01-30",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "13:30",
+    "closeTime": "13:45",
+    "note": "",
+    "lastUpdated": "2026-01-29 13:45:33",
+    "totalAmtSubmitted": 0,
+    "totalAmtAccepted": 0,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      }
+    ]
+  },
+  {
+    "operationId": "RP 012826 25",
+    "auctionStatus": "Results",
+    "operationDate": "2026-01-28",
+    "settlementDate": "2026-01-28",
+    "maturityDate": "2026-01-29",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "08:15",
+    "closeTime": "08:30",
+    "note": "",
+    "lastUpdated": "2026-01-28 08:30:59",
+    "totalAmtSubmitted": 3000000,
+    "totalAmtAccepted": 3000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 1000000,
+        "amtAccepted": 1000000,
+        "minimumBidRate": 3.75,
+        "percentHighRate": 3.75,
+        "percentLowRate": 3.75,
+        "percentStopOutRate": 3.75,
+        "percentWeightedAverageRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 1000000,
+        "amtAccepted": 1000000,
+        "minimumBidRate": 3.75,
+        "percentHighRate": 3.75,
+        "percentLowRate": 3.75,
+        "percentStopOutRate": 3.75,
+        "percentWeightedAverageRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 1000000,
+        "amtAccepted": 1000000,
+        "minimumBidRate": 3.75,
+        "percentHighRate": 3.75,
+        "percentLowRate": 3.75,
+        "percentStopOutRate": 3.75,
+        "percentWeightedAverageRate": 3.75
+      }
+    ]
+  },
+  {
+    "operationId": "RP 012826 26",
+    "auctionStatus": "Results",
+    "operationDate": "2026-01-28",
+    "settlementDate": "2026-01-28",
+    "maturityDate": "2026-01-29",
+    "operationType": "Reverse Repo",
+    "operationMethod": "Fixed Rate",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "12:45",
+    "closeTime": "13:15",
+    "note": "",
+    "lastUpdated": "2026-01-28 13:15:51",
+    "participatingCpty": 5,
+    "acceptedCpty": 5,
+    "totalAmtSubmitted": 1103000000,
+    "totalAmtAccepted": 1103000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 1103000000,
+        "amtAccepted": 1103000000,
+        "percentOfferingRate": 3.5,
+        "percentAwardRate": 3.5
+      }
+    ]
+  },
+  {
+    "operationId": "RP 012826 27",
+    "auctionStatus": "Results",
+    "operationDate": "2026-01-28",
+    "settlementDate": "2026-01-28",
+    "maturityDate": "2026-01-29",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "13:30",
+    "closeTime": "13:45",
+    "note": "",
+    "lastUpdated": "2026-01-28 13:45:50",
+    "totalAmtSubmitted": 3000000,
+    "totalAmtAccepted": 3000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 1000000,
+        "amtAccepted": 1000000,
+        "minimumBidRate": 3.75,
+        "percentHighRate": 3.75,
+        "percentLowRate": 3.75,
+        "percentStopOutRate": 3.75,
+        "percentWeightedAverageRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 1000000,
+        "amtAccepted": 1000000,
+        "minimumBidRate": 3.75,
+        "percentHighRate": 3.75,
+        "percentLowRate": 3.75,
+        "percentStopOutRate": 3.75,
+        "percentWeightedAverageRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 1000000,
+        "amtAccepted": 1000000,
+        "minimumBidRate": 3.75,
+        "percentHighRate": 3.75,
+        "percentLowRate": 3.75,
+        "percentStopOutRate": 3.75,
+        "percentWeightedAverageRate": 3.75
+      }
+    ]
+  },
+  {
+    "operationId": "RP 012726 25",
+    "auctionStatus": "Results",
+    "operationDate": "2026-01-27",
+    "settlementDate": "2026-01-27",
+    "maturityDate": "2026-01-28",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "08:15",
+    "closeTime": "08:30",
+    "note": "",
+    "lastUpdated": "2026-01-27 08:31:00",
+    "totalAmtSubmitted": 0,
+    "totalAmtAccepted": 0,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      }
+    ]
+  },
+  {
+    "operationId": "RP 012726 26",
+    "auctionStatus": "Results",
+    "operationDate": "2026-01-27",
+    "settlementDate": "2026-01-27",
+    "maturityDate": "2026-01-28",
+    "operationType": "Reverse Repo",
+    "operationMethod": "Fixed Rate",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "12:45",
+    "closeTime": "13:15",
+    "note": "",
+    "lastUpdated": "2026-01-27 13:16:06",
+    "participatingCpty": 5,
+    "acceptedCpty": 5,
+    "totalAmtSubmitted": 1253000000,
+    "totalAmtAccepted": 1253000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 1253000000,
+        "amtAccepted": 1253000000,
+        "percentOfferingRate": 3.5,
+        "percentAwardRate": 3.5
+      }
+    ]
+  },
+  {
+    "operationId": "RP 012726 27",
+    "auctionStatus": "Results",
+    "operationDate": "2026-01-27",
+    "settlementDate": "2026-01-27",
+    "maturityDate": "2026-01-28",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "13:30",
+    "closeTime": "13:45",
+    "note": "",
+    "lastUpdated": "2026-01-27 13:46:13",
+    "totalAmtSubmitted": 1000000,
+    "totalAmtAccepted": 1000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 1000000,
+        "amtAccepted": 1000000,
+        "minimumBidRate": 3.75,
+        "percentHighRate": 3.75,
+        "percentLowRate": 3.75,
+        "percentStopOutRate": 3.75,
+        "percentWeightedAverageRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      }
+    ]
+  },
+  {
+    "operationId": "RP 012626 25",
+    "auctionStatus": "Results",
+    "operationDate": "2026-01-26",
+    "settlementDate": "2026-01-26",
+    "maturityDate": "2026-01-27",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "08:15",
+    "closeTime": "08:30",
+    "note": "",
+    "lastUpdated": "2026-01-26 08:31:37",
+    "totalAmtSubmitted": 0,
+    "totalAmtAccepted": 0,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      }
+    ]
+  },
+  {
+    "operationId": "RP 012626 26",
+    "auctionStatus": "Results",
+    "operationDate": "2026-01-26",
+    "settlementDate": "2026-01-26",
+    "maturityDate": "2026-01-27",
+    "operationType": "Reverse Repo",
+    "operationMethod": "Fixed Rate",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "12:45",
+    "closeTime": "13:15",
+    "note": "",
+    "lastUpdated": "2026-01-26 13:16:33",
+    "participatingCpty": 7,
+    "acceptedCpty": 7,
+    "totalAmtSubmitted": 1489000000,
+    "totalAmtAccepted": 1489000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 1489000000,
+        "amtAccepted": 1489000000,
+        "percentOfferingRate": 3.5,
+        "percentAwardRate": 3.5
+      }
+    ]
+  },
+  {
+    "operationId": "RP 012626 27",
+    "auctionStatus": "Results",
+    "operationDate": "2026-01-26",
+    "settlementDate": "2026-01-26",
+    "maturityDate": "2026-01-27",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 1,
+    "term": "Overnight",
+    "releaseTime": "13:30",
+    "closeTime": "13:45",
+    "note": "",
+    "lastUpdated": "2026-01-26 13:46:07",
+    "totalAmtSubmitted": 1000000,
+    "totalAmtAccepted": 1000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 1000000,
+        "amtAccepted": 1000000,
+        "minimumBidRate": 3.75,
+        "percentHighRate": 3.75,
+        "percentLowRate": 3.75,
+        "percentStopOutRate": 3.75,
+        "percentWeightedAverageRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      }
+    ]
+  },
+  {
+    "operationId": "RP 012326 25",
+    "auctionStatus": "Results",
+    "operationDate": "2026-01-23",
+    "settlementDate": "2026-01-23",
+    "maturityDate": "2026-01-26",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 3,
+    "term": "Overnight",
+    "releaseTime": "08:15",
+    "closeTime": "08:30",
+    "note": "",
+    "lastUpdated": "2026-01-23 08:30:36",
+    "totalAmtSubmitted": 0,
+    "totalAmtAccepted": 0,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      }
+    ]
+  },
+  {
+    "operationId": "RP 012326 26",
+    "auctionStatus": "Results",
+    "operationDate": "2026-01-23",
+    "settlementDate": "2026-01-23",
+    "maturityDate": "2026-01-26",
+    "operationType": "Reverse Repo",
+    "operationMethod": "Fixed Rate",
+    "settlementType": "Same Day",
+    "termCalenderDays": 3,
+    "term": "Overnight",
+    "releaseTime": "12:45",
+    "closeTime": "13:15",
+    "note": "",
+    "lastUpdated": "2026-01-23 13:15:46",
+    "participatingCpty": 5,
+    "acceptedCpty": 5,
+    "totalAmtSubmitted": 927000000,
+    "totalAmtAccepted": 927000000,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 927000000,
+        "amtAccepted": 927000000,
+        "percentOfferingRate": 3.5,
+        "percentAwardRate": 3.5
+      }
+    ]
+  },
+  {
+    "operationId": "RP 012326 27",
+    "auctionStatus": "Results",
+    "operationDate": "2026-01-23",
+    "settlementDate": "2026-01-23",
+    "maturityDate": "2026-01-26",
+    "operationType": "Repo",
+    "operationMethod": "Full Allotment",
+    "settlementType": "Same Day",
+    "termCalenderDays": 3,
+    "term": "Overnight",
+    "releaseTime": "13:30",
+    "closeTime": "13:45",
+    "note": "",
+    "lastUpdated": "2026-01-23 13:45:22",
+    "totalAmtSubmitted": 0,
+    "totalAmtAccepted": 0,
+    "details": [
+      {
+        "securityType": "Treasury",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Agency",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      },
+      {
+        "securityType": "Mortgage-Backed",
+        "amtSubmitted": 0,
+        "amtAccepted": 0,
+        "minimumBidRate": 3.75
+      }
+    ]
+  }
+]

@@ -62,7 +62,11 @@
       "Bash(chmod:*)",
       "Bash(./run_ui_regression.sh:*)",
       "WebFetch(domain:markets.newyorkfed.org)",
-      "Bash(docker volume:*)"
+      "Bash(docker volume:*)",
+      "Bash(for job in etl/jobs/run_newyorkfed_*.py)",
+      "Bash(/tmp/test_all_newyorkfed_jobs.sh:*)",
+      "Bash(/tmp/test_all_newyorkfed_jobs.sh)",
+      "Bash(head:*)"
     ]
   }
 }
