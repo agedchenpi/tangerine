@@ -1170,6 +1170,8 @@ def main():
         print(f"ERROR: {e}")
         exit(1)
 
+    print(f"Run UUID: {job.run_uuid}")
+
     try:
         success = job.run()
         if success:

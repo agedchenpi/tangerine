@@ -103,6 +103,8 @@ def run_generic_import(config_id: int, dry_run: bool, logger) -> bool:
         logger.error(f"Config not found: {e}")
         return False
 
+    print(f"Run UUID: {job.run_uuid}")
+
     try:
         job.run()
         logger.info(

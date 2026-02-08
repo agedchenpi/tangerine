@@ -12,7 +12,8 @@ from services.scheduler_service import (
     list_schedules, get_schedule, create_schedule, update_schedule,
     delete_schedule, toggle_active, get_scheduler_stats, job_name_exists,
     get_job_types, get_config_options, regenerate_crontab, get_crontab_preview,
-    build_cron_expression, calculate_next_run, execute_schedule_adhoc
+    build_cron_expression, calculate_next_run, execute_schedule_adhoc,
+    get_schedule_logs
 )
 from utils.db_helpers import format_sql_error
 from utils.ui_helpers import load_custom_css, add_page_header, render_stat_card
@@ -50,6 +51,82 @@ SCHEDULER_QUICK_START = """
 
 load_custom_css()
 add_page_header("Job Scheduler", icon="⏰")
+
+
+@st.dialog("Job Logs", width="large")
+def show_log_dialog(scheduler_id: int):
+    """Display log entries for a scheduler job's last run."""
+    result = get_schedule_logs(scheduler_id)
+    if not result:
+        st.warning("No logs available for this job. Run the job first.")
+        return
+
+    schedule = result['schedule']
+    logs = result['logs']
+    run_uuid = result.get('run_uuid')
+    raw_output = result.get('output')
+
+    # Header
+    status_badge = {"Success": "✅", "Failed": "❌", "Running": "🔄"}.get(
+        schedule.get('last_run_status'), "❓"
+    )
+    st.markdown(f"**{schedule['job_name']}** {status_badge} `{schedule.get('last_run_status', 'Unknown')}`")
+    uuid_display = f"`{run_uuid}`" if run_uuid else "_not captured_"
+    st.caption(f"Run UUID: {uuid_display} | Last run: {schedule.get('last_run_at', 'N/A')}")
+
+    st.divider()
+
+    if logs:
+        # Structured log table from tlogentry
+        log_df = pd.DataFrame(logs)
+        if 'timestamp' in log_df.columns:
+            log_df['timestamp'] = pd.to_datetime(log_df['timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
+        if 'stepruntime' in log_df.columns:
+            log_df['stepruntime'] = log_df['stepruntime'].apply(lambda x: f"{x:.2f}s" if x is not None else "-")
+
+        display_cols = [c for c in ['stepcounter', 'timestamp', 'message', 'stepruntime'] if c in log_df.columns]
+        st.dataframe(log_df[display_cols], use_container_width=True, hide_index=True)
+
+        # Build plain text download
+        lines = [
+            f"=== Job: {schedule['job_name']} ===",
+            f"=== Run UUID: {run_uuid} ===",
+            f"=== Status: {schedule.get('last_run_status', 'Unknown')} ===",
+            "",
+        ]
+        for log in logs:
+            ts = log.get('timestamp', '')
+            if hasattr(ts, 'strftime'):
+                ts = ts.strftime('%Y-%m-%d %H:%M:%S')
+            step = log.get('stepcounter', '?')
+            msg = log.get('message', '')
+            runtime = log.get('stepruntime')
+            rt_str = f"{runtime:.2f}s" if runtime is not None else "0.00s"
+
+            if 'ERROR' in str(msg).upper() or 'FAIL' in str(msg).upper():
+                lines.append(f"[{ts}] [ERROR]  {msg} ({rt_str})")
+            else:
+                lines.append(f"[{ts}] [STEP {step}] {msg} ({rt_str})")
+
+        log_text = "\n".join(lines)
+        uuid_prefix = run_uuid[:8] if run_uuid else "no-uuid"
+        st.download_button(
+            "📥 Download Log (.log)",
+            data=log_text,
+            file_name=f"{schedule['job_name']}_{uuid_prefix}.log",
+            mime="text/plain",
+        )
+    elif raw_output:
+        # No structured logs — show raw stdout output
+        st.code(raw_output, language="log")
+        st.download_button(
+            "📥 Download Output (.log)",
+            data=raw_output,
+            file_name=f"{schedule['job_name']}_output.log",
+            mime="text/plain",
+        )
+    else:
+        st.info("No log entries found for this run.")
 
 # Statistics
 try:
@@ -344,6 +421,28 @@ with tab1:
                                 output_lines.append(line)
                                 output_area.code('\n'.join(output_lines), language='log')
                     st.rerun()
+
+            # View Logs buttons for jobs that have been run
+            jobs_with_status = [s for s in schedules if s.get('last_run_status')]
+            if jobs_with_status:
+                st.divider()
+                st.markdown("##### Job Logs")
+                log_cols = st.columns(min(len(jobs_with_status), 4))
+                for i, sched in enumerate(jobs_with_status):
+                    col_idx = i % min(len(jobs_with_status), 4)
+                    with log_cols[col_idx]:
+                        status_icon = {"Success": "✅", "Failed": "❌", "Running": "🔄"}.get(
+                            sched.get('last_run_status'), ""
+                        )
+                        has_logs = bool(sched.get('last_run_uuid') or sched.get('last_run_output'))
+                        if st.button(
+                            f"📋 {sched['job_name']} {status_icon}",
+                            key=f"view_logs_{sched['scheduler_id']}",
+                            use_container_width=True,
+                            disabled=not has_logs,
+                            help="Run this job first to capture logs" if not has_logs else "View logs from last run",
+                        ):
+                            show_log_dialog(sched['scheduler_id'])
         else:
             show_info("No scheduled jobs found. Create one in the 'Create New' tab.")
     except Exception as e:

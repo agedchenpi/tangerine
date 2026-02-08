@@ -88,7 +88,6 @@ def execute_import_job(
     """
     # Build command
     cmd = [
-        "docker", "compose", "exec", "-T", "tangerine",
         "python", "etl/jobs/generic_import.py",
         "--config-id", str(config_id)
     ]

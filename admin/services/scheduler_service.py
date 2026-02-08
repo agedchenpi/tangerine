@@ -4,6 +4,7 @@ from typing import List, Dict, Any, Optional, Generator
 from datetime import datetime
 from common.db_utils import fetch_dict, db_transaction
 import subprocess
+import os
 
 # Optional croniter for next run calculation
 try:
@@ -479,21 +480,34 @@ def execute_schedule_adhoc(scheduler_id: int, timeout: int = 300) -> Generator[s
             (scheduler_id,)
         )
 
-    cmd = ["docker", "compose", "exec", "-T", "tangerine"] + cmd_str.split()
+    cmd = cmd_str.split()
     exit_code = -1
+    run_uuid = None
+    run_start_time = datetime.now()
+    output_lines = []
 
     try:
+        env = os.environ.copy()
+        env['PYTHONPATH'] = '/app'
+        env['PYTHONUNBUFFERED'] = '1'
+        env['ETL_ENABLE_DB_LOGGING'] = 'true'
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
-            universal_newlines=True
+            universal_newlines=True,
+            cwd='/app',
+            env=env
         )
 
         for line in process.stdout:
-            yield line.rstrip('\n')
+            stripped = line.rstrip('\n')
+            if 'Run UUID:' in stripped:
+                run_uuid = stripped.split('Run UUID:')[1].strip()
+            output_lines.append(stripped)
+            yield stripped
 
         process.wait(timeout=timeout)
         exit_code = process.returncode
@@ -510,11 +524,59 @@ def execute_schedule_adhoc(scheduler_id: int, timeout: int = 300) -> Generator[s
         yield f"\n❌ Error executing job: {str(e)}"
     finally:
         status = 'Success' if exit_code == 0 else 'Failed'
+        # Keep last 500 lines of output for debugging
+        run_output = '\n'.join(output_lines[-500:]) if output_lines else None
         with db_transaction() as cursor:
+            # Fallback: look up run_uuid from tlogentry if not captured from stdout
+            if not run_uuid:
+                cursor.execute("""
+                    SELECT DISTINCT run_uuid FROM dba.tlogentry
+                    WHERE timestamp >= %s
+                    ORDER BY run_uuid
+                    LIMIT 1
+                """, (run_start_time,))
+                row = cursor.fetchone()
+                if row:
+                    run_uuid = row[0]
+
             cursor.execute(
-                "UPDATE dba.tscheduler SET last_run_at = %s, last_run_status = %s WHERE scheduler_id = %s",
-                (datetime.now(), status, scheduler_id)
+                "UPDATE dba.tscheduler SET last_run_at = %s, last_run_status = %s, last_run_uuid = %s, last_run_output = %s WHERE scheduler_id = %s",
+                (datetime.now(), status, run_uuid, run_output, scheduler_id)
             )
+
+
+def get_schedule_logs(scheduler_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Get log entries for a scheduler job's last run.
+
+    Returns structured tlogentry logs when run_uuid is available,
+    or raw stdout output as fallback for debugging failed jobs.
+
+    Args:
+        scheduler_id: Scheduler ID
+
+    Returns:
+        Dictionary with 'schedule' info, 'logs' list, 'run_uuid', and optional 'output'
+    """
+    schedule = get_schedule(scheduler_id)
+    if not schedule:
+        return None
+
+    # No UUID and no output — nothing to show
+    if not schedule.get('last_run_uuid') and not schedule.get('last_run_output'):
+        return None
+
+    logs = []
+    if schedule.get('last_run_uuid'):
+        from services.job_execution_service import get_job_output
+        logs = get_job_output(schedule['last_run_uuid'])
+
+    return {
+        'schedule': schedule,
+        'logs': logs,
+        'run_uuid': schedule.get('last_run_uuid'),
+        'output': schedule.get('last_run_output'),
+    }
 
 
 def create_schedule_for_report(

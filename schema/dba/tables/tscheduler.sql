@@ -17,6 +17,7 @@ BEGIN
             last_modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_run_at TIMESTAMP,
             last_run_status VARCHAR(50) CHECK (last_run_status IS NULL OR last_run_status IN ('Success', 'Failed', 'Running')),
+            last_run_uuid VARCHAR(36),
             next_run_at TIMESTAMP,
             CONSTRAINT valid_custom_job CHECK (
                 (job_type = 'custom' AND script_path IS NOT NULL)
@@ -39,6 +40,7 @@ BEGIN
         COMMENT ON COLUMN dba.tscheduler.last_modified_at IS 'Timestamp when the schedule was last modified.';
         COMMENT ON COLUMN dba.tscheduler.last_run_at IS 'Timestamp of the last execution.';
         COMMENT ON COLUMN dba.tscheduler.last_run_status IS 'Status of the last run: Success, Failed, or Running.';
+        COMMENT ON COLUMN dba.tscheduler.last_run_uuid IS 'Run UUID from the last job execution, links to tlogentry for log retrieval.';
         COMMENT ON COLUMN dba.tscheduler.next_run_at IS 'Calculated timestamp for the next scheduled run.';
     END IF;
 END $$;
@@ -46,3 +48,27 @@ GRANT SELECT ON dba.tscheduler TO app_ro;
 GRANT SELECT, INSERT, UPDATE ON dba.tscheduler TO app_rw;
 GRANT ALL ON dba.tscheduler TO admin;
 GRANT USAGE, SELECT ON SEQUENCE dba.tscheduler_scheduler_id_seq TO app_rw, app_ro;
+
+-- Migration: add last_run_output column to store stdout from ad-hoc runs
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'dba' AND table_name = 'tscheduler' AND column_name = 'last_run_output'
+    ) THEN
+        ALTER TABLE dba.tscheduler ADD COLUMN last_run_output TEXT;
+        COMMENT ON COLUMN dba.tscheduler.last_run_output IS 'Captured stdout from the last ad-hoc job execution for debugging.';
+    END IF;
+END $$;
+
+-- Migration: add last_run_uuid column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'dba' AND table_name = 'tscheduler' AND column_name = 'last_run_uuid'
+    ) THEN
+        ALTER TABLE dba.tscheduler ADD COLUMN last_run_uuid VARCHAR(36);
+        COMMENT ON COLUMN dba.tscheduler.last_run_uuid IS 'Run UUID from the last job execution, links to tlogentry for log retrieval.';
+    END IF;
+END $$;

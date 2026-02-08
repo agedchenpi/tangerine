@@ -199,7 +199,7 @@ with tab2:
             **Next Steps:**
             1. Verify the target table `{form_data['target_table']}` exists
             2. Place files matching pattern `{form_data['file_pattern']}` in `{form_data['source_directory']}`
-            3. Run the import: `docker compose exec tangerine python etl/jobs/generic_import.py --config-id {new_id}`
+            3. Run the import: `python etl/jobs/generic_import.py --config-id {new_id}`
             """)
 
         except Exception as e:
