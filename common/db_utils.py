@@ -271,26 +271,6 @@ def test_connection() -> bool:
         return False
 
 
-# Legacy function for backward compatibility
-def connect_db(db_url: str) -> Optional[PGConnection]:
-    """
-    Legacy connection function (deprecated - use get_connection instead).
-
-    Args:
-        db_url: Database connection URL
-
-    Returns:
-        Database connection or None
-    """
-    try:
-        conn = psycopg2.connect(db_url)
-        print("Connected to DB")
-        return conn
-    except Exception as e:
-        print(f"Error: {e}")
-        return None
-
-
 if __name__ == "__main__":
     """Test database connection and utilities."""
     db_url = os.getenv("DB_URL")
