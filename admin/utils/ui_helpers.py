@@ -713,6 +713,44 @@ def render_stat_card(label: str, value: str, icon: str = "📊", color: str = No
         icon_opacity = "0.4"
 
     st.markdown(f"""
+    <style>
+        /* Force equal-height stat cards across columns */
+        [data-testid="stHorizontalBlock"] {{
+            align-items: stretch !important;
+        }}
+        [data-testid="stHorizontalBlock"] [data-testid="stColumn"] {{
+            display: flex !important;
+            flex-direction: column !important;
+        }}
+        [data-testid="stHorizontalBlock"] [data-testid="stColumn"] > div {{
+            flex: 1 !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }}
+        [data-testid="stHorizontalBlock"] [data-testid="stColumn"] .stVerticalBlock {{
+            flex: 1 !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }}
+        [data-testid="stHorizontalBlock"] [data-testid="stColumn"] .stElementContainer {{
+            flex: 1 !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }}
+        [data-testid="stHorizontalBlock"] [data-testid="stColumn"] .stMarkdown {{
+            flex: 1 !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }}
+        [data-testid="stHorizontalBlock"] [data-testid="stColumn"] .stMarkdown > div {{
+            flex: 1 !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }}
+        [data-testid="stHorizontalBlock"] [data-testid="stColumn"] .stMarkdown > div > div {{
+            flex: 1 !important;
+        }}
+    </style>
     <div style="
         background: {bg_gradient};
         padding: 1.75rem;
@@ -723,6 +761,9 @@ def render_stat_card(label: str, value: str, icon: str = "📊", color: str = No
         border-right: 1px solid {'#FFFFFF0D' if is_dark_mode() else '#00000010'};
         border-bottom: 1px solid {'#FFFFFF0D' if is_dark_mode() else '#00000010'};
         margin-bottom: 1rem;
+        min-height: 120px;
+        height: 100%;
+        box-sizing: border-box;
         transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
         overflow: hidden;

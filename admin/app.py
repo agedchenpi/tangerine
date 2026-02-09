@@ -81,6 +81,7 @@ pages = {
     ],
     "System": [
         st.Page("pages/event_system.py", title="Event System", icon="🔔"),
+        st.Page("pages/sql.py", title="SQL", icon="🔍"),
     ],
 }
 
