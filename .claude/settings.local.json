@@ -78,7 +78,8 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(git -C /opt/tangerine log --all --full-history --format=\"%H\" -- \"etl/jobs/run_newyorkfed_pd_statistics.py\" \"etl/jobs/run_newyorkfed_market_share.py\")",
       "Bash(test:*)",
-      "Bash(git -C /opt/tangerine show 922e379858df1b9a508c23314af771b6632d12c8:etl/jobs/run_newyorkfed_pd_statistics.py)"
+      "Bash(git -C /opt/tangerine show 922e379858df1b9a508c23314af771b6632d12c8:etl/jobs/run_newyorkfed_pd_statistics.py)",
+      "Bash(git log:*)"
     ]
   }
 }
