@@ -1,0 +1,53 @@
+[
+  {
+    "operationId": "OR 021026 1",
+    "auctionStatus": "Results",
+    "operationType": "Outright Bill Purchase",
+    "operationDate": "2026-02-10",
+    "settlementDate": "2026-02-11",
+    "maturityRangeStart": "2026-03-12",
+    "maturityRangeEnd": "2026-06-11",
+    "operationDirection": "P",
+    "auctionMethod": "Multiple Price",
+    "releaseTime": "09:00",
+    "closeTime": "09:20",
+    "totalParAmtSubmitted": "81306000000",
+    "totalParAmtAccepted": "8304000000",
+    "note": "",
+    "lastUpdated": "2026-02-10 09:21:04"
+  },
+  {
+    "operationId": "OR 020426 1",
+    "auctionStatus": "Results",
+    "operationType": "Outright Bill Purchase",
+    "operationDate": "2026-02-04",
+    "settlementDate": "2026-02-05",
+    "maturityRangeStart": "2026-03-10",
+    "maturityRangeEnd": "2026-06-04",
+    "operationDirection": "P",
+    "auctionMethod": "Multiple Price",
+    "releaseTime": "09:00",
+    "closeTime": "09:20",
+    "totalParAmtSubmitted": "67701000000",
+    "totalParAmtAccepted": "8304000000",
+    "note": "",
+    "lastUpdated": "2026-02-04 09:21:45"
+  },
+  {
+    "operationId": "OR 020226 1",
+    "auctionStatus": "Results",
+    "operationType": "Outright Bill Purchase",
+    "operationDate": "2026-02-02",
+    "settlementDate": "2026-02-03",
+    "maturityRangeStart": "2026-06-04",
+    "maturityRangeEnd": "2027-01-21",
+    "operationDirection": "P",
+    "auctionMethod": "Multiple Price",
+    "releaseTime": "09:00",
+    "closeTime": "09:20",
+    "totalParAmtSubmitted": "38000000000",
+    "totalParAmtAccepted": "6921000000",
+    "note": "",
+    "lastUpdated": "2026-02-02 09:21:19"
+  }
+]

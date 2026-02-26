@@ -925,6 +925,12 @@ class GenericImportJob(BaseETLJob):
 
         transformed = self._normalize_column_names(data)
 
+        # Serialize nested dicts/lists to JSON strings to prevent psycopg2 'can't adapt type' errors
+        for record in transformed:
+            for key, value in record.items():
+                if isinstance(value, (dict, list)):
+                    record[key] = json.dumps(value)
+
         for record in transformed:
             record['created_date'] = datetime.now()
             record['created_by'] = self.username

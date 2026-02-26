@@ -58,7 +58,9 @@ $PSQL -f /app/schema/dba/data/example_reference_data.sql
 # $PSQL -f /app/schema/dba/data/regression_test_configs.sql  # Commented out - test configs not needed
 $PSQL -f /app/schema/dba/data/newyorkfed_reference_data.sql
 $PSQL -f /app/schema/dba/data/newyorkfed_import_configs.sql
+$PSQL -f /app/schema/dba/data/smoketest_reference_data.sql
 $PSQL -f /app/schema/dba/data/newyorkfed_scheduler_jobs.sql
+$PSQL -f /app/schema/dba/data/smoketest_scheduler_job.sql
 
 # Execute DBA views (after data is loaded)
 $PSQL -f /app/schema/dba/views/vdataset.sql

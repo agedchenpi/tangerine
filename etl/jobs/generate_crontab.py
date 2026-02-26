@@ -61,8 +61,20 @@ def generate_crontab_entries() -> List[str]:
         'SHELL=/bin/bash',
         'PATH=/usr/local/bin:/usr/bin:/bin:/app',
         'PYTHONPATH=/app',
-        '',
     ]
+
+    # Forward runtime environment variables so cron jobs have DB access, logging config, etc.
+    cron_env_vars = [
+        'DB_URL', 'ETL_LOG_LEVEL', 'ETL_LOG_DIR',
+        'ETL_ENABLE_DB_LOGGING', 'ETL_ENABLE_FILE_LOGGING',
+        'GMAIL_CREDENTIALS_PATH', 'GMAIL_TOKEN_PATH',
+    ]
+    for var in cron_env_vars:
+        val = os.environ.get(var)
+        if val:
+            entries.append(f'{var}={val}')
+
+    entries.append('')
 
     if not schedules:
         entries.append('# No active schedules configured')

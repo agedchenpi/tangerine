@@ -13,33 +13,33 @@ BEGIN
     ) VALUES
         -- Daily imports
         ('NewYorkFed_ReferenceRates', 'custom', '0', '9', '*', '*', '*',
-         'python /app/etl/jobs/run_newyorkfed_reference_rates.py --endpoint-type latest', TRUE),
+         'etl/jobs/run_newyorkfed_reference_rates.py --endpoint-type latest', TRUE),
         ('NewYorkFed_Repo', 'custom', '5', '9', '*', '*', '*',
-         'python /app/etl/jobs/run_newyorkfed_repo.py --operation-type repo', TRUE),
+         'etl/jobs/run_newyorkfed_repo.py', TRUE),
         ('NewYorkFed_ReverseRepo', 'custom', '10', '9', '*', '*', '*',
-         'python /app/etl/jobs/run_newyorkfed_repo.py --operation-type reverserepo', TRUE),
+         'etl/jobs/run_newyorkfed_repo.py', TRUE),
         ('NewYorkFed_SecLending', 'custom', '15', '9', '*', '*', '*',
-         'python /app/etl/jobs/run_newyorkfed_securities_lending.py', FALSE),
+         'etl/jobs/run_newyorkfed_securities_lending.py', FALSE),
         ('NewYorkFed_Treasury', 'custom', '20', '9', '*', '*', '*',
-         'python /app/etl/jobs/run_newyorkfed_treasury.py', FALSE),
+         'etl/jobs/run_newyorkfed_treasury.py', FALSE),
 
         -- Weekly imports
         ('NewYorkFed_SOMA', 'custom', '0', '10', '*', '*', '4',
-         'python /app/etl/jobs/run_newyorkfed_soma_holdings.py', TRUE),
+         'etl/jobs/run_newyorkfed_soma_holdings.py', TRUE),
         ('NewYorkFed_AgencyMBS', 'custom', '0', '10', '*', '*', '5',
-         'python /app/etl/jobs/run_newyorkfed_agency_mbs.py', FALSE),
+         'etl/jobs/run_newyorkfed_agency_mbs.py', FALSE),
         ('NewYorkFed_FXSwaps', 'custom', '5', '10', '*', '*', '5',
-         'python /app/etl/jobs/run_newyorkfed_fx_swaps.py', FALSE),
+         'etl/jobs/run_newyorkfed_fx_swaps.py', FALSE),
         ('NewYorkFed_PDStatistics', 'custom', '10', '10', '*', '*', '5',
-         'python /app/etl/jobs/run_newyorkfed_pd_statistics.py', FALSE),
+         'etl/jobs/run_newyorkfed_api_import.py --config-id 9', FALSE),
 
         -- Monthly imports (first Monday of month)
         ('NewYorkFed_GuideSheets', 'custom', '0', '11', '1-7', '*', '1',
-         'python /app/etl/jobs/run_newyorkfed_guide_sheets.py', FALSE),
+         'etl/jobs/run_newyorkfed_guide_sheets.py', FALSE),
 
         -- Quarterly imports (1st of Jan/Apr/Jul/Oct)
         ('NewYorkFed_MarketShare', 'custom', '0', '11', '1', '1,4,7,10', '*',
-         'python /app/etl/jobs/run_newyorkfed_market_share.py', FALSE)
+         'etl/jobs/run_newyorkfed_api_import.py --config-id 10', FALSE)
     ON CONFLICT (job_name) DO UPDATE SET
         script_path = EXCLUDED.script_path,
         is_active = EXCLUDED.is_active;
