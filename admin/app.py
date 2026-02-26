@@ -76,6 +76,7 @@ pages = {
     ],
     "Operations": [
         st.Page("pages/run_jobs.py", title="Run Jobs", icon="▶️"),
+        st.Page("pages/pipeline_monitor.py", title="Pipeline Monitor", icon="🔭"),
         st.Page("pages/monitoring.py", title="Monitoring", icon="📊"),
         st.Page("pages/reports.py", title="Reports", icon="📄"),
     ],
