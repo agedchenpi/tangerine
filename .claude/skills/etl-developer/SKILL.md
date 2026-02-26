@@ -9,29 +9,136 @@ description: ETL job development patterns for Tangerine - import jobs, extractor
 
 Tangerine uses a config-driven ETL framework. Most imports use `generic_import.py` with database configuration rather than custom job files.
 
-## Job Structure
+## Architecture: Collector Pattern
+
+All API-based data imports follow a **two-stage collector pattern**:
+
+1. **Data Collection** (unique per source) — API fetch + transform + save JSON
+2. **Import** (universal) — `generic_import.py --config-id N`
 
 ```
 etl/
-├── base/
-│   └── etl_job.py              # Base ETL job class
+├── collectors/                          # Data collection (unique per source)
+│   ├── newyorkfed_collector.py          # All NewYorkFed endpoints (13 configs)
+│   └── bankofengland_collector.py       # All BoE endpoints (SONIA rates)
+├── clients/                             # API clients (reusable, no transforms)
+│   ├── newyorkfed_client.py
+│   └── bankofengland_client.py
 ├── jobs/
-│   ├── generic_import.py       # Config-driven file imports
-│   ├── run_gmail_inbox_processor.py  # Email attachment processing
-│   ├── run_report_generator.py       # SQL-based report generation
-│   └── generate_crontab.py           # Scheduler generation
+│   ├── generic_import.py                # Universal config-driven file import
+│   ├── run_gmail_inbox_processor.py     # Email attachment processing (not an import)
+│   ├── run_report_generator.py          # SQL-based report generation (not an import)
+│   └── generate_crontab.py             # Scheduler cron generation
 └── regression/
     ├── run_regression_tests.py
     └── generate_test_files.py
 ```
 
-## Creating a New Import
+### Collector Lifecycle
 
-**DO NOT create new job files.** Instead:
+```python
+# etl/collectors/{source}_collector.py --config-id N
+def main():
+    config = load_config(args.config_id)         # Read from timportconfig
+    raw_data = collector['fetch'](config)         # API call via client
+    transformed = collector['transform'](raw_data) # Source-specific transforms
+    save_json(transformed, config)                 # Write JSON to source_directory
+    run_generic_import(args.config_id, dry_run)    # Universal import
+```
 
-1. Add configuration to `dba.timportconfig` table via admin UI
-2. Configure: file pattern, target table, import strategy, metadata extraction
-3. Run via: `docker compose exec tangerine python etl/jobs/generic_import.py --config-id {id}`
+### Adding a New API Endpoint
+
+**DO NOT create new `run_*.py` job files.** Instead, add to an existing collector:
+
+1. **Add a transform function** in the appropriate collector (e.g., `newyorkfed_collector.py`):
+   ```python
+   def transform_new_endpoint(data: list) -> list:
+       transformed = []
+       for record in data:
+           transformed.append({
+               'field_name': record.get('apiFieldName'),
+               'date_field': _parse_date(record.get('dateField')),
+               **_audit_cols(),
+           })
+       return transformed
+   ```
+
+2. **Register it** in the `COLLECTORS` dict:
+   ```python
+   COLLECTORS = {
+       ...
+       'NewYorkFed_New_Endpoint': {'fetch': fetch_newyorkfed, 'transform': transform_new_endpoint},
+   }
+   ```
+
+3. **Add SQL config** in `schema/dba/data/{source}_import_configs.sql`:
+   - `source_directory` = `/app/data/source/{source}`
+   - `archive_directory` = `/app/data/archive/{source}`
+   - `file_pattern` = `{source}_{slug}_.*\.json` (regex)
+   - `api_endpoint_path`, `api_response_root_path` from API docs
+
+4. **Add scheduler job** in `schema/dba/data/{source}_scheduler_jobs.sql`:
+   ```sql
+   ('JobName', 'custom', '0', '9', '*', '*', '*',
+    'etl/collectors/{source}_collector.py --config-id N', TRUE)
+   ```
+
+5. **Apply SQL** and test:
+   ```bash
+   docker compose exec tangerine python etl/collectors/{source}_collector.py --config-id N --dry-run
+   docker compose exec tangerine python etl/collectors/{source}_collector.py --config-id N
+   ```
+
+### Adding a New Data Source
+
+Create a new collector file following the established pattern:
+
+1. Create `etl/clients/{source}_client.py` (API client)
+2. Create `etl/collectors/{source}_collector.py` with:
+   - `SOURCE_DIR`, `load_config()`, `save_json()`, `ensure_source_directory()`, `run_generic_import()`
+   - Source-specific fetch function(s)
+   - Transform function(s)
+   - `COLLECTORS` registry dict
+   - `main()` with `--config-id` and `--dry-run` args
+3. Create SQL configs and scheduler jobs
+
+### Config IDs Reference
+
+**NewYorkFed** (`newyorkfed_collector.py`):
+| ID | Config Name | Active | Schedule |
+|----|-------------|--------|----------|
+| 1 | ReferenceRates_Latest | Yes | Daily 9:00 |
+| 2 | ReferenceRates_Search | No | — |
+| 3 | SOMA_Holdings | Yes | Thu 10:00 |
+| 4 | Repo_Operations | Yes | Daily 9:05 |
+| 5 | ReverseRepo_Operations | Yes | Daily 9:10 |
+| 6 | Agency_MBS | No | Fri 10:00 |
+| 7 | FX_Swaps | No | Fri 10:05 |
+| 8 | Guide_Sheets | No | 1st Mon 11:00 |
+| 9 | PD_Statistics | No | Fri 10:10 |
+| 10 | Market_Share | No | Quarterly |
+| 11 | Securities_Lending | No | Daily 9:15 |
+| 12 | Treasury_Operations | No | Daily 9:20 |
+
+**BankOfEngland** (`bankofengland_collector.py`):
+| ID | Config Name | Active | Schedule |
+|----|-------------|--------|----------|
+| 13 | SONIA_Rates | Yes | Weekdays 15:30 UTC |
+
+### Transform Patterns
+
+Common helper functions available in collectors:
+- `_parse_date(value)` — Parse `YYYY-MM-DD` string to ISO date string, or None
+- `_parse_numeric(value, strip_commas=False)` — Parse numeric, optionally strip commas
+- `_audit_cols()` — Returns `{'created_date': ..., 'created_by': 'etl_user'}`
+
+### File Naming Convention
+
+Collectors save JSON as: `{source}_{slug}_{YYYYMMDD_HHMMSS}.json`
+- `newyorkfed_referencerates_latest_20260226_090000.json`
+- `bankofengland_sonia_rates_20260226_153000.json`
+
+`generic_import` matches files via `file_pattern` regex in timportconfig.
 
 ## Supported File Formats
 
@@ -52,32 +159,6 @@ etl/
 
 **Recommendation:** Use Strategy 2 (Ignore) for most imports. Use Strategy 1 only when schema evolution is expected.
 
-## Key Classes
-
-### SchemaManager
-
-Handles table creation and column type inference:
-
-```python
-from etl.jobs.generic_import import SchemaManager
-
-manager = SchemaManager(cursor, "feeds.my_table")
-manager.ensure_table_exists(columns, sample_data)
-manager.add_missing_columns(new_columns)
-```
-
-### Extractor Pattern
-
-Each file type has an extractor that returns records:
-
-```python
-def extract_csv(file_path: Path, delimiter: str = ",") -> list[dict]:
-    """Extract records from CSV file."""
-    with open(file_path, "r", newline="") as f:
-        reader = csv.DictReader(f, delimiter=delimiter)
-        return list(reader)
-```
-
 ## Required Patterns
 
 ### 1. Dry-Run Mode
@@ -87,10 +168,6 @@ All jobs MUST support `--dry-run` flag:
 ```python
 parser.add_argument("--dry-run", action="store_true",
                     help="Validate without database writes")
-
-if args.dry_run:
-    logger.info("DRY RUN - no changes will be made")
-    # Skip: INSERT, UPDATE, DELETE, file archiving
 ```
 
 ### 2. Logging
@@ -98,115 +175,49 @@ if args.dry_run:
 Use the common logging utility:
 
 ```python
-from common.logging_utils import get_etl_logger
-
-logger = get_etl_logger("generic_import", run_uuid)
-logger.info("Starting import for config_id=%s", config_id)
-logger.error("Failed to process file: %s", str(e))
+from common.logging_utils import get_logger
+logger = get_logger("collector_name")
 ```
 
 ### 3. Dataset Tracking
 
-Create a dataset record for each import:
-
-```python
-cursor.execute("""
-    INSERT INTO dba.tdataset (
-        datasourceid, datasettypeid, label, datasetdate, datastatusid
-    ) VALUES (%s, %s, %s, %s, 1)
-    RETURNING datasetid
-""", (datasource_id, datasettype_id, label, file_date))
-dataset_id = cursor.fetchone()["datasetid"]
-```
+`generic_import.py` handles dataset tracking automatically via `dba.f_dataset_iu()`.
 
 ### 4. File Archiving
 
-Move processed files to archive directory:
-
-```python
-import shutil
-from datetime import datetime
-
-archive_name = f"{datetime.now():%Y%m%d_%H%M%S}_{file_path.name}"
-archive_path = archive_dir / archive_name
-shutil.move(str(file_path), str(archive_path))
-```
+`generic_import.py` handles file archiving automatically (moves to `archive_directory`).
 
 ## Database Connections
 
 Always use the transaction context manager:
 
 ```python
-from common.db_utils import db_transaction
+from common.db_utils import db_transaction, fetch_dict
 
 with db_transaction() as cursor:
     cursor.execute("SELECT * FROM dba.timportconfig WHERE config_id = %s", (config_id,))
-    config = cursor.fetchone()
-```
 
-## Metadata Extraction
-
-Three modes for extracting dataset labels:
-
-| Mode | Config | Example |
-|------|--------|---------|
-| filename | `metadata_label_source='filename'`, `metadata_label_location='_:2'` | `data_sales_20260115.csv` → `20260115` |
-| file_content | `metadata_label_source='file_content'`, `metadata_label_location='label_column'` | Column value from first row |
-| static | `metadata_label_source='static'`, `metadata_label_location='Fixed Label'` | Literal string |
-
-## Date Extraction
-
-Convert Java date formats to Python:
-
-```python
-def java_to_python_format(java_fmt: str) -> str:
-    """Convert Java date format to Python strptime format."""
-    return (java_fmt
-        .replace("yyyy", "%Y")
-        .replace("MM", "%m")
-        .replace("dd", "%d"))
-
-# Example: "yyyyMMdd" → "%Y%m%d"
+rows = fetch_dict("SELECT * FROM dba.timportconfig WHERE config_id = %s", (config_id,))
 ```
 
 ## Testing
 
-Tests are in `tests/integration/etl/`:
-
 ```bash
-# Run all ETL tests
-docker compose exec tangerine pytest tests/integration/etl/ -v
+# Test a collector (dry run)
+docker compose exec tangerine python etl/collectors/newyorkfed_collector.py --config-id 1 --dry-run
 
-# Run specific test file
-docker compose exec tangerine pytest tests/integration/etl/test_generic_import.py -v
+# Test a collector (live)
+docker compose exec tangerine python etl/collectors/newyorkfed_collector.py --config-id 1
+
+# Run integration tests
+docker compose exec tangerine pytest tests/integration/etl/ -v
 ```
 
 ## Common Pitfalls
 
-1. **Don't hardcode paths** - Use config values from database
-2. **Don't skip dry-run** - Always implement and test dry-run mode
-3. **Don't forget dataset tracking** - Every import needs a tdataset record
-4. **Don't leave files in source** - Archive after successful processing
-5. **Don't use string formatting for SQL** - Always use parameterized queries
-
-## Documentation Requirements
-
-**After making ETL changes, always update documentation:**
-
-1. **CHANGELOG.md** - Add entry under `[Unreleased]` section:
-   - `Added` - New jobs, extractors, file formats
-   - `Changed` - Modifications to existing ETL behavior
-   - `Fixed` - Bug fixes
-
-2. **Codemaps** (if architecture changes):
-   - `.claude/codemaps/etl-framework.md` - Job structure, strategies
-   - `.claude/codemaps/database-schema.md` - New tracking tables
-
-3. **Feature docs** (for significant features):
-   - Create `docs/features/{feature-name}.md` using `/doc-feature`
-
-**Example CHANGELOG entry:**
-```markdown
-### Added
-- **XML Import Support**: Added XML file parsing to generic import job
-```
+1. **Don't create new `run_*.py` job files** — Add to existing collectors instead
+2. **Don't hardcode paths** — Use config values from database
+3. **Don't skip dry-run** — Always implement and test dry-run mode
+4. **Don't use string formatting for SQL** — Always use parameterized queries
+5. **Dates in JSON as ISO strings** — PostgreSQL auto-casts `'2025-01-03'` to DATE
+6. **Config IDs are auto-generated** — Check the database for actual IDs, don't assume

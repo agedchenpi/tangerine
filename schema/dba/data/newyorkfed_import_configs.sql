@@ -1,5 +1,6 @@
 -- NewYorkFed Import Configurations
 -- Creates timportconfig records for each NewYorkFed API endpoint
+-- All configs now use the collector pattern: newyorkfed_collector.py --config-id N
 
 -- Helper function to get data source and type IDs
 DO $$
@@ -48,9 +49,9 @@ BEGIN
         'NewYorkFed_ReferenceRates_Latest',
         'NewYorkFed',
         'ReferenceRates',
-        '',  -- Not used for API imports
-        '',  -- Not used for API imports
-        '',  -- Not used for API imports
+        '/app/data/source/newyorkfed',
+        '/app/data/archive/newyorkfed',
+        'newyorkfed_referencerates_latest_.*\.json',
         'JSON',
         'static',
         'ReferenceRates_Latest',
@@ -70,8 +71,12 @@ BEGIN
         'refRates',
         60
     ) ON CONFLICT (config_name) DO UPDATE SET
+        source_directory = EXCLUDED.source_directory,
+        archive_directory = EXCLUDED.archive_directory,
+        file_pattern = EXCLUDED.file_pattern,
         api_base_url = EXCLUDED.api_base_url,
         api_endpoint_path = EXCLUDED.api_endpoint_path,
+        api_response_root_path = EXCLUDED.api_response_root_path,
         is_active = EXCLUDED.is_active;
 
     -- 2. Reference Rates - Search (30 days)
@@ -87,7 +92,10 @@ BEGIN
     ) VALUES (
         'NewYorkFed_ReferenceRates_Search',
         'NewYorkFed', 'ReferenceRates',
-        '', '', '', 'JSON',
+        '/app/data/source/newyorkfed',
+        '/app/data/archive/newyorkfed',
+        'newyorkfed_referencerates_search_.*\.json',
+        'JSON',
         'static', 'ReferenceRates_Search',
         'static', NULL, 'yyyy-MM-dd', NULL,
         'feeds.newyorkfed_reference_rates', v_strategy_id, FALSE, FALSE,
@@ -97,7 +105,10 @@ BEGIN
         'GET', 'json', 'refRates',
         '{"startDate": "{{date-30d}}", "endDate": "{{date}}"}'::jsonb,
         60
-    ) ON CONFLICT (config_name) DO NOTHING;
+    ) ON CONFLICT (config_name) DO UPDATE SET
+        source_directory = EXCLUDED.source_directory,
+        archive_directory = EXCLUDED.archive_directory,
+        file_pattern = EXCLUDED.file_pattern;
 
     -- 3. SOMA Holdings
     INSERT INTO dba.timportconfig (
@@ -112,16 +123,24 @@ BEGIN
     ) VALUES (
         'NewYorkFed_SOMA_Holdings',
         'NewYorkFed', 'SOMAHoldings',
-        '', '', '', 'JSON',
+        '/app/data/source/newyorkfed',
+        '/app/data/archive/newyorkfed',
+        'newyorkfed_soma_holdings_.*\.json',
+        'JSON',
         'static', 'SOMA_Holdings',
         'static', NULL, 'yyyy-MM-dd', NULL,
         'feeds.newyorkfed_soma_holdings', v_strategy_id, TRUE, FALSE,
         'api',
         'https://markets.newyorkfed.org',
-        '/api/soma/summary.{format}',
-        'GET', 'json', 'soma',
+        '/api/soma/tsy/get/monthly.{format}',
+        'GET', 'json', 'soma.holdings',
         60
-    ) ON CONFLICT (config_name) DO NOTHING;
+    ) ON CONFLICT (config_name) DO UPDATE SET
+        source_directory = EXCLUDED.source_directory,
+        archive_directory = EXCLUDED.archive_directory,
+        file_pattern = EXCLUDED.file_pattern,
+        api_endpoint_path = EXCLUDED.api_endpoint_path,
+        api_response_root_path = EXCLUDED.api_response_root_path;
 
     -- 4. Repo Operations
     INSERT INTO dba.timportconfig (
@@ -136,16 +155,24 @@ BEGIN
     ) VALUES (
         'NewYorkFed_Repo_Operations',
         'NewYorkFed', 'RepoOperations',
-        '', '', '', 'JSON',
+        '/app/data/source/newyorkfed',
+        '/app/data/archive/newyorkfed',
+        'newyorkfed_repo_operations_.*\.json',
+        'JSON',
         'static', 'Repo_Operations',
         'static', NULL, 'yyyy-MM-dd', NULL,
         'feeds.newyorkfed_repo_operations', v_strategy_id, TRUE, FALSE,
         'api',
         'https://markets.newyorkfed.org',
-        '/api/repo/results/search.{format}',
-        'GET', 'json', 'repo',
+        '/api/rp/all/all/results/lastTwoWeeks.{format}',
+        'GET', 'json', 'repo.operations',
         60
-    ) ON CONFLICT (config_name) DO NOTHING;
+    ) ON CONFLICT (config_name) DO UPDATE SET
+        source_directory = EXCLUDED.source_directory,
+        archive_directory = EXCLUDED.archive_directory,
+        file_pattern = EXCLUDED.file_pattern,
+        api_endpoint_path = EXCLUDED.api_endpoint_path,
+        api_response_root_path = EXCLUDED.api_response_root_path;
 
     -- 5. Reverse Repo Operations
     INSERT INTO dba.timportconfig (
@@ -160,18 +187,26 @@ BEGIN
     ) VALUES (
         'NewYorkFed_ReverseRepo_Operations',
         'NewYorkFed', 'RepoOperations',
-        '', '', '', 'JSON',
+        '/app/data/source/newyorkfed',
+        '/app/data/archive/newyorkfed',
+        'newyorkfed_reverserepo_operations_.*\.json',
+        'JSON',
         'static', 'ReverseRepo_Operations',
         'static', NULL, 'yyyy-MM-dd', NULL,
         'feeds.newyorkfed_repo_operations', v_strategy_id, TRUE, FALSE,
         'api',
         'https://markets.newyorkfed.org',
-        '/api/reverserepo/results/search.{format}',
-        'GET', 'json', 'reverserepo',
+        '/api/rp/reverserepo/all/results/lastTwoWeeks.{format}',
+        'GET', 'json', 'repo.operations',
         60
-    ) ON CONFLICT (config_name) DO NOTHING;
+    ) ON CONFLICT (config_name) DO UPDATE SET
+        source_directory = EXCLUDED.source_directory,
+        archive_directory = EXCLUDED.archive_directory,
+        file_pattern = EXCLUDED.file_pattern,
+        api_endpoint_path = EXCLUDED.api_endpoint_path,
+        api_response_root_path = EXCLUDED.api_response_root_path;
 
-    -- 6-10: Stub configs for remaining endpoints
+    -- 6. Agency MBS
     INSERT INTO dba.timportconfig (
         config_name, datasource, datasettype,
         source_directory, archive_directory, file_pattern, file_type,
@@ -179,52 +214,255 @@ BEGIN
         dateconfig, datelocation, dateformat, delimiter,
         target_table, importstrategyid, is_active, is_blob,
         import_mode, api_base_url, api_endpoint_path,
-        api_http_method, api_response_format, api_rate_limit_rpm
-    ) VALUES
-        ('NewYorkFed_Agency_MBS', 'NewYorkFed', 'AgencyMBS',
-         '', '', '', 'JSON', 'static', 'Agency_MBS',
-         'static', NULL, 'yyyy-MM-dd', NULL,
-         'feeds.newyorkfed_agency_mbs', v_strategy_id, FALSE, FALSE,
-         'api', 'https://markets.newyorkfed.org', '/api/ambs/...', 'GET', 'json', 60),
+        api_http_method, api_response_format, api_response_root_path,
+        api_rate_limit_rpm
+    ) VALUES (
+        'NewYorkFed_Agency_MBS',
+        'NewYorkFed', 'AgencyMBS',
+        '/app/data/source/newyorkfed',
+        '/app/data/archive/newyorkfed',
+        'newyorkfed_agency_mbs_.*\.json',
+        'JSON',
+        'static', 'Agency_MBS',
+        'static', NULL, 'yyyy-MM-dd', NULL,
+        'feeds.newyorkfed_agency_mbs', v_strategy_id, FALSE, FALSE,
+        'api',
+        'https://markets.newyorkfed.org',
+        '/api/ambs/all/announcements/summary/latest.{format}',
+        'GET', 'json', 'ambs.auctions',
+        60
+    ) ON CONFLICT (config_name) DO UPDATE SET
+        source_directory = EXCLUDED.source_directory,
+        archive_directory = EXCLUDED.archive_directory,
+        file_pattern = EXCLUDED.file_pattern,
+        api_endpoint_path = EXCLUDED.api_endpoint_path,
+        api_response_root_path = EXCLUDED.api_response_root_path;
 
-        ('NewYorkFed_FX_Swaps', 'NewYorkFed', 'FXSwaps',
-         '', '', '', 'JSON', 'static', 'FX_Swaps',
-         'static', NULL, 'yyyy-MM-dd', NULL,
-         'feeds.newyorkfed_fx_swaps', v_strategy_id, FALSE, FALSE,
-         'api', 'https://markets.newyorkfed.org', '/api/fxswaps/...', 'GET', 'json', 60),
+    -- 7. FX Swaps
+    INSERT INTO dba.timportconfig (
+        config_name, datasource, datasettype,
+        source_directory, archive_directory, file_pattern, file_type,
+        metadata_label_source, metadata_label_location,
+        dateconfig, datelocation, dateformat, delimiter,
+        target_table, importstrategyid, is_active, is_blob,
+        import_mode, api_base_url, api_endpoint_path,
+        api_http_method, api_response_format, api_response_root_path,
+        api_rate_limit_rpm
+    ) VALUES (
+        'NewYorkFed_FX_Swaps',
+        'NewYorkFed', 'FXSwaps',
+        '/app/data/source/newyorkfed',
+        '/app/data/archive/newyorkfed',
+        'newyorkfed_fx_swaps_.*\.json',
+        'JSON',
+        'static', 'FX_Swaps',
+        'static', NULL, 'yyyy-MM-dd', NULL,
+        'feeds.newyorkfed_fx_swaps', v_strategy_id, FALSE, FALSE,
+        'api',
+        'https://markets.newyorkfed.org',
+        '/api/fxs/all/latest.{format}',
+        'GET', 'json', 'fxSwaps.operations',
+        60
+    ) ON CONFLICT (config_name) DO UPDATE SET
+        source_directory = EXCLUDED.source_directory,
+        archive_directory = EXCLUDED.archive_directory,
+        file_pattern = EXCLUDED.file_pattern,
+        api_endpoint_path = EXCLUDED.api_endpoint_path,
+        api_response_root_path = EXCLUDED.api_response_root_path;
 
-        ('NewYorkFed_Guide_Sheets', 'NewYorkFed', 'GuideSheets',
-         '', '', '', 'JSON', 'static', 'Guide_Sheets',
-         'static', NULL, 'yyyy-MM-dd', NULL,
-         'feeds.newyorkfed_guide_sheets', v_strategy_id, FALSE, FALSE,
-         'api', 'https://markets.newyorkfed.org', '/api/guidesheets/...', 'GET', 'json', 60),
+    -- 8. Securities Lending
+    INSERT INTO dba.timportconfig (
+        config_name, datasource, datasettype,
+        source_directory, archive_directory, file_pattern, file_type,
+        metadata_label_source, metadata_label_location,
+        dateconfig, datelocation, dateformat, delimiter,
+        target_table, importstrategyid, is_active, is_blob,
+        import_mode, api_base_url, api_endpoint_path,
+        api_http_method, api_response_format, api_response_root_path,
+        api_rate_limit_rpm
+    ) VALUES (
+        'NewYorkFed_Securities_Lending',
+        'NewYorkFed', 'SecuritiesLending',
+        '/app/data/source/newyorkfed',
+        '/app/data/archive/newyorkfed',
+        'newyorkfed_securities_lending_.*\.json',
+        'JSON',
+        'static', 'Securities_Lending',
+        'static', NULL, 'yyyy-MM-dd', NULL,
+        'feeds.newyorkfed_securities_lending', v_strategy_id, FALSE, FALSE,
+        'api',
+        'https://markets.newyorkfed.org',
+        '/api/seclending/all/results/summary/latest.{format}',
+        'GET', 'json', 'seclending.operations',
+        60
+    ) ON CONFLICT (config_name) DO UPDATE SET
+        source_directory = EXCLUDED.source_directory,
+        archive_directory = EXCLUDED.archive_directory,
+        file_pattern = EXCLUDED.file_pattern,
+        api_endpoint_path = EXCLUDED.api_endpoint_path,
+        api_response_root_path = EXCLUDED.api_response_root_path;
 
-        ('NewYorkFed_PD_Statistics', 'NewYorkFed', 'PDStatistics',
-         '', '', '', 'JSON', 'static', 'PD_Statistics',
-         'static', NULL, 'yyyy-MM-dd', NULL,
-         'feeds.newyorkfed_pd_statistics', v_strategy_id, FALSE, FALSE,
-         'api', 'https://markets.newyorkfed.org', '/api/pd/...', 'GET', 'json', 60),
+    -- 9. Guide Sheets
+    INSERT INTO dba.timportconfig (
+        config_name, datasource, datasettype,
+        source_directory, archive_directory, file_pattern, file_type,
+        metadata_label_source, metadata_label_location,
+        dateconfig, datelocation, dateformat, delimiter,
+        target_table, importstrategyid, is_active, is_blob,
+        import_mode, api_base_url, api_endpoint_path,
+        api_http_method, api_response_format, api_response_root_path,
+        api_rate_limit_rpm
+    ) VALUES (
+        'NewYorkFed_Guide_Sheets',
+        'NewYorkFed', 'GuideSheets',
+        '/app/data/source/newyorkfed',
+        '/app/data/archive/newyorkfed',
+        'newyorkfed_guide_sheets_.*\.json',
+        'JSON',
+        'static', 'Guide_Sheets',
+        'static', NULL, 'yyyy-MM-dd', NULL,
+        'feeds.newyorkfed_guide_sheets', v_strategy_id, FALSE, FALSE,
+        'api',
+        'https://markets.newyorkfed.org',
+        '/api/guidesheets/si/latest.{format}',
+        'GET', 'json', 'guidesheet.si',
+        60
+    ) ON CONFLICT (config_name) DO UPDATE SET
+        source_directory = EXCLUDED.source_directory,
+        archive_directory = EXCLUDED.archive_directory,
+        file_pattern = EXCLUDED.file_pattern,
+        api_endpoint_path = EXCLUDED.api_endpoint_path,
+        api_response_root_path = EXCLUDED.api_response_root_path;
 
-        ('NewYorkFed_Market_Share', 'NewYorkFed', 'MarketShare',
-         '', '', '', 'JSON', 'static', 'Market_Share',
-         'static', NULL, 'yyyy-MM-dd', NULL,
-         'feeds.newyorkfed_market_share', v_strategy_id, FALSE, FALSE,
-         'api', 'https://markets.newyorkfed.org', '/api/marketshare/...', 'GET', 'json', 60),
+    -- 10. PD Statistics
+    INSERT INTO dba.timportconfig (
+        config_name, datasource, datasettype,
+        source_directory, archive_directory, file_pattern, file_type,
+        metadata_label_source, metadata_label_location,
+        dateconfig, datelocation, dateformat, delimiter,
+        target_table, importstrategyid, is_active, is_blob,
+        import_mode, api_base_url, api_endpoint_path,
+        api_http_method, api_response_format, api_response_root_path,
+        api_rate_limit_rpm
+    ) VALUES (
+        'NewYorkFed_PD_Statistics',
+        'NewYorkFed', 'PDStatistics',
+        '/app/data/source/newyorkfed',
+        '/app/data/archive/newyorkfed',
+        'newyorkfed_pd_statistics_.*\.json',
+        'JSON',
+        'static', 'PD_Statistics',
+        'static', NULL, 'yyyy-MM-dd', NULL,
+        'feeds.newyorkfed_pd_statistics', v_strategy_id, FALSE, FALSE,
+        'api',
+        'https://markets.newyorkfed.org',
+        '/api/pd/get/all/timeseries.{format}',
+        'GET', 'json', 'pd',
+        60
+    ) ON CONFLICT (config_name) DO UPDATE SET
+        source_directory = EXCLUDED.source_directory,
+        archive_directory = EXCLUDED.archive_directory,
+        file_pattern = EXCLUDED.file_pattern,
+        api_endpoint_path = EXCLUDED.api_endpoint_path,
+        api_response_root_path = EXCLUDED.api_response_root_path;
 
-        ('NewYorkFed_Securities_Lending', 'NewYorkFed', 'SecuritiesLending',
-         '', '', '', 'JSON', 'static', 'Securities_Lending',
-         'static', NULL, 'yyyy-MM-dd', NULL,
-         'feeds.newyorkfed_securities_lending', v_strategy_id, FALSE, FALSE,
-         'api', 'https://markets.newyorkfed.org', '/api/seclending/...', 'GET', 'json', 60),
+    -- 11. Market Share
+    INSERT INTO dba.timportconfig (
+        config_name, datasource, datasettype,
+        source_directory, archive_directory, file_pattern, file_type,
+        metadata_label_source, metadata_label_location,
+        dateconfig, datelocation, dateformat, delimiter,
+        target_table, importstrategyid, is_active, is_blob,
+        import_mode, api_base_url, api_endpoint_path,
+        api_http_method, api_response_format, api_response_root_path,
+        api_rate_limit_rpm
+    ) VALUES (
+        'NewYorkFed_Market_Share',
+        'NewYorkFed', 'MarketShare',
+        '/app/data/source/newyorkfed',
+        '/app/data/archive/newyorkfed',
+        'newyorkfed_market_share_.*\.json',
+        'JSON',
+        'static', 'Market_Share',
+        'static', NULL, 'yyyy-MM-dd', NULL,
+        'feeds.newyorkfed_market_share', v_strategy_id, FALSE, FALSE,
+        'api',
+        'https://markets.newyorkfed.org',
+        '/api/marketshare/qtrly/latest.{format}',
+        'GET', 'json', 'marketshare',
+        60
+    ) ON CONFLICT (config_name) DO UPDATE SET
+        source_directory = EXCLUDED.source_directory,
+        archive_directory = EXCLUDED.archive_directory,
+        file_pattern = EXCLUDED.file_pattern,
+        api_endpoint_path = EXCLUDED.api_endpoint_path,
+        api_response_root_path = EXCLUDED.api_response_root_path;
 
-        ('NewYorkFed_Treasury_Operations', 'NewYorkFed', 'TreasuryOperations',
-         '', '', '', 'JSON', 'static', 'Treasury_Operations',
-         'static', NULL, 'yyyy-MM-dd', NULL,
-         'feeds.newyorkfed_treasury_operations', v_strategy_id, FALSE, FALSE,
-         'api', 'https://markets.newyorkfed.org', '/api/treasury/...', 'GET', 'json', 60)
-    ON CONFLICT (config_name) DO NOTHING;
+    -- 12. Treasury Operations
+    INSERT INTO dba.timportconfig (
+        config_name, datasource, datasettype,
+        source_directory, archive_directory, file_pattern, file_type,
+        metadata_label_source, metadata_label_location,
+        dateconfig, datelocation, dateformat, delimiter,
+        target_table, importstrategyid, is_active, is_blob,
+        import_mode, api_base_url, api_endpoint_path,
+        api_http_method, api_response_format, api_response_root_path,
+        api_rate_limit_rpm
+    ) VALUES (
+        'NewYorkFed_Treasury_Operations',
+        'NewYorkFed', 'TreasuryOperations',
+        '/app/data/source/newyorkfed',
+        '/app/data/archive/newyorkfed',
+        'newyorkfed_treasury_operations_.*\.json',
+        'JSON',
+        'static', 'Treasury_Operations',
+        'static', NULL, 'yyyy-MM-dd', NULL,
+        'feeds.newyorkfed_treasury_operations', v_strategy_id, FALSE, FALSE,
+        'api',
+        'https://markets.newyorkfed.org',
+        '/api/tsy/all/results/summary/lastTwoWeeks.{format}',
+        'GET', 'json', 'treasury.auctions',
+        60
+    ) ON CONFLICT (config_name) DO UPDATE SET
+        source_directory = EXCLUDED.source_directory,
+        archive_directory = EXCLUDED.archive_directory,
+        file_pattern = EXCLUDED.file_pattern,
+        api_endpoint_path = EXCLUDED.api_endpoint_path,
+        api_response_root_path = EXCLUDED.api_response_root_path;
 
-    RAISE NOTICE 'Created 10 NewYorkFed import configurations';
-    RAISE NOTICE '  - 4 active (ReferenceRates, SOMA, Repo, ReverseRepo)';
-    RAISE NOTICE '  - 6 inactive (stubs awaiting endpoint details)';
+    -- 13. Counterparties
+    INSERT INTO dba.timportconfig (
+        config_name, datasource, datasettype,
+        source_directory, archive_directory, file_pattern, file_type,
+        metadata_label_source, metadata_label_location,
+        dateconfig, datelocation, dateformat, delimiter,
+        target_table, importstrategyid, is_active, is_blob,
+        import_mode, api_base_url, api_endpoint_path,
+        api_http_method, api_response_format, api_response_root_path,
+        api_rate_limit_rpm
+    ) VALUES (
+        'NewYorkFed_Counterparties',
+        'NewYorkFed', 'FXCounterparties',
+        '/app/data/source/newyorkfed',
+        '/app/data/archive/newyorkfed',
+        'newyorkfed_counterparties_.*\.json',
+        'JSON',
+        'static', 'Counterparties',
+        'static', NULL, 'yyyy-MM-dd', NULL,
+        'feeds.newyorkfed_counterparties', v_strategy_id, FALSE, FALSE,
+        'api',
+        'https://markets.newyorkfed.org',
+        '/api/fxs/list/counterparties.{format}',
+        'GET', 'json', 'fxSwaps.counterparties',
+        60
+    ) ON CONFLICT (config_name) DO UPDATE SET
+        source_directory = EXCLUDED.source_directory,
+        archive_directory = EXCLUDED.archive_directory,
+        file_pattern = EXCLUDED.file_pattern,
+        api_endpoint_path = EXCLUDED.api_endpoint_path,
+        api_response_root_path = EXCLUDED.api_response_root_path;
+
+    RAISE NOTICE 'Created 13 NewYorkFed import configurations';
+    RAISE NOTICE '  - 4 active (ReferenceRates Latest, SOMA, Repo, ReverseRepo)';
+    RAISE NOTICE '  - 9 inactive (ReferenceRates Search, Agency MBS, FX Swaps, Securities Lending, Guide Sheets, PD Stats, Market Share, Treasury, Counterparties)';
 END $$;

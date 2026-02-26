@@ -1,20 +1,28 @@
-"""Integration tests for NewYorkFed ETL jobs
+"""Integration tests for NewYorkFed ETL collector
 
-Tests the end-to-end ETL pipeline for NewYorkFed Markets API:
-- Reference Rates job with live API (optional)
-- Reference Rates job with mocked API
-- Data transformation and loading
-- Database integration
+Tests the data transformation pipeline for the NewYorkFed collector:
+- Reference Rates transform with mock data
+- Data transformation correctness
+- Edge cases (empty data, missing fields, malformed dates)
 """
 
 import pytest
 import json
 from datetime import date, datetime
 from pathlib import Path
-from unittest.mock import patch, MagicMock
 
-from etl.jobs.run_newyorkfed_reference_rates import NewYorkFedReferenceRatesJob
-from common.db_utils import fetch_dict
+from etl.collectors.newyorkfed_collector import (
+    transform_reference_rates,
+    transform_soma_holdings,
+    transform_repo_operations,
+    transform_agency_mbs,
+    transform_fx_swaps,
+    transform_counterparties,
+    transform_securities_lending,
+    transform_guide_sheets,
+    transform_treasury_operations,
+    transform_passthrough,
+)
 
 
 # ============================================================================
@@ -29,93 +37,24 @@ def mock_responses():
         return json.load(f)
 
 
-@pytest.fixture
-def cleanup_test_data():
-    """Cleanup test data after test runs"""
-    yield
-    # Cleanup logic would go here if needed
-    # For now, dry-run tests don't create data
-
-
 # ============================================================================
-# TEST Reference Rates Job - Dry Run
+# TEST Reference Rates Transform
 # ============================================================================
 
 @pytest.mark.integration
-class TestReferenceRatesJobDryRun:
-    """Tests for Reference Rates job in dry-run mode (no DB writes)"""
+class TestReferenceRatesTransform:
+    """Tests for Reference Rates transform function"""
 
-    @patch('etl.jobs.run_newyorkfed_reference_rates.NewYorkFedAPIClient')
-    def test_dry_run_extract_latest(self, mock_client_class, mock_responses):
-        """Should extract latest rates without database writes"""
-        # Setup mock
-        mock_client = MagicMock()
-        mock_client.get_reference_rates_latest.return_value = mock_responses['reference_rates_latest']['refRates']
-        mock_client_class.return_value = mock_client
+    def test_transform_latest(self, mock_responses):
+        """Should transform latest rates correctly"""
+        raw_data = mock_responses['reference_rates_latest']['refRates']
+        transformed = transform_reference_rates(raw_data)
 
-        # Create and run job
-        job = NewYorkFedReferenceRatesJob(
-            endpoint_type='latest',
-            run_date=date.today(),
-            dry_run=True
-        )
-
-        success = job.run()
-
-        assert success is True
-        assert job.records_extracted == 3
-        assert job.records_transformed == 3
-        assert job.records_loaded == 3  # Dry run still counts records
-        mock_client.get_reference_rates_latest.assert_called_once()
-
-    @patch('etl.jobs.run_newyorkfed_reference_rates.NewYorkFedAPIClient')
-    def test_dry_run_extract_search(self, mock_client_class, mock_responses):
-        """Should extract date range without database writes"""
-        # Setup mock
-        mock_client = MagicMock()
-        mock_client.get_reference_rates_search.return_value = mock_responses['reference_rates_search']['refRates']
-        mock_client_class.return_value = mock_client
-
-        # Create and run job
-        job = NewYorkFedReferenceRatesJob(
-            endpoint_type='search',
-            run_date=date.today(),
-            dry_run=True
-        )
-
-        success = job.run()
-
-        assert success is True
-        assert job.records_extracted == 2
-        assert job.records_transformed == 2
-        mock_client.get_reference_rates_search.assert_called_once()
-
-    @patch('etl.jobs.run_newyorkfed_reference_rates.NewYorkFedAPIClient')
-    def test_transformation_logic(self, mock_client_class, mock_responses):
-        """Should correctly transform API response to database schema"""
-        # Setup mock
-        mock_client = MagicMock()
-        mock_client.get_reference_rates_latest.return_value = mock_responses['reference_rates_latest']['refRates']
-        mock_client_class.return_value = mock_client
-
-        # Create and run job
-        job = NewYorkFedReferenceRatesJob(
-            endpoint_type='latest',
-            run_date=date.today(),
-            dry_run=True
-        )
-
-        # Run extract and transform
-        job.setup()
-        data = job.extract()
-        transformed = job.transform(data)
-
-        # Verify transformation
         assert len(transformed) == 3
 
         # Check SOFR record
         sofr = next(r for r in transformed if r['rate_type'] == 'SOFR')
-        assert sofr['effective_date'] == datetime.strptime('2026-02-04', '%Y-%m-%d').date()
+        assert sofr['effective_date'] == '2026-02-04'
         assert sofr['rate_percent'] == 5.32
         assert sofr['volume_billions'] == 1542.0
         assert sofr['percentile_1'] == 5.30
@@ -130,34 +69,21 @@ class TestReferenceRatesJobDryRun:
         assert effr['target_range_from'] == 5.25
         assert effr['target_range_to'] == 5.50
 
-    @patch('etl.jobs.run_newyorkfed_reference_rates.NewYorkFedAPIClient')
-    def test_handles_empty_response(self, mock_client_class):
+    def test_transform_search(self, mock_responses):
+        """Should transform search results correctly"""
+        raw_data = mock_responses['reference_rates_search']['refRates']
+        transformed = transform_reference_rates(raw_data)
+
+        assert len(transformed) == 2
+
+    def test_handles_empty_response(self):
         """Should handle empty API response gracefully"""
-        # Setup mock with empty response
-        mock_client = MagicMock()
-        mock_client.get_reference_rates_latest.return_value = []
-        mock_client_class.return_value = mock_client
+        transformed = transform_reference_rates([])
+        assert len(transformed) == 0
 
-        # Create and run job
-        job = NewYorkFedReferenceRatesJob(
-            endpoint_type='latest',
-            run_date=date.today(),
-            dry_run=True
-        )
-
-        success = job.run()
-
-        assert success is True
-        assert job.records_extracted == 0
-        assert job.records_transformed == 0
-        assert job.records_loaded == 0
-
-    @patch('etl.jobs.run_newyorkfed_reference_rates.NewYorkFedAPIClient')
-    def test_handles_missing_fields(self, mock_client_class):
+    def test_handles_missing_fields(self):
         """Should handle records with missing optional fields"""
-        # Setup mock with minimal data
-        mock_client = MagicMock()
-        mock_client.get_reference_rates_latest.return_value = [
+        data = [
             {
                 'type': 'SOFR',
                 'effectiveDate': '2026-02-04',
@@ -165,26 +91,13 @@ class TestReferenceRatesJobDryRun:
                 # Missing volume and percentiles
             }
         ]
-        mock_client_class.return_value = mock_client
+        transformed = transform_reference_rates(data)
+        assert len(transformed) == 1
+        assert transformed[0]['volume_billions'] is None
 
-        # Create and run job
-        job = NewYorkFedReferenceRatesJob(
-            endpoint_type='latest',
-            run_date=date.today(),
-            dry_run=True
-        )
-
-        success = job.run()
-
-        assert success is True
-        assert job.records_transformed == 1
-
-    @patch('etl.jobs.run_newyorkfed_reference_rates.NewYorkFedAPIClient')
-    def test_handles_malformed_date(self, mock_client_class):
+    def test_handles_malformed_date(self):
         """Should skip records with invalid dates"""
-        # Setup mock with invalid date
-        mock_client = MagicMock()
-        mock_client.get_reference_rates_latest.return_value = [
+        data = [
             {
                 'type': 'SOFR',
                 'effectiveDate': 'invalid-date',
@@ -196,222 +109,149 @@ class TestReferenceRatesJobDryRun:
                 'percentRate': 5.33
             }
         ]
-        mock_client_class.return_value = mock_client
+        transformed = transform_reference_rates(data)
+        # Should skip invalid record, keep valid one
+        assert len(transformed) == 1
+        assert transformed[0]['rate_type'] == 'EFFR'
 
-        # Create and run job
-        job = NewYorkFedReferenceRatesJob(
-            endpoint_type='latest',
-            run_date=date.today(),
-            dry_run=True
-        )
-
-        success = job.run()
-
-        # Should complete successfully, skipping invalid record
-        assert success is True
-        assert job.records_extracted == 2
-        assert job.records_transformed == 1  # Only valid record
-
-    @patch('etl.jobs.run_newyorkfed_reference_rates.NewYorkFedAPIClient')
-    def test_invalid_endpoint_type(self, mock_client_class):
-        """Should raise error for invalid endpoint type"""
-        mock_client = MagicMock()
-        mock_client_class.return_value = mock_client
-
-        job = NewYorkFedReferenceRatesJob(
-            endpoint_type='invalid',
-            run_date=date.today(),
-            dry_run=True
-        )
-
-        with pytest.raises(ValueError) as exc_info:
-            job.run()
-
-        assert 'Invalid endpoint_type' in str(exc_info.value)
-
-
-# ============================================================================
-# TEST Reference Rates Job - Live API (Optional)
-# ============================================================================
-
-@pytest.mark.integration
-@pytest.mark.live_api
-@pytest.mark.skipif(True, reason="Live API tests disabled by default - enable manually")
-class TestReferenceRatesJobLiveAPI:
-    """Tests with actual NewYorkFed API (optional, slow)"""
-
-    def test_live_api_latest_rates(self):
-        """Should successfully fetch real data from NewYorkFed API"""
-        job = NewYorkFedReferenceRatesJob(
-            endpoint_type='latest',
-            run_date=date.today(),
-            dry_run=True
-        )
-
-        success = job.run()
-
-        assert success is True
-        assert job.records_extracted > 0
-        assert job.records_transformed > 0
-        # Verify we got expected rate types
-        # (This would need access to job's transformed data)
-
-
-# ============================================================================
-# TEST Database Integration (Requires DB)
-# ============================================================================
-
-@pytest.mark.integration
-@pytest.mark.database
-class TestReferenceRatesJobDatabase:
-    """Tests that require database connection"""
-
-    @pytest.mark.skip(reason="Requires database cleanup mechanism")
-    @patch('etl.jobs.run_newyorkfed_reference_rates.NewYorkFedAPIClient')
-    def test_full_pipeline_with_database(self, mock_client_class, mock_responses, cleanup_test_data):
-        """Should complete full ETL pipeline with database writes"""
-        # Setup mock
-        mock_client = MagicMock()
-        mock_client.get_reference_rates_latest.return_value = mock_responses['reference_rates_latest']['refRates']
-        mock_client_class.return_value = mock_client
-
-        # Create and run job (NOT dry run)
-        job = NewYorkFedReferenceRatesJob(
-            endpoint_type='latest',
-            run_date=date.today(),
-            dry_run=False  # Actually write to DB
-        )
-
-        success = job.run()
-
-        assert success is True
-        assert job.dataset_id is not None
-
-        # Verify data in database
-        query = """
-            SELECT COUNT(*) as count
-            FROM feeds.newyorkfed_reference_rates
-            WHERE datasetid = %s
-        """
-        result = fetch_dict(query, (job.dataset_id,))
-        assert result[0]['count'] == 3
-
-        # Verify dataset metadata
-        query = """
-            SELECT d.*, ds.sourcename, dt.typename
-            FROM dba.tdataset d
-            JOIN dba.tdatasource ds ON d.datasourceid = ds.datasourceid
-            JOIN dba.tdatasettype dt ON d.datasettypeid = dt.datasettypeid
-            WHERE d.datasetid = %s
-        """
-        dataset = fetch_dict(query, (job.dataset_id,))[0]
-        assert dataset['sourcename'] == 'NewYorkFed'
-        assert dataset['typename'] == 'ReferenceRates'
-        assert dataset['statusname'] == 'Active' or 'statusname' not in dataset
-
-
-# ============================================================================
-# TEST CLI Integration
-# ============================================================================
-
-@pytest.mark.integration
-class TestReferenceRatesCLI:
-    """Tests for command-line interface"""
-
-    @patch('etl.jobs.run_newyorkfed_reference_rates.NewYorkFedAPIClient')
-    def test_cli_dry_run_flag(self, mock_client_class, mock_responses):
-        """Should respect --dry-run CLI flag"""
-        # Setup mock
-        mock_client = MagicMock()
-        mock_client.get_reference_rates_latest.return_value = mock_responses['reference_rates_latest']['refRates']
-        mock_client_class.return_value = mock_client
-
-        # Simulate CLI usage
-        import sys
-        old_argv = sys.argv
-        try:
-            sys.argv = ['run_newyorkfed_reference_rates.py', '--dry-run']
-
-            from etl.jobs.run_newyorkfed_reference_rates import main
-            exit_code = main()
-
-            assert exit_code == 0
-        finally:
-            sys.argv = old_argv
-
-    @patch('etl.jobs.run_newyorkfed_reference_rates.NewYorkFedAPIClient')
-    def test_cli_endpoint_type_flag(self, mock_client_class, mock_responses):
-        """Should respect --endpoint-type CLI flag"""
-        # Setup mock
-        mock_client = MagicMock()
-        mock_client.get_reference_rates_search.return_value = mock_responses['reference_rates_search']['refRates']
-        mock_client_class.return_value = mock_client
-
-        # Simulate CLI usage with search endpoint
-        import sys
-        old_argv = sys.argv
-        try:
-            sys.argv = ['run_newyorkfed_reference_rates.py', '--endpoint-type', 'search', '--dry-run']
-
-            from etl.jobs.run_newyorkfed_reference_rates import main
-            exit_code = main()
-
-            assert exit_code == 0
-            mock_client.get_reference_rates_search.assert_called_once()
-        finally:
-            sys.argv = old_argv
-
-
-# ============================================================================
-# TEST Error Handling
-# ============================================================================
-
-@pytest.mark.integration
-class TestErrorHandling:
-    """Tests for error scenarios"""
-
-    @patch('etl.jobs.run_newyorkfed_reference_rates.NewYorkFedAPIClient')
-    def test_api_failure(self, mock_client_class):
-        """Should handle API failures gracefully"""
-        # Setup mock to raise exception
-        mock_client = MagicMock()
-        mock_client.get_reference_rates_latest.side_effect = Exception("API Connection Failed")
-        mock_client_class.return_value = mock_client
-
-        # Create and run job
-        job = NewYorkFedReferenceRatesJob(
-            endpoint_type='latest',
-            run_date=date.today(),
-            dry_run=True
-        )
-
-        # Should raise exception and job should fail
-        with pytest.raises(Exception):
-            job.run()
-
-    @patch('etl.jobs.run_newyorkfed_reference_rates.NewYorkFedAPIClient')
-    def test_transformation_error(self, mock_client_class):
-        """Should log transformation errors and continue"""
-        # Setup mock with data that will cause transformation issues
-        mock_client = MagicMock()
-        mock_client.get_reference_rates_latest.return_value = [
+    def test_handles_missing_date(self):
+        """Should skip records with no effectiveDate"""
+        data = [
             {
-                # Missing required 'type' field
-                'effectiveDate': '2026-02-04',
+                'type': 'SOFR',
                 'percentRate': 5.32
+                # Missing effectiveDate
             }
         ]
-        mock_client_class.return_value = mock_client
+        transformed = transform_reference_rates(data)
+        assert len(transformed) == 0
 
-        # Create and run job
-        job = NewYorkFedReferenceRatesJob(
-            endpoint_type='latest',
-            run_date=date.today(),
-            dry_run=True
-        )
 
-        # Should complete but skip bad records
-        success = job.run()
-        assert success is True
-        assert job.records_extracted == 1
-        # Transformed should be 0 or job should handle gracefully
+# ============================================================================
+# TEST Other Transforms
+# ============================================================================
+
+@pytest.mark.integration
+class TestOtherTransforms:
+    """Tests for other transform functions"""
+
+    def test_repo_operations_type_normalization(self):
+        """Should normalize operation type (lowercase, no spaces)"""
+        data = [
+            {
+                'operationType': 'Reverse Repo',
+                'operationDate': '2026-02-04',
+                'maturityDate': '2026-02-05',
+                'operationId': 'RP-001',
+                'termCalenderDays': 1,
+                'auctionStatus': 'Active',
+                'totalAmtSubmitted': 100.0,
+                'totalAmtAccepted': 80.0,
+            }
+        ]
+        transformed = transform_repo_operations(data)
+        assert len(transformed) == 1
+        assert transformed[0]['operation_type'] == 'reverserepo'
+
+    def test_fx_swaps_term_days_calc(self):
+        """Should calculate term_days from swap_date and maturity_date"""
+        data = [
+            {
+                'swapDate': '2026-02-04',
+                'maturityDate': '2026-02-11',
+                'counterparty': 'ECB',
+                'currencyCode': 'EUR',
+            }
+        ]
+        transformed = transform_fx_swaps(data)
+        assert len(transformed) == 1
+        assert transformed[0]['term_days'] == 7
+
+    def test_fx_swaps_fallback_date_and_currency(self):
+        """Should fall back to operationDate and currency fields"""
+        data = [
+            {
+                'operationDate': '2026-02-04',
+                'maturityDate': '2026-02-11',
+                'currency': 'JPY',
+            }
+        ]
+        transformed = transform_fx_swaps(data)
+        assert len(transformed) == 1
+        assert transformed[0]['swap_date'] == '2026-02-04'
+        assert transformed[0]['currency_code'] == 'JPY'
+
+    def test_counterparties_skip_empty(self):
+        """Should skip records with no counterparty name"""
+        data = [
+            {'counterparty_name': 'ECB'},
+            {'counterparty_name': ''},
+            {'counterparty_name': None},
+            {'counterparty_name': 'Bank of Japan'},
+        ]
+        transformed = transform_counterparties(data)
+        assert len(transformed) == 2
+
+    def test_securities_lending_term_days(self):
+        """Should calculate term_days from loan and return dates"""
+        data = [
+            {
+                'operationDate': '2026-02-04',
+                'loanDate': '2026-02-04',
+                'returnDate': '2026-02-06',
+                'totalParAmtAccepted': 1000000,
+            }
+        ]
+        transformed = transform_securities_lending(data)
+        assert len(transformed) == 1
+        assert transformed[0]['term_days'] == 2
+        assert transformed[0]['par_amount'] == 1000000
+
+    def test_guide_sheets_nested_extraction(self):
+        """Should extract details from nested SI object"""
+        data = [
+            {
+                'reportWeeksFromDate': '2026-02-03',
+                'title': 'FR 2004SI Guide Sheet',
+                'details': [
+                    {
+                        'secType': 'T-Note',
+                        'cusip': '912828ZZ0',
+                        'issueDate': '2026-01-15',
+                        'maturityDate': '2028-01-15',
+                        'percentCouponRate': 4.5,
+                        'settlementPrice': 99.50,
+                        'accruedInterest': 0.25,
+                    }
+                ]
+            }
+        ]
+        transformed = transform_guide_sheets(data)
+        assert len(transformed) == 1
+        assert transformed[0]['publication_date'] == '2026-02-03'
+        assert transformed[0]['guide_type'] == 'FR 2004SI Guide Sheet'
+        assert transformed[0]['security_type'] == 'T-Note'
+
+    def test_passthrough(self):
+        """Should pass data through unchanged"""
+        data = [{'a': 1}, {'b': 2}]
+        result = transform_passthrough(data)
+        assert result == data
+
+    def test_soma_holdings_comma_stripping(self):
+        """Should strip commas from numeric values"""
+        data = [
+            {
+                'asOfDate': '2026-01-31',
+                'securityType': 'Treasury',
+                'cusip': '912828ZZ0',
+                'securityDescription': 'US Treasury Note',
+                'maturityDate': '2028-01-15',
+                'parValue': '1,000,000',
+                'currentFaceValue': '999,500.50',
+            }
+        ]
+        transformed = transform_soma_holdings(data)
+        assert len(transformed) == 1
+        assert transformed[0]['par_value'] == 1000000.0
+        assert transformed[0]['current_face_value'] == 999500.50
