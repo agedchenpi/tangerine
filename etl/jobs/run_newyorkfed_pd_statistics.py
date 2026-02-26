@@ -28,10 +28,7 @@ def main():
         try:
             client = NewYorkFedAPIClient()
             try:
-                raw_data = client.fetch_endpoint(
-                    endpoint_path='/api/pd/get/all/timeseries.{format}',
-                    response_root_path='pd',
-                )
+                raw_data = client.get_pd_statistics_latest()
             finally:
                 client.close()
             if not raw_data:

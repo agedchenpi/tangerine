@@ -16,6 +16,7 @@ Provides access to 40+ endpoints across 10 categories:
 API Documentation: https://markets.newyorkfed.org/static/docs/markets-api.html
 """
 
+import re
 from typing import Dict, List, Optional, Any
 from etl.base.api_client import BaseAPIClient
 
@@ -71,6 +72,13 @@ class NewYorkFedAPIClient(BaseAPIClient):
             'Accept': 'application/json',
             'User-Agent': 'Tangerine-ETL/1.0'
         }
+
+    def get(self, endpoint: str, params=None):
+        """Override get() to sanitize NY Fed responses that use bare * for suppressed values."""
+        response = self._make_request('GET', endpoint, params=params)
+        text = re.sub(r':\s*\*\s*(?=[,}\]])', ': null', response.text)
+        import json
+        return json.loads(text)
 
     def fetch_endpoint(
         self,
@@ -187,6 +195,33 @@ class NewYorkFedAPIClient(BaseAPIClient):
             return [result]
 
     # Convenience methods for common endpoints
+
+    def get_pd_statistics_latest(self) -> List[Dict]:
+        """
+        Fetch the latest Primary Dealer Statistics survey.
+
+        Dynamically discovers the current series break from the list endpoint,
+        then fetches the latest survey data for that series break.
+
+        Note: /api/pd/get/all/timeseries.json does not exist — the /all/ path
+        only works for CSV format. This method uses the correct JSON endpoints.
+
+        Returns:
+            List of dicts with asofdate, keyid, and value fields
+        """
+        series_list = self.fetch_endpoint(
+            endpoint_path='/api/pd/list/timeseries.{format}',
+            response_root_path='pd.timeseries',
+        )
+        if not series_list:
+            self.logger.warning("PD timeseries list returned empty — cannot determine series break")
+            return []
+        seriesbreak = series_list[0].get('seriesbreak', 'SBN2024')
+        self.logger.info(f"Fetching PD Statistics for series break: {seriesbreak}")
+        return self.fetch_endpoint(
+            endpoint_path=f'/api/pd/latest/{seriesbreak}.{{format}}',
+            response_root_path='pd.timeseries',
+        )
 
     def get_reference_rates_latest(self) -> List[Dict]:
         """

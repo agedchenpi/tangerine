@@ -30,7 +30,7 @@ def main():
             try:
                 raw_data = client.fetch_endpoint(
                     endpoint_path='/api/marketshare/qtrly/latest.{format}',
-                    response_root_path='marketshare',
+                    response_root_path='pd.marketshare',
                 )
             finally:
                 client.close()

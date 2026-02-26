@@ -29,7 +29,9 @@ PostgreSQL 18 database with two schemas:
 │                                                                  │
 │ Tracking & Logging:                                              │
 │   tdataset         - Dataset metadata                            │
-│   tlogentry        - ETL execution logs                          │
+│   tlogentry        - ETL execution logs (generic_import)         │
+│   tjobrun          - High-level ETL job run record               │
+│   tjobstep         - Individual step within a job run            │
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
@@ -98,6 +100,47 @@ stepruntime NUMERIC(10,2),               -- Seconds
 created_date TIMESTAMP DEFAULT NOW()
 ```
 
+### dba.tjobrun
+
+```sql
+-- One row per ETL script execution (run_*.py or generic_import.py)
+jobrunid      SERIAL PRIMARY KEY,
+job_name      VARCHAR(100) NOT NULL,           -- e.g. 'run_newyorkfed_reference_rates'
+config_name   VARCHAR(100) NOT NULL,           -- e.g. 'NewYorkFed_ReferenceRates_Latest'
+run_uuid      VARCHAR(36),                     -- links to tlogentry for db_import step
+started_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+completed_at  TIMESTAMP,
+status        VARCHAR(20) NOT NULL DEFAULT 'running'
+              CHECK (status IN ('running','success','failed','partial')),
+triggered_by  VARCHAR(50) NOT NULL DEFAULT 'manual',
+dry_run       BOOLEAN NOT NULL DEFAULT FALSE,
+error_message TEXT,
+created_date  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+created_by    VARCHAR(50) NOT NULL DEFAULT 'etl_user'
+-- Indexes: ix_tjobrun_started_at (DESC), ix_tjobrun_status, ix_tjobrun_job_name
+```
+
+### dba.tjobstep
+
+```sql
+-- One row per step within a job run (e.g. data_collection, db_import)
+jobstepid    SERIAL PRIMARY KEY,
+jobrunid     INT NOT NULL REFERENCES dba.tjobrun(jobrunid) ON DELETE CASCADE,
+step_name    VARCHAR(50) NOT NULL,             -- 'data_collection' or 'db_import'
+step_order   SMALLINT NOT NULL,
+display_name VARCHAR(100) NOT NULL,            -- Human-readable label
+started_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+completed_at TIMESTAMP,
+status       VARCHAR(20) NOT NULL DEFAULT 'running'
+             CHECK (status IN ('pending','running','success','failed','skipped')),
+records_in   INT,
+records_out  INT,
+step_runtime FLOAT,                            -- Seconds
+log_run_uuid VARCHAR(36),                      -- Links to dba.tlogentry for import logs
+message      TEXT
+-- Index: ix_tjobstep_jobrunid
+```
+
 ### dba.tpubsub_events
 
 ```sql
@@ -161,6 +204,13 @@ feeds.{table}
 
 tpubsub_subscribers
     └── config_id → timportconfig OR tinboxconfig OR treportmanager
+
+tjobrun
+    └── (no FK — job_name and config_name are denormalized strings)
+
+tjobstep
+    └── jobrunid → tjobrun.jobrunid ON DELETE CASCADE
+    └── log_run_uuid → tlogentry.run_uuid (soft link, no FK)
 ```
 
 ## Querying Patterns

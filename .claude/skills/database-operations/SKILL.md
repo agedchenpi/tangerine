@@ -87,7 +87,9 @@ COMMENT ON COLUMN dba.ttablename.name IS 'Description of column';
 | `tdataset` | Dataset tracking | datasetid, label, datasetdate, datastatusid |
 | `tdatasource` | Data source reference | datasourceid, sourcename |
 | `tdatasettype` | Dataset type reference | datasettypeid, typename |
-| `tlogentry` | ETL execution logs | run_uuid, message, stepruntime |
+| `tlogentry` | ETL execution logs (generic_import) | run_uuid, message, stepruntime |
+| `tjobrun` | High-level job run record (one per script execution) | jobrunid, job_name, config_name, status, triggered_by, dry_run |
+| `tjobstep` | Individual step within a job run | jobstepid, jobrunid, step_name, status, records_in, records_out, log_run_uuid |
 | `tinboxconfig` | Gmail inbox rules | inbox_config_id, subject_pattern, target_directory |
 | `treportmanager` | Report configurations | report_id, recipients, body_template |
 | `tscheduler` | Cron job definitions | scheduler_id, job_type, cron_* fields |

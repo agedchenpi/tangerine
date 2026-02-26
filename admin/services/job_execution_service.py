@@ -131,6 +131,48 @@ def execute_import_job(
         raise
 
 
+def execute_etl_script(
+    job_name: str,
+    dry_run: bool = False,
+    timeout: int = 300
+) -> Generator[str, None, None]:
+    """
+    Execute a run_*.py ETL script by job_name.
+    job_name: e.g. 'run_newyorkfed_reference_rates' → runs etl/jobs/run_newyorkfed_reference_rates.py
+    """
+    cmd = ["python", f"etl/jobs/{job_name}.py"]
+    if dry_run:
+        cmd.append("--dry-run")
+
+    try:
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            universal_newlines=True
+        )
+
+        for line in process.stdout:
+            yield line.rstrip('\n')
+
+        process.wait(timeout=timeout)
+
+        if process.returncode != 0:
+            yield f"\n❌ Job failed with exit code {process.returncode}"
+        else:
+            yield f"\n✅ Job completed successfully"
+
+    except subprocess.TimeoutExpired:
+        process.kill()
+        yield f"\n⏱️ Job execution exceeded timeout of {timeout} seconds"
+        raise
+    except Exception as e:
+        yield f"\n❌ Error executing job: {str(e)}"
+        raise
+
+
 def validate_import_config(config_id: int) -> tuple[bool, Optional[str]]:
     """
     Validate that an import configuration exists and is active.
