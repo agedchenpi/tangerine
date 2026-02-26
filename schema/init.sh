@@ -60,6 +60,9 @@ $PSQL -f /app/schema/dba/data/newyorkfed_reference_data.sql
 $PSQL -f /app/schema/dba/data/newyorkfed_import_configs.sql
 $PSQL -f /app/schema/dba/data/smoketest_reference_data.sql
 $PSQL -f /app/schema/dba/data/newyorkfed_scheduler_jobs.sql
+$PSQL -f /app/schema/dba/data/bankofengland_reference_data.sql
+$PSQL -f /app/schema/dba/data/bankofengland_import_configs.sql
+$PSQL -f /app/schema/dba/data/bankofengland_scheduler_jobs.sql
 $PSQL -f /app/schema/dba/data/smoketest_scheduler_job.sql
 
 # Execute DBA views (after data is loaded)
@@ -77,6 +80,7 @@ $PSQL -f /app/schema/feeds/newyorkfed_fx_swaps.sql
 $PSQL -f /app/schema/feeds/newyorkfed_guide_sheets.sql
 $PSQL -f /app/schema/feeds/newyorkfed_securities_lending.sql
 $PSQL -f /app/schema/feeds/newyorkfed_treasury_operations.sql
+$PSQL -f /app/schema/feeds/bankofengland_sonia_rates.sql
 
 # Optional: Execute shared_queries.sql last (if exists)
 if [ -f /app/schema/shared_queries.sql ]; then
