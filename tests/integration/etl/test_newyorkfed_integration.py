@@ -1,6 +1,6 @@
-"""Integration tests for NewYorkFed ETL collector
+"""Integration tests for NewYorkFed ETL scripts
 
-Tests the data transformation pipeline for the NewYorkFed collector:
+Tests the data transformation pipeline for the NewYorkFed scripts:
 - Reference Rates transform with mock data
 - Data transformation correctness
 - Edge cases (empty data, missing fields, malformed dates)
@@ -11,18 +11,15 @@ import json
 from datetime import date, datetime
 from pathlib import Path
 
-from etl.collectors.newyorkfed_collector import (
-    transform_reference_rates,
-    transform_soma_holdings,
-    transform_repo_operations,
-    transform_agency_mbs,
-    transform_fx_swaps,
-    transform_counterparties,
-    transform_securities_lending,
-    transform_guide_sheets,
-    transform_treasury_operations,
-    transform_passthrough,
-)
+from etl.jobs.run_newyorkfed_reference_rates import transform as transform_reference_rates
+from etl.jobs.run_newyorkfed_soma_holdings import transform as transform_soma_holdings
+from etl.jobs.run_newyorkfed_repo import transform as transform_repo_operations
+from etl.jobs.run_newyorkfed_agency_mbs import transform as transform_agency_mbs
+from etl.jobs.run_newyorkfed_fx_swaps import transform as transform_fx_swaps
+from etl.jobs.run_newyorkfed_counterparties import transform as transform_counterparties
+from etl.jobs.run_newyorkfed_securities_lending import transform as transform_securities_lending
+from etl.jobs.run_newyorkfed_guide_sheets import transform as transform_guide_sheets
+from etl.jobs.run_newyorkfed_treasury import transform as transform_treasury_operations
 
 
 # ============================================================================
@@ -231,12 +228,6 @@ class TestOtherTransforms:
         assert transformed[0]['publication_date'] == '2026-02-03'
         assert transformed[0]['guide_type'] == 'FR 2004SI Guide Sheet'
         assert transformed[0]['security_type'] == 'T-Note'
-
-    def test_passthrough(self):
-        """Should pass data through unchanged"""
-        data = [{'a': 1}, {'b': 2}]
-        result = transform_passthrough(data)
-        assert result == data
 
     def test_soma_holdings_comma_stripping(self):
         """Should strip commas from numeric values"""

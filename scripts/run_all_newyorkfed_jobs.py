@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Run all NewYorkFed Markets API ETL jobs via the collector pattern.
+Run all NewYorkFed Markets API ETL jobs.
 
 This script executes all NewYorkFed import jobs in sequence using
-newyorkfed_collector, loading data from the Federal Reserve Bank of
+individual scripts, loading data from the Federal Reserve Bank of
 New York Markets API into the Tangerine database.
 
 Usage:
@@ -23,25 +23,25 @@ import sys
 from typing import List, Tuple
 
 
-# Config IDs and labels for all NewYorkFed endpoints
+# Individual scripts and labels for all NewYorkFed endpoints
 JOBS = [
-    (1,  "Reference Rates (Latest)"),
-    (3,  "SOMA Holdings"),
-    (4,  "Repo Operations"),
-    (5,  "Reverse Repo Operations"),
-    (6,  "Agency MBS"),
-    (7,  "FX Swaps"),
-    (8,  "Securities Lending"),
-    (9,  "Guide Sheets"),
-    (10, "PD Statistics"),
-    (11, "Market Share"),
-    (12, "Treasury Operations"),
+    ("etl/jobs/run_newyorkfed_reference_rates.py",  "Reference Rates (Latest)"),
+    ("etl/jobs/run_newyorkfed_soma_holdings.py",     "SOMA Holdings"),
+    ("etl/jobs/run_newyorkfed_repo.py",              "Repo Operations"),
+    ("etl/jobs/run_newyorkfed_reverserepo.py",       "Reverse Repo Operations"),
+    ("etl/jobs/run_newyorkfed_agency_mbs.py",        "Agency MBS"),
+    ("etl/jobs/run_newyorkfed_fx_swaps.py",          "FX Swaps"),
+    ("etl/jobs/run_newyorkfed_securities_lending.py", "Securities Lending"),
+    ("etl/jobs/run_newyorkfed_guide_sheets.py",      "Guide Sheets"),
+    ("etl/jobs/run_newyorkfed_pd_statistics.py",     "PD Statistics"),
+    ("etl/jobs/run_newyorkfed_market_share.py",      "Market Share"),
+    ("etl/jobs/run_newyorkfed_treasury.py",          "Treasury Operations"),
 ]
 
 
 def run_all_jobs(dry_run: bool = False) -> Tuple[int, int]:
     """
-    Run all NewYorkFed ETL jobs via the collector.
+    Run all NewYorkFed ETL jobs via individual scripts.
 
     Args:
         dry_run: If True, run in dry-run mode (no database writes)
@@ -59,14 +59,10 @@ def run_all_jobs(dry_run: bool = False) -> Tuple[int, int]:
     failed = 0
     results = []
 
-    for config_id, job_name in JOBS:
-        print(f"Running: {job_name} (config-id {config_id})...", end=" ", flush=True)
+    for script_path, job_name in JOBS:
+        print(f"Running: {job_name}...", end=" ", flush=True)
 
-        cmd = [
-            sys.executable,
-            "etl/collectors/newyorkfed_collector.py",
-            "--config-id", str(config_id),
-        ]
+        cmd = [sys.executable, script_path]
         if dry_run:
             cmd.append("--dry-run")
 
@@ -74,21 +70,21 @@ def run_all_jobs(dry_run: bool = False) -> Tuple[int, int]:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
             if result.returncode == 0:
                 print(f"SUCCESS")
-                results.append((job_name, "SUCCESS", config_id))
+                results.append((job_name, "SUCCESS", script_path))
                 successful += 1
             else:
                 print(f"FAILED")
                 if result.stderr:
                     print(f"  stderr: {result.stderr.strip()[:200]}")
-                results.append((job_name, "FAILED", config_id))
+                results.append((job_name, "FAILED", script_path))
                 failed += 1
         except subprocess.TimeoutExpired:
             print(f"TIMEOUT")
-            results.append((job_name, "TIMEOUT", config_id))
+            results.append((job_name, "TIMEOUT", script_path))
             failed += 1
         except Exception as e:
             print(f"ERROR: {str(e)}")
-            results.append((job_name, "ERROR", config_id))
+            results.append((job_name, "ERROR", script_path))
             failed += 1
 
     # Print summary
@@ -96,10 +92,10 @@ def run_all_jobs(dry_run: bool = False) -> Tuple[int, int]:
     print("=" * 70)
     print("Summary")
     print("=" * 70)
-    print(f"{'Job':<35} {'Status':<15} {'Config ID'}")
+    print(f"{'Job':<35} {'Status':<15} {'Script'}")
     print("-" * 70)
-    for job_name, status, config_id in results:
-        print(f"{job_name:<35} {status:<15} {config_id:>9}")
+    for job_name, status, script_path in results:
+        print(f"{job_name:<35} {status:<15} {script_path}")
     print("-" * 70)
     print(f"Total: {successful} successful, {failed} failed")
     print("=" * 70)

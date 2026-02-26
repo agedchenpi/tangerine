@@ -83,7 +83,8 @@
       "Bash(sqlite3:*)",
       "Bash(crontab:*)",
       "Bash(env:*)",
-      "Bash(while read pid)"
+      "Bash(while read pid)",
+      "Bash(for f in /opt/tangerine/etl/jobs/run_newyorkfed_*.py /opt/tangerine/etl/jobs/run_bankofengland_*.py)"
     ]
   }
 }
