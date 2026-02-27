@@ -11,6 +11,7 @@ from services.pipeline_monitor_service import (
     get_step_logs,
     get_pipeline_stats,
     get_distinct_job_names,
+    mark_step_overridden,
 )
 from services.job_execution_service import (
     execute_etl_script,
@@ -28,6 +29,7 @@ STATUS_ICON = {
     'partial': '⚠️',
     'pending': '⏳',
     'skipped': '⏭️',
+    'overridden': '🔓',
 }
 
 TIME_RANGE_OPTIONS = {
@@ -404,6 +406,13 @@ def show_steps_dialog(run):
                                 'config_name': run['config_name'],
                             }
                             st.rerun()
+                    if st.button("🔓", key=f"override_{step['jobstepid']}",
+                                 help="Mark as manually overridden (accept failure, proceed)"):
+                        try:
+                            mark_step_overridden(step['jobstepid'])
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error overriding step: {format_sql_error(e)}")
 
             if s_uuid:
                 with st.expander("View Import Logs", expanded=False):

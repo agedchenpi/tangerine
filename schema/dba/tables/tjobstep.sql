@@ -7,7 +7,7 @@ CREATE TABLE dba.tjobstep (
     started_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP,
     status       VARCHAR(20) NOT NULL DEFAULT 'running'
-                 CHECK (status IN ('pending','running','success','failed','skipped')),
+                 CHECK (status IN ('pending','running','success','failed','skipped','overridden')),
     records_in   INT,
     records_out  INT,
     step_runtime FLOAT,

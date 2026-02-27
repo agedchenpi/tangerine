@@ -120,6 +120,15 @@ def get_pipeline_stats(hours: int = 24) -> Dict[str, Any]:
     }
 
 
+def mark_step_overridden(jobstepid: int) -> None:
+    """Mark a failed step as manually overridden."""
+    from common.db_utils import execute_query
+    execute_query(
+        "UPDATE dba.tjobstep SET status = 'overridden', completed_at = NOW() WHERE jobstepid = %s",
+        (jobstepid,)
+    )
+
+
 def get_distinct_job_names() -> List[str]:
     """All distinct job_name values from tjobrun, for filter dropdowns."""
     query = """
