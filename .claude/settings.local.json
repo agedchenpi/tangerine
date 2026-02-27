@@ -84,7 +84,10 @@
       "Bash(crontab:*)",
       "Bash(env:*)",
       "Bash(while read pid)",
-      "Bash(for f in /opt/tangerine/etl/jobs/run_newyorkfed_*.py /opt/tangerine/etl/jobs/run_bankofengland_*.py)"
+      "Bash(for f in /opt/tangerine/etl/jobs/run_newyorkfed_*.py /opt/tangerine/etl/jobs/run_bankofengland_*.py)",
+      "Bash(__NEW_LINE_2091ff1b0a31740d__ echo:*)",
+      "Bash($PSQL:*)",
+      "Bash(__NEW_LINE_56acde4c003020c1__ echo:*)"
     ]
   }
 }

@@ -22,3 +22,6 @@ xlsxwriter==3.1.9
 
 # Cron expression parsing
 croniter==2.0.1
+
+# Commodity futures price data
+yfinance>=0.2.40
