@@ -39,6 +39,7 @@ def save_json(data: list, config_name: str, source: str) -> Path:
         'bankofengland': 'BankOfEngland_',
         'yfinance': 'YFinance_',
         'coingecko': 'CoinGecko_',
+        'iiif': 'IIIF_',
     }
     prefix = prefix_map.get(source, '')
     slug = config_name.replace(prefix, '').lower()

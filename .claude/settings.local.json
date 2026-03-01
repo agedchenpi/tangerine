@@ -87,7 +87,16 @@
       "Bash(for f in /opt/tangerine/etl/jobs/run_newyorkfed_*.py /opt/tangerine/etl/jobs/run_bankofengland_*.py)",
       "Bash(__NEW_LINE_2091ff1b0a31740d__ echo:*)",
       "Bash($PSQL:*)",
-      "Bash(__NEW_LINE_56acde4c003020c1__ echo:*)"
+      "Bash(__NEW_LINE_56acde4c003020c1__ echo:*)",
+      "WebFetch(domain:iiif.si.edu)",
+      "WebFetch(domain:asia.si.edu)",
+      "WebFetch(domain:ids.si.edu)",
+      "WebFetch(domain:iiif.io)",
+      "WebFetch(domain:api.si.edu)",
+      "WebFetch(domain:edan.si.edu)",
+      "WebFetch(domain:www.getty.edu)",
+      "WebFetch(domain:data.getty.edu)",
+      "WebFetch(domain:media.getty.edu)"
     ]
   }
 }
