@@ -61,6 +61,7 @@ services:
       ETL_ENABLE_FILE_LOGGING: ${ETL_ENABLE_FILE_LOGGING:-true}
       GMAIL_CREDENTIALS_PATH: /app/secrets/credentials.json
       GMAIL_TOKEN_PATH: /app/secrets/token.json
+      SI_API_KEY: ${SI_API_KEY}
     volumes:
       - ${ETL_DATA_PATH:-./.data/etl}:/app/data
       - ./secrets:/app/secrets

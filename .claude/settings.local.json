@@ -100,7 +100,9 @@
       "WebFetch(domain:www.si.edu)",
       "Bash(sudo rm:*)",
       "WebFetch(domain:search.getty.edu)",
-      "Bash(sudo cp:*)"
+      "Bash(sudo cp:*)",
+      "WebFetch(domain:www.postman.com)",
+      "Bash(__NEW_LINE_bbc49cb833f4dba7__ curl:*)"
     ]
   }
 }
