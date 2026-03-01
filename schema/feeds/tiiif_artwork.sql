@@ -96,6 +96,7 @@ ALTER TABLE IF EXISTS feeds.tiiif_artwork ADD COLUMN IF NOT EXISTS topics       
 ALTER TABLE IF EXISTS feeds.tiiif_artwork ADD COLUMN IF NOT EXISTS exhibition_history JSONB;
 ALTER TABLE IF EXISTS feeds.tiiif_artwork ADD COLUMN IF NOT EXISTS api_url          TEXT;
 ALTER TABLE IF EXISTS feeds.tiiif_artwork ALTER COLUMN attribution TYPE TEXT;
+ALTER TABLE IF EXISTS feeds.tiiif_artwork ALTER COLUMN dimensions_text TYPE TEXT;
 
 GRANT SELECT ON feeds.tiiif_artwork TO app_ro;
 GRANT SELECT, INSERT, UPDATE, DELETE ON feeds.tiiif_artwork TO app_rw;
