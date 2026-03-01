@@ -12,24 +12,131 @@ import time
 import requests
 
 from common.db_utils import fetch_dict
-from etl.jobs.run_iiif_getty_artworks import SPARQL_ENDPOINT, SPARQL_QUERY
 
 SI_API_BASE = 'https://api.si.edu/openaccess/api/v1.0'
 SI_ROWS = 1000
 
+GETTY_SPARQL_ENDPOINT = "https://data.getty.edu/museum/collection/sparql"
+
+GETTY_OBJECT_TYPES = {
+    "Paintings":       "300033618",
+    "Drawings":        "300033973",
+    "Prints":          "300041273",
+    "Sculpture":       "300047090",
+    "Ceramics":        "300151343",
+    "Photographs":     "300046300",
+    "Textiles":        "300231565",
+    "Decorative Arts": "300054168",
+}
+
 
 # ── Getty ──────────────────────────────────────────────────────────────────── #
 
-def discover_getty_manifests() -> list[dict]:
+def _build_getty_sparql(
+    object_type_aats: list[str],
+    date_from: int | None,
+    date_to: int | None,
+    culture: str,
+    medium: str,
+) -> str:
+    lines = [
+        "PREFIX crm: <http://www.cidoc-crm.org/cidoc-crm/>",
+        "PREFIX aat: <http://vocab.getty.edu/aat/>",
+        "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>",
+        "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>",
+        "",
+        "SELECT DISTINCT ?manifest ?title WHERE {",
+        "  ?obj a crm:E22_Human-Made_Object ;",
+        "       crm:P67i_is_referred_to_by <http://creativecommons.org/publicdomain/zero/1.0/> ;",
+        "       crm:P129i_is_subject_of ?manifest .",
+        "  FILTER(CONTAINS(STR(?manifest), 'media.getty.edu/iiif/manifest'))",
+        "",
+    ]
+
+    # Object type filter
+    if len(object_type_aats) == 1:
+        lines.append(f"  ?obj crm:P2_has_type <http://vocab.getty.edu/aat/{object_type_aats[0]}> .")
+    else:
+        values = " ".join(f"<http://vocab.getty.edu/aat/{a}>" for a in object_type_aats)
+        lines += [
+            f"  VALUES ?objType {{ {values} }}",
+            "  ?obj crm:P2_has_type ?objType .",
+        ]
+
+    # Title (optional)
+    lines += [
+        "",
+        "  OPTIONAL {",
+        "    ?obj rdfs:label ?title .",
+        "  }",
+    ]
+
+    # Date range (optional)
+    if date_from or date_to:
+        lines += [
+            "",
+            "  ?obj crm:P108i_was_produced_by ?prod .",
+            "  ?prod crm:P4_has_time_span ?ts .",
+        ]
+        if date_from:
+            lines.append(f"  ?ts crm:P82b_end_of_the_end ?endDate .")
+            lines.append(f"  FILTER(?endDate >= '{date_from}-01-01'^^xsd:dateTime)")
+        if date_to:
+            lines.append(f"  ?ts crm:P82a_begin_of_the_begin ?startDate .")
+            lines.append(f"  FILTER(?startDate <= '{date_to}-12-31'^^xsd:dateTime)")
+
+    # Culture (optional text CONTAINS on referred_to_by linguistic statement)
+    if culture:
+        lines += [
+            "",
+            "  ?obj crm:P67i_is_referred_to_by ?cultureStmt .",
+            "  ?cultureStmt crm:P2_has_type <http://vocab.getty.edu/aat/300055768> ;",
+            "               crm:P190_has_symbolic_content ?cultureText .",
+            f"  FILTER(CONTAINS(LCASE(STR(?cultureText)), '{culture.lower()}'))",
+        ]
+
+    # Medium (optional text CONTAINS on referred_to_by linguistic statement)
+    if medium:
+        lines += [
+            "",
+            "  ?obj crm:P67i_is_referred_to_by ?mediumStmt .",
+            "  ?mediumStmt crm:P2_has_type <http://vocab.getty.edu/aat/300435429> ;",
+            "              crm:P190_has_symbolic_content ?mediumText .",
+            f"  FILTER(CONTAINS(LCASE(STR(?mediumText)), '{medium.lower()}'))",
+        ]
+
+    lines.append("}")
+    return "\n".join(lines)
+
+
+def discover_getty_manifests(
+    object_type_aats: list[str] | None = None,
+    date_from: int | None = None,
+    date_to: int | None = None,
+    culture: str = "",
+    medium: str = "",
+) -> list[dict]:
     """
-    POST SPARQL query to Getty endpoint and return manifest UUIDs + URLs.
+    POST SPARQL query to Getty endpoint and return manifest UUIDs + URLs + titles.
+
+    Args:
+        object_type_aats: AAT codes for object types (defaults to ["300033618"] = paintings).
+        date_from:        Earliest production year (inclusive).
+        date_to:          Latest production year (inclusive).
+        culture:          Text filter on production place label (case-insensitive CONTAINS).
+        medium:           Text filter on material label (case-insensitive CONTAINS).
 
     Returns:
-        List of {"uuid": "...", "manifest_url": "https://media.getty.edu/iiif/manifest/..."}.
+        List of {"uuid": "...", "manifest_url": "https://...", "title": "..."}.
     """
+    if not object_type_aats:
+        object_type_aats = ["300033618"]
+
+    query = _build_getty_sparql(object_type_aats, date_from, date_to, culture, medium)
+
     response = requests.post(
-        SPARQL_ENDPOINT,
-        data=SPARQL_QUERY,
+        GETTY_SPARQL_ENDPOINT,
+        data=query,
         headers={
             'Content-Type': 'application/sparql-query',
             'Accept': 'application/sparql-results+json',
@@ -48,7 +155,8 @@ def discover_getty_manifests() -> list[dict]:
         uuid = url.split('/')[-1]
         if uuid not in seen:
             seen.add(uuid)
-            results.append({'uuid': uuid, 'manifest_url': url})
+            title = row.get('title', {}).get('value', '')
+            results.append({'uuid': uuid, 'manifest_url': url, 'title': title})
 
     return sorted(results, key=lambda r: r['uuid'])
 

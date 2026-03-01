@@ -4,6 +4,8 @@ import pandas as pd
 import streamlit as st
 
 from services.collection_explorer_service import (
+    GETTY_OBJECT_TYPES,
+    _build_getty_sparql,
     discover_getty_manifests,
     discover_smithsonian_artworks,
     get_imported_manifest_ids,
@@ -20,10 +22,84 @@ tab_getty, tab_si = st.tabs(["Getty Museum", "Smithsonian Asian Art"])
 # ── Getty tab ─────────────────────────────────────────────────────────────── #
 
 with tab_getty:
-    if st.button("Discover Paintings", key="getty_discover", type="primary"):
+    # Object Type
+    selected_type_names = st.multiselect(
+        "Object Type",
+        options=list(GETTY_OBJECT_TYPES.keys()),
+        default=["Paintings"],
+        key="getty_object_types",
+    )
+    selected_type_aats = [GETTY_OBJECT_TYPES[t] for t in selected_type_names]
+
+    # Date Range
+    date_col1, date_col2 = st.columns(2)
+    with date_col1:
+        date_from = st.number_input(
+            "Date From (year, optional)",
+            min_value=1,
+            max_value=2100,
+            step=1,
+            value=None,
+            key="getty_date_from",
+            placeholder="e.g. 1400",
+        )
+    with date_col2:
+        date_to = st.number_input(
+            "Date To (year, optional)",
+            min_value=1,
+            max_value=2100,
+            step=1,
+            value=None,
+            key="getty_date_to",
+            placeholder="e.g. 1600",
+        )
+
+    # Culture
+    culture = st.text_input(
+        "Culture (optional)",
+        value="",
+        placeholder="e.g. China, Japan",
+        key="getty_culture",
+    )
+
+    # Medium
+    medium = st.text_input(
+        "Medium (optional)",
+        value="",
+        placeholder="e.g. oil, watercolor",
+        key="getty_medium",
+    )
+
+    # SPARQL expander
+    if selected_type_aats:
+        sparql_preview = _build_getty_sparql(
+            selected_type_aats,
+            int(date_from) if date_from is not None else None,
+            int(date_to) if date_to is not None else None,
+            culture,
+            medium,
+        )
+    else:
+        sparql_preview = "# Select at least one Object Type to generate a query."
+    with st.expander("Generated SPARQL"):
+        st.code(sparql_preview, language="sparql")
+
+    # Discover button
+    if st.button(
+        "Discover",
+        key="getty_discover",
+        type="primary",
+        disabled=not selected_type_aats,
+    ):
         with st.spinner("Querying Getty SPARQL endpoint…"):
             try:
-                manifests = discover_getty_manifests()
+                manifests = discover_getty_manifests(
+                    object_type_aats=selected_type_aats,
+                    date_from=int(date_from) if date_from is not None else None,
+                    date_to=int(date_to) if date_to is not None else None,
+                    culture=culture,
+                    medium=medium,
+                )
                 imported = get_imported_manifest_ids()
                 st.session_state["getty_results"] = manifests
                 st.session_state["getty_imported"] = imported
@@ -48,6 +124,7 @@ with tab_getty:
             status = "✅ Imported" if m["uuid"] in imported else "🆕 New"
             rows.append({
                 "UUID":         m["uuid"],
+                "Title":        m.get("title", ""),
                 "Manifest URL": m["manifest_url"],
                 "Status":       status,
             })
