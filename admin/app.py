@@ -80,6 +80,9 @@ pages = {
         st.Page("pages/monitoring.py", title="Monitoring", icon="📊"),
         st.Page("pages/reports.py", title="Reports", icon="📄"),
     ],
+    "Collections": [
+        st.Page("pages/artwork_gallery.py", title="Artwork Gallery", icon="🖼️"),
+    ],
     "System": [
         st.Page("pages/event_system.py", title="Event System", icon="🔔"),
         st.Page("pages/sql.py", title="SQL", icon="🔍"),
