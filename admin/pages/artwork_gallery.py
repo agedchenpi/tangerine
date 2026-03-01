@@ -3,7 +3,11 @@
 import streamlit as st
 from pathlib import Path
 
-from services.artwork_service import get_artworks, get_provenance, get_artwork_topics, get_rights_values
+from services.artwork_service import (
+    get_artworks, get_provenance, get_artwork_topics, get_rights_values,
+    get_distinct_periods, get_distinct_origins, get_distinct_artwork_types,
+    get_distinct_mediums, get_distinct_date_texts, get_search_suggestions,
+)
 from utils.ui_helpers import load_custom_css, add_page_header
 
 load_custom_css()
@@ -15,6 +19,48 @@ IMAGE_DIR = Path("/app/data/images/iiif")
 with st.sidebar:
     st.markdown("### Filters")
 
+    # Search selectbox — type-to-filter across all text fields
+    try:
+        suggestions = get_search_suggestions()
+    except Exception:
+        suggestions = []
+    search_options = [""] + [f"{s['field']}: {s['value']}" for s in suggestions]
+    search_choice = st.selectbox(
+        "🔍 Search",
+        options=search_options,
+        index=0,
+        key="gallery_search",
+        help="Type to filter suggestions across all fields",
+    )
+    search_term = search_choice.split(": ", 1)[1] if search_choice and ": " in search_choice else None
+
+    # Attribute filters
+    st.markdown("##### Attribute Filters")
+    _attr_filters = [
+        ("Date",   get_distinct_date_texts,    "gallery_date"),
+        ("Period", get_distinct_periods,        "gallery_period"),
+        ("Origin", get_distinct_origins,        "gallery_origin"),
+        ("Type",   get_distinct_artwork_types,  "gallery_type"),
+        ("Medium", get_distinct_mediums,        "gallery_medium"),
+    ]
+    date_filter = period_filter = origin_filter = type_filter = medium_filter = None
+    _attr_values = {}
+    for label, getter, key in _attr_filters:
+        try:
+            opts = ["All"] + getter()
+        except Exception:
+            opts = ["All"]
+        selected = st.selectbox(label, opts, key=key)
+        _attr_values[key] = None if selected == "All" else selected
+
+    date_filter   = _attr_values["gallery_date"]
+    period_filter = _attr_values["gallery_period"]
+    origin_filter = _attr_values["gallery_origin"]
+    type_filter   = _attr_values["gallery_type"]
+    medium_filter = _attr_values["gallery_medium"]
+
+    # Source, Rights, Topic filters
+    st.markdown("##### Source & Rights")
     source_options = ["All", "Freer Gallery", "Getty Museum"]
     selected_source = st.selectbox("Source", source_options, key="gallery_source")
     source_filter = None if selected_source == "All" else selected_source
@@ -35,13 +81,23 @@ with st.sidebar:
         "Topic",
         ["All"] + all_topics,
         key="gallery_topic",
-        help="Filter to artworks that include this topic"
+        help="Filter to artworks that include this topic",
     )
     topic_value = None if topic_filter == "All" else topic_filter
 
 # ── Load data ────────────────────────────────────────────────────────────────
 try:
-    artworks = get_artworks(source=source_filter, rights=rights_filter, topic=topic_value)
+    artworks = get_artworks(
+        source=source_filter,
+        rights=rights_filter,
+        topic=topic_value,
+        search=search_term,
+        date_text=date_filter,
+        period=period_filter,
+        origin=origin_filter,
+        artwork_type=type_filter,
+        medium=medium_filter,
+    )
 except Exception as e:
     st.error(f"Error loading artworks: {e}")
     st.stop()
