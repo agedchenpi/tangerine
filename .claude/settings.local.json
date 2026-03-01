@@ -96,7 +96,8 @@
       "WebFetch(domain:edan.si.edu)",
       "WebFetch(domain:www.getty.edu)",
       "WebFetch(domain:data.getty.edu)",
-      "WebFetch(domain:media.getty.edu)"
+      "WebFetch(domain:media.getty.edu)",
+      "WebFetch(domain:www.si.edu)"
     ]
   }
 }
