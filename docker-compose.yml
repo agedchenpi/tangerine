@@ -38,6 +38,7 @@ services:
       - etl_logs:/app/logs
       - ${ETL_DATA_PATH:-./.data/etl}:/app/data
       - ./secrets:/app/secrets:ro
+      - ./backups:/app/backups
     networks:
       - tangerine_network
     restart: unless-stopped
