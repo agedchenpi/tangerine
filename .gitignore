@@ -63,6 +63,9 @@ spec/
 .data/etl/archive/
 .data/etl/*/archive/
 
+# IIIF images
+.data/etl/images/iiif/
+
 # Test data artifacts
 .data/etl/regression/archive/
 

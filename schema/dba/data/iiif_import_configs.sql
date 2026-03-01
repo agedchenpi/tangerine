@@ -66,5 +66,27 @@ BEGIN
         target_table = EXCLUDED.target_table,
         is_active = EXCLUDED.is_active;
 
-    RAISE NOTICE 'Created 2 IIIF import configurations (Freer Gallery + Getty Museum Artworks)';
+    -- Asian Art Museum — Chinese Paintings (SI Open Access API discovery, ~585 records)
+    INSERT INTO dba.timportconfig (
+        config_name, datasource, datasettype,
+        source_directory, archive_directory, file_pattern, file_type,
+        metadata_label_source, metadata_label_location,
+        dateconfig, datelocation, dateformat, delimiter,
+        target_table, importstrategyid, is_active, is_blob, import_mode
+    ) VALUES (
+        'IIIF_AsianArt_China_Paintings', 'IIIF', 'Artwork',
+        '/app/data/source/iiif', '/app/data/archive/iiif',
+        'iiif_asianart_china_paintings_.*\.json', 'JSON',
+        'static', 'Artwork',
+        'static', NULL, 'yyyy-MM-dd', NULL,
+        'feeds.tiiif_artwork', v_strategy_id, TRUE, FALSE, 'file'
+    ) ON CONFLICT (config_name) DO UPDATE SET
+        source_directory = EXCLUDED.source_directory,
+        archive_directory = EXCLUDED.archive_directory,
+        file_pattern = EXCLUDED.file_pattern,
+        file_type = EXCLUDED.file_type,
+        target_table = EXCLUDED.target_table,
+        is_active = EXCLUDED.is_active;
+
+    RAISE NOTICE 'Created 3 IIIF import configurations (Freer Gallery + Getty Museum + AsianArt China Paintings)';
 END $$;

@@ -97,7 +97,9 @@
       "WebFetch(domain:www.getty.edu)",
       "WebFetch(domain:data.getty.edu)",
       "WebFetch(domain:media.getty.edu)",
-      "WebFetch(domain:www.si.edu)"
+      "WebFetch(domain:www.si.edu)",
+      "Bash(sudo rm:*)",
+      "WebFetch(domain:search.getty.edu)"
     ]
   }
 }
