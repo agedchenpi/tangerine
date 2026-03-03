@@ -61,15 +61,28 @@ def get_memory_info() -> dict:
 
 
 def get_disk_info() -> list[dict]:
-    """Return per-partition disk usage stats."""
+    """Return per-partition disk usage stats.
+
+    Keeps only meaningful mounts: the overlay root (/) and real block devices
+    (/dev/*). Bind mounts of host directories are skipped — they duplicate the
+    stats of the underlying host partition and clutter the view.
+    """
     import psutil
 
+    seen_devices: set[str] = set()
     partitions = []
     for part in psutil.disk_partitions(all=False):
+        is_root = part.mountpoint == "/"
+        is_block_device = part.device.startswith("/dev/")
+        if not (is_root or is_block_device):
+            continue
+        if part.device in seen_devices:
+            continue
         try:
             usage = psutil.disk_usage(part.mountpoint)
         except PermissionError:
             continue
+        seen_devices.add(part.device)
         partitions.append({
             "device": part.device,
             "mountpoint": part.mountpoint,
