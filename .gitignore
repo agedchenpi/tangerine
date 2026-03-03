@@ -74,3 +74,6 @@ spec/
 
 # Gmail credentials (OAuth2)
 secrets/
+
+# DB backups
+*.gz
