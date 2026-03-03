@@ -85,6 +85,7 @@ pages = {
         st.Page("pages/collection_explorer.py", title="Collection Explorer", icon="🔭"),
     ],
     "System": [
+        st.Page("pages/server_monitor.py", title="Server Health", icon="🖥️"),
         st.Page("pages/event_system.py", title="Event System", icon="🔔"),
         st.Page("pages/sql.py", title="SQL", icon="🔍"),
     ],
