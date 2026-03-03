@@ -110,7 +110,8 @@
       "WebFetch(domain:gist.githubusercontent.com)",
       "WebFetch(domain:programminghistorian.org)",
       "WebFetch(domain:mapping-manuscript-migrations.github.io)",
-      "WebFetch(domain:linked.art)"
+      "WebFetch(domain:linked.art)",
+      "Bash(streamlit:*)"
     ]
   }
 }

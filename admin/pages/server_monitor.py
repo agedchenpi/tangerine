@@ -31,28 +31,57 @@ from utils.ui_helpers import (
 load_custom_css()
 add_page_header("Server Health", icon="🖥️", subtitle="Real-time infrastructure vitals")
 
+st.markdown("""
+<style>
+@media (max-width: 768px) {
+    [data-testid="stHorizontalBlock"] {
+        flex-wrap: wrap !important;
+    }
+    [data-testid="stColumn"] {
+        min-width: 100% !important;
+        flex: 1 1 100% !important;
+        width: 100% !important;
+    }
+    .js-plotly-plot .plot-container {
+        max-height: 200px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        padding: 0.4rem 0.6rem !important;
+        font-size: 0.78rem !important;
+    }
+    h1 { font-size: 1.6rem !important; }
+}
+@media (max-width: 480px) {
+    .stTabs [data-baseweb="tab"] {
+        padding: 0.3rem 0.4rem !important;
+        font-size: 0.72rem !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
 
 # ---------------------------------------------------------------------------
 # Auto-refresh controls
 # ---------------------------------------------------------------------------
 def _refresh_controls():
-    col_title, col_interval, col_btn = st.columns([4, 2, 1])
+    st.caption(f"Last updated: {datetime.now().strftime('%H:%M:%S')}")
+    col_interval, col_btn = st.columns([3, 1])
 
     with col_interval:
         interval_label = st.selectbox(
-            "Auto-refresh",
+            "Auto-refresh interval",
             ["Off", "10s", "30s", "60s"],
             key="refresh_interval_label",
-            label_visibility="collapsed",
+            label_visibility="visible",
         )
         interval_map = {"Off": 0, "10s": 10, "30s": 30, "60s": 60}
         st.session_state["refresh_interval"] = interval_map[interval_label]
 
     with col_btn:
+        st.write("")  # vertical alignment spacer
         if st.button("↺ Refresh", use_container_width=True):
             st.rerun()
-
-    st.caption(f"Last updated: {datetime.now().strftime('%H:%M:%S')}")
 
 
 _refresh_controls()
@@ -166,14 +195,19 @@ with tab_cpu:
             st.write(f"**Frequency:** {cpu['freq_current']:.0f} MHz (max {cpu['freq_max']:.0f} MHz)")
 
     st.subheader("Per-Core Usage")
+    rows_html = ""
     for i, pct in enumerate(cpu["per_core"]):
-        cols = st.columns([1, 8, 1])
-        with cols[0]:
-            st.write(f"Core {i}")
-        with cols[1]:
-            st.progress(int(pct) / 100)
-        with cols[2]:
-            st.write(f"{pct:.0f}%")
+        color = _health_color(pct)
+        rows_html += f"""
+        <div style="margin-bottom:0.5rem;">
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:2px;">
+                <span>Core {i}</span><span style="color:{color};font-weight:600;">{pct:.0f}%</span>
+            </div>
+            <div style="background:#e9ecef; border-radius:4px; height:8px; overflow:hidden;">
+                <div style="width:{pct:.0f}%; background:{color}; height:100%; border-radius:4px;"></div>
+            </div>
+        </div>"""
+    st.markdown(rows_html, unsafe_allow_html=True)
 
 # ── Memory ──────────────────────────────────────────────────────────────────
 with tab_mem:

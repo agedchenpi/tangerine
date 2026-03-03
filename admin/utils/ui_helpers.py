@@ -107,6 +107,33 @@ def load_custom_css():
             display: none !important;
         }
 
+        /* ── Mobile: restore native sidebar collapse (overrides desktop rules above) ── */
+        @media (max-width: 768px) {
+            /* Allow sidebar to slide off-screen when collapsed */
+            [data-testid="stSidebar"][aria-expanded="false"] {
+                transform: translateX(-110%) !important;
+                margin-left: 0 !important;
+            }
+
+            /* Remove min-width so sidebar doesn't overflow viewport */
+            [data-testid="stSidebar"] {
+                min-width: unset !important;
+                width: 85vw !important;
+                max-width: 300px !important;
+            }
+
+            /* Show the expand button (hamburger) when sidebar is closed */
+            [data-testid="collapsedControl"],
+            button[kind="header"][aria-label*="Open sidebar"] {
+                display: flex !important;
+            }
+
+            /* Show the close button inside the open sidebar */
+            button[kind="header"][aria-label*="Close sidebar"] {
+                display: flex !important;
+            }
+        }
+
         /* Hide appearance settings within settings dialog (defense in depth) */
         [data-testid="stSettingsDialog"] div[data-testid="stAppearanceSettings"],
         [data-testid="stSettingsDialog"] button[data-testid="themeSettings"],

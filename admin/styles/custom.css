@@ -929,6 +929,52 @@ hr::after {
         padding: 0.5rem 1rem;
         font-size: 0.875rem;
     }
+
+    /* Sidebar: overlay content on mobile, above the header */
+    section[data-testid="stSidebar"] {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        height: 100dvh !important;
+        z-index: 1001 !important;   /* above Streamlit header (~1000) */
+        width: 85vw !important;
+        max-width: 300px !important;
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    /* Full-width content area regardless of sidebar state */
+    .main .block-container {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        max-width: 100% !important;
+    }
+
+    /* Large tappable open/close button (collapsedControl + close) */
+    [data-testid="collapsedControl"] button,
+    button[kind="header"][aria-label*="Open sidebar"],
+    button[kind="header"][aria-label*="Close sidebar"] {
+        width: 2.75rem !important;
+        height: 2.75rem !important;
+        min-width: 2.75rem !important;
+        background: var(--tangerine-primary) !important;
+        border-radius: 50% !important;
+        color: white !important;
+        font-size: 1.25rem !important;
+        border: none !important;
+        box-shadow: var(--shadow-md) !important;
+    }
+
+    /* Remove the old stSidebarCollapseButton override (was hidden behind header) */
+    [data-testid="stSidebarCollapseButton"] button {
+        width: unset !important;
+        height: unset !important;
+        background: unset !important;
+        border-radius: unset !important;
+        color: unset !important;
+        font-size: unset !important;
+        border: unset !important;
+        box-shadow: unset !important;
+    }
 }
 
 /* ============================================================================

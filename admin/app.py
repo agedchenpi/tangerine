@@ -16,7 +16,7 @@ st.set_page_config(
     page_title="Tangerine ETL Admin",
     page_icon="🍊",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # Initialize session state for database connection
