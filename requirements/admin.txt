@@ -9,3 +9,8 @@ plotly==5.18.0                  # Interactive charts
 python-dateutil==2.8.2         # Date parsing
 validators==0.22.0              # Input validation
 psutil>=5.9.0                   # System resource monitoring
+
+# Media editor
+Pillow>=10.0.0                  # Image manipulation
+streamlit-drawable-canvas==0.9.3  # Freehand drawing component
+moviepy==1.0.3                  # Video trimming and compositing

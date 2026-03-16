@@ -84,6 +84,9 @@ pages = {
         st.Page("pages/artwork_gallery.py", title="Artwork Gallery", icon="🖼️"),
         st.Page("pages/collection_explorer.py", title="Collection Explorer", icon="🔭"),
     ],
+    "Tools": [
+        st.Page("pages/media_editor.py", title="Media Editor", icon="🎨"),
+    ],
     "System": [
         st.Page("pages/server_monitor.py", title="Server Health", icon="🖥️"),
         st.Page("pages/event_system.py", title="Event System", icon="🔔"),
