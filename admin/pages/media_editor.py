@@ -99,27 +99,20 @@ def _render_image_editor(img_bytes: bytes) -> None:
             show_error(f"Error encoding image: {e}")
             return
 
-    if "canvas_mode" not in st.session_state:
-        st.session_state["canvas_mode"] = "paint"
-
     col_canvas, col_controls = st.columns([3, 2], gap="large")
 
-    # Read mode from session state (set by radio on previous rerun)
-    _mode = st.session_state["canvas_mode"]
-
     # ── Resolve canvas drawing_mode and stroke from session state ──────────────
+    _tool = st.session_state.get("drawing_tool", "paint")
     _draw_mode_map = {
-        "paint":   ("freedraw",
-                    st.session_state.get("paint_size", 5),
-                    st.session_state.get("paint_color", "#FF0000")),
-        "text":    ("transform", 3, "#000000"),
-        "shapes":  (st.session_state.get("shape_type", "rect"),
-                    st.session_state.get("shape_lw", 3),
-                    st.session_state.get("shape_color", "#FF0000")),
-        "overlay": ("transform", 3, "#000000"),
-        "move":    ("transform", 3, "#000000"),
+        "paint":  ("freedraw",
+                   st.session_state.get("paint_size", 5),
+                   st.session_state.get("paint_color", "#FF0000")),
+        "shapes": (st.session_state.get("shape_type", "rect"),
+                   st.session_state.get("shape_lw", 3),
+                   st.session_state.get("shape_color", "#FF0000")),
+        "move":   ("transform", 3, "#000000"),
     }
-    _draw_mode, _stroke_w, _stroke_c = _draw_mode_map[_mode]
+    _draw_mode, _stroke_w, _stroke_c = _draw_mode_map.get(_tool, _draw_mode_map["paint"])
 
     # ── Canvas — rendered first so canvas_result is available to controls ──────
     # Build FabricJS JSON with backgroundImage (base64 data URL) to avoid
@@ -149,49 +142,51 @@ def _render_image_editor(img_bytes: bytes) -> None:
             height=canvas_h,
             width=canvas_w,
             drawing_mode=_draw_mode,
-            update_streamlit=False,
+            update_streamlit=True,
             key="canvas",
         )
 
-    # ── Controls — canvas_result is now defined ────────────────────────────────
+    # Helper: get live canvas objects (from FabricJS if available, else session state)
+    def _live_objects() -> list:
+        if canvas_result.json_data is not None:
+            return list(canvas_result.json_data.get("objects", []))
+        return list(st.session_state["canvas_json"].get("objects", []))
+
+    # ── Controls — unified toolbar ─────────────────────────────────────────────
     with col_controls:
-        _modes = ["paint", "text", "shapes", "overlay", "move"]
-        _mode_labels = {
-            "paint": "🎨 Paint", "text": "✏️ Text", "shapes": "🔷 Shapes",
-            "overlay": "🖼️ Overlay", "move": "↔️ Move",
-        }
-        new_mode = st.radio(
-            "Mode",
-            options=_modes,
-            format_func=lambda x: _mode_labels[x],
-            index=_modes.index(_mode),
-            horizontal=True,
-            key="mode_radio",
+        # ── Drawing Tool selector ──────────────────────────────────────────
+        tool = st.segmented_control(
+            "Drawing Tool",
+            options=["paint", "shapes", "move"],
+            format_func={"paint": "🎨 Paint", "shapes": "🔷 Shapes", "move": "↔️ Move"}.get,
+            default="paint",
+            key="drawing_tool",
         )
-        if new_mode != _mode:
-            st.session_state["canvas_mode"] = new_mode
-            # No st.rerun() needed — stable canvas key means FabricJS switches mode via prop change
+
+        # Tool-specific settings (inline)
+        if tool == "paint":
+            st.color_picker("Brush color", "#FF0000", key="paint_color")
+            st.slider("Brush size", 1, 50, 5, key="paint_size")
+        elif tool == "shapes":
+            st.selectbox(
+                "Shape", ["rect", "circle", "line"], key="shape_type",
+                format_func=lambda x: {"rect": "Rectangle", "circle": "Circle", "line": "Line"}[x],
+            )
+            st.color_picker("Color", "#FF0000", key="shape_color")
+            st.slider("Line width", 1, 20, 3, key="shape_lw")
+        elif tool == "move":
+            st.caption("Click any object to select, drag to move, use handles to resize/rotate")
 
         st.divider()
 
-        # ── Paint controls ────────────────────────────────────────────────────
-        if _mode == "paint":
-            st.color_picker("Brush color", "#FF0000", key="paint_color")
-            st.slider("Brush size", 1, 50, 5, key="paint_size")
-            st.caption("Paint directly on the canvas with your mouse")
-
-        # ── Text controls ─────────────────────────────────────────────────────
-        elif _mode == "text":
+        # ── Add Elements ───────────────────────────────────────────────────
+        with st.expander("📝 Add Text"):
             text_input = st.text_input("Text", value="Hello!", key="txt_input")
             font_size = st.slider("Font size", 10, 120, 40, key="txt_size")
             text_color = st.color_picker("Text color", "#FFFFFF", key="txt_color")
             bg_color = st.color_picker("Background color", "#000000", key="txt_bg")
             if st.button("Add Text", key="btn_text", use_container_width=True):
-                current_objects = (
-                    canvas_result.json_data.get("objects", [])
-                    if canvas_result.json_data is not None
-                    else st.session_state["canvas_json"].get("objects", [])
-                )
+                current_objects = _live_objects()
                 current_objects.append({
                     "type": "i-text",
                     "left": 50, "top": 50,
@@ -204,22 +199,10 @@ def _render_image_editor(img_bytes: bytes) -> None:
                     "hasControls": True,
                 })
                 st.session_state["canvas_json"]["objects"] = current_objects
-                show_success("Text added — switch to ↔️ Move to drag it into position.")
+                show_success("Text added!")
                 st.rerun()
-            st.caption("After adding, switch to Move mode to drag text into position")
 
-        # ── Shapes controls ───────────────────────────────────────────────────
-        elif _mode == "shapes":
-            st.selectbox(
-                "Shape", ["rect", "circle", "line"], key="shape_type",
-                format_func=lambda x: {"rect": "Rectangle", "circle": "Circle", "line": "Line"}[x],
-            )
-            st.color_picker("Color", "#FF0000", key="shape_color")
-            st.slider("Line width", 1, 20, 3, key="shape_lw")
-            st.caption("Draw directly on the canvas, then switch to Move mode to reposition")
-
-        # ── Overlay controls ──────────────────────────────────────────────────
-        elif _mode == "overlay":
+        with st.expander("🖼️ Add Overlay"):
             overlay_file = st.file_uploader("Overlay image", type=["png", "jpg", "jpeg", "webp"], key="overlay_file")
             overlay_scale = st.slider("Scale (% of canvas width)", 5, 100, 30, key="ov_scale")
             if st.button("Add Overlay", key="btn_overlay", use_container_width=True, disabled=overlay_file is None):
@@ -229,11 +212,7 @@ def _render_image_editor(img_bytes: bytes) -> None:
                     ov_img.save(ov_bytes, format="PNG")
                     b64 = base64.b64encode(ov_bytes.getvalue()).decode()
                     scale_factor = (canvas_w * overlay_scale / 100) / ov_img.width
-                    current_objects = (
-                        canvas_result.json_data.get("objects", [])
-                        if canvas_result.json_data is not None
-                        else st.session_state["canvas_json"].get("objects", [])
-                    )
+                    current_objects = _live_objects()
                     current_objects.append({
                         "type": "image",
                         "left": 50, "top": 50,
@@ -242,19 +221,14 @@ def _render_image_editor(img_bytes: bytes) -> None:
                         "selectable": True, "hasControls": True,
                     })
                     st.session_state["canvas_json"]["objects"] = current_objects
-                    show_success("Overlay added — switch to ↔️ Move to drag it into position.")
+                    show_success("Overlay added!")
                     st.rerun()
                 except Exception as e:
                     show_error(str(e))
-            st.caption("After adding, switch to Move mode to drag the overlay into position")
-
-        # ── Move controls ─────────────────────────────────────────────────────
-        elif _mode == "move":
-            st.caption("Click any object to select it, then drag to move or use handles to resize/rotate")
 
         st.divider()
 
-        # ── Download / Reset ──────────────────────────────────────────────────
+        # ── Download / Reset ──────────────────────────────────────────────
         if canvas_result.image_data is not None:
             import numpy as np
             flat_img = Image.fromarray(canvas_result.image_data.astype("uint8"), "RGBA")
