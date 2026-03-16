@@ -1,6 +1,8 @@
 """Media Editor — image and video editing tools."""
 
+import base64
 import io
+import logging
 import tempfile
 
 import streamlit as st
@@ -8,6 +10,8 @@ from PIL import Image, ImageDraw
 
 from utils.ui_helpers import load_custom_css, add_page_header
 from components.notifications import show_success, show_error, show_warning, show_info
+
+logger = logging.getLogger("media_editor")
 
 load_custom_css()
 add_page_header("Media Editor", icon="🎨")
@@ -24,7 +28,13 @@ if uploaded is None:
     st.stop()
 
 mime = uploaded.type or ""
-file_bytes = uploaded.read()
+
+# Cache file bytes in session state — UploadedFile can only be reliably read once per rerun
+if st.session_state.get("_uploaded_name") != uploaded.name:
+    st.session_state["_uploaded_name"] = uploaded.name
+    st.session_state["_uploaded_bytes"] = uploaded.read()
+
+file_bytes: bytes = st.session_state["_uploaded_bytes"]
 
 # ── Route by type ─────────────────────────────────────────────────────────────
 if mime.startswith("image/"):
@@ -40,25 +50,219 @@ else:
 # IMAGE EDITOR
 # ══════════════════════════════════════════════════════════════════════════════
 def _render_image_editor(img_bytes: bytes) -> None:
-    # Initialise session state image
-    if "editor_image" not in st.session_state or st.session_state.get("_editor_file") != uploaded.name:
-        st.session_state["editor_image"] = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
-        st.session_state["_editor_file"] = uploaded.name
+    try:
+        from streamlit_drawable_canvas import st_canvas
+    except ImportError:
+        show_warning("streamlit-drawable-canvas is not installed. Rebuild the Docker image to enable this feature.")
+        return
 
-    img: Image.Image = st.session_state["editor_image"]
+    try:
+        # Reset canvas state when a new file is loaded
+        if st.session_state.get("_editor_file") != uploaded.name:
+            st.session_state["_editor_file"] = uploaded.name
+            st.session_state["canvas_json"] = {"version": "5.3.0", "objects": []}
+            st.session_state["_editor_img"] = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+            # Clear cached base64 so it's re-encoded for the new image
+            st.session_state.pop("_bg_data_url", None)
+
+        if "canvas_json" not in st.session_state:
+            st.session_state["canvas_json"] = {"version": "5.3.0", "objects": []}
+        if "_editor_img" not in st.session_state:
+            st.session_state["_editor_img"] = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+    except Exception as e:
+        logger.exception("media_editor error loading image: %s", e)
+        show_error(f"Error loading image: {e}")
+        return
+
+    img: Image.Image = st.session_state["_editor_img"]
     w, h = img.size
 
-    col_preview, col_controls = st.columns([2, 3], gap="large")
+    # Aspect-ratio-preserving canvas dimensions
+    ratio = w / h
+    if w > 800 or h > 600:
+        if w / 800 >= h / 600:
+            canvas_w, canvas_h = 800, int(800 / ratio)
+        else:
+            canvas_w, canvas_h = int(600 * ratio), 600
+    else:
+        canvas_w, canvas_h = w, h
 
-    with col_preview:
-        st.markdown("**Preview**")
-        # Display as RGB for st.image compatibility
-        st.image(img.convert("RGB"), use_column_width=True)
-        st.caption(f"{w} × {h} px")
+    # Encode background image as base64 data URL once per file (avoids MediaFileHandler 400s)
+    if "_bg_data_url" not in st.session_state:
+        try:
+            buf = io.BytesIO()
+            img.resize((canvas_w, canvas_h), Image.LANCZOS).convert("RGB").save(buf, format="JPEG", quality=70)
+            b64 = base64.b64encode(buf.getvalue()).decode()
+            st.session_state["_bg_data_url"] = f"data:image/jpeg;base64,{b64}"
+        except Exception as e:
+            logger.exception("media_editor error encoding background: %s", e)
+            show_error(f"Error encoding image: {e}")
+            return
 
-        # Download button
-        buf = io.BytesIO()
-        img.convert("RGB").save(buf, format="PNG")
+    if "canvas_mode" not in st.session_state:
+        st.session_state["canvas_mode"] = "paint"
+
+    col_canvas, col_controls = st.columns([3, 2], gap="large")
+
+    # Read mode from session state (set by radio on previous rerun)
+    _mode = st.session_state["canvas_mode"]
+
+    # ── Resolve canvas drawing_mode and stroke from session state ──────────────
+    _draw_mode_map = {
+        "paint":   ("freedraw",
+                    st.session_state.get("paint_size", 5),
+                    st.session_state.get("paint_color", "#FF0000")),
+        "text":    ("transform", 3, "#000000"),
+        "shapes":  (st.session_state.get("shape_type", "rect"),
+                    st.session_state.get("shape_lw", 3),
+                    st.session_state.get("shape_color", "#FF0000")),
+        "overlay": ("transform", 3, "#000000"),
+        "move":    ("transform", 3, "#000000"),
+    }
+    _draw_mode, _stroke_w, _stroke_c = _draw_mode_map[_mode]
+
+    # ── Canvas — rendered first so canvas_result is available to controls ──────
+    # Build FabricJS JSON with backgroundImage (base64 data URL) to avoid
+    # Streamlit MediaFileHandler 400 errors on rerun/mode-switch
+    initial_drawing = {
+        "version": "5.3.0",
+        "objects": st.session_state["canvas_json"].get("objects", []),
+        "backgroundImage": {
+            "type": "image",
+            "version": "5.3.0",
+            "left": 0, "top": 0,
+            "width": canvas_w, "height": canvas_h,
+            "src": st.session_state["_bg_data_url"],
+            "scaleX": 1.0, "scaleY": 1.0,
+            "selectable": False, "hasControls": False, "evented": False,
+        },
+    }
+
+    with col_canvas:
+        st.caption(f"{w} × {h} px  |  Canvas: {canvas_w} × {canvas_h} px")
+        canvas_result = st_canvas(
+            fill_color="rgba(0,0,0,0)",
+            stroke_width=_stroke_w,
+            stroke_color=_stroke_c,
+            background_image=None,
+            initial_drawing=initial_drawing,
+            height=canvas_h,
+            width=canvas_w,
+            drawing_mode=_draw_mode,
+            update_streamlit=False,
+            key="canvas",
+        )
+
+    # ── Controls — canvas_result is now defined ────────────────────────────────
+    with col_controls:
+        _modes = ["paint", "text", "shapes", "overlay", "move"]
+        _mode_labels = {
+            "paint": "🎨 Paint", "text": "✏️ Text", "shapes": "🔷 Shapes",
+            "overlay": "🖼️ Overlay", "move": "↔️ Move",
+        }
+        new_mode = st.radio(
+            "Mode",
+            options=_modes,
+            format_func=lambda x: _mode_labels[x],
+            index=_modes.index(_mode),
+            horizontal=True,
+            key="mode_radio",
+        )
+        if new_mode != _mode:
+            st.session_state["canvas_mode"] = new_mode
+            # No st.rerun() needed — stable canvas key means FabricJS switches mode via prop change
+
+        st.divider()
+
+        # ── Paint controls ────────────────────────────────────────────────────
+        if _mode == "paint":
+            st.color_picker("Brush color", "#FF0000", key="paint_color")
+            st.slider("Brush size", 1, 50, 5, key="paint_size")
+            st.caption("Paint directly on the canvas with your mouse")
+
+        # ── Text controls ─────────────────────────────────────────────────────
+        elif _mode == "text":
+            text_input = st.text_input("Text", value="Hello!", key="txt_input")
+            font_size = st.slider("Font size", 10, 120, 40, key="txt_size")
+            text_color = st.color_picker("Text color", "#FFFFFF", key="txt_color")
+            bg_color = st.color_picker("Background color", "#000000", key="txt_bg")
+            if st.button("Add Text", key="btn_text", use_container_width=True):
+                current_objects = (
+                    canvas_result.json_data.get("objects", [])
+                    if canvas_result.json_data is not None
+                    else st.session_state["canvas_json"].get("objects", [])
+                )
+                current_objects.append({
+                    "type": "i-text",
+                    "left": 50, "top": 50,
+                    "text": text_input,
+                    "fontSize": font_size,
+                    "fill": text_color,
+                    "backgroundColor": bg_color,
+                    "fontFamily": "Arial",
+                    "selectable": True,
+                    "hasControls": True,
+                })
+                st.session_state["canvas_json"]["objects"] = current_objects
+                show_success("Text added — switch to ↔️ Move to drag it into position.")
+                st.rerun()
+            st.caption("After adding, switch to Move mode to drag text into position")
+
+        # ── Shapes controls ───────────────────────────────────────────────────
+        elif _mode == "shapes":
+            st.selectbox(
+                "Shape", ["rect", "circle", "line"], key="shape_type",
+                format_func=lambda x: {"rect": "Rectangle", "circle": "Circle", "line": "Line"}[x],
+            )
+            st.color_picker("Color", "#FF0000", key="shape_color")
+            st.slider("Line width", 1, 20, 3, key="shape_lw")
+            st.caption("Draw directly on the canvas, then switch to Move mode to reposition")
+
+        # ── Overlay controls ──────────────────────────────────────────────────
+        elif _mode == "overlay":
+            overlay_file = st.file_uploader("Overlay image", type=["png", "jpg", "jpeg", "webp"], key="overlay_file")
+            overlay_scale = st.slider("Scale (% of canvas width)", 5, 100, 30, key="ov_scale")
+            if st.button("Add Overlay", key="btn_overlay", use_container_width=True, disabled=overlay_file is None):
+                try:
+                    ov_img = Image.open(overlay_file).convert("RGBA")
+                    ov_bytes = io.BytesIO()
+                    ov_img.save(ov_bytes, format="PNG")
+                    b64 = base64.b64encode(ov_bytes.getvalue()).decode()
+                    scale_factor = (canvas_w * overlay_scale / 100) / ov_img.width
+                    current_objects = (
+                        canvas_result.json_data.get("objects", [])
+                        if canvas_result.json_data is not None
+                        else st.session_state["canvas_json"].get("objects", [])
+                    )
+                    current_objects.append({
+                        "type": "image",
+                        "left": 50, "top": 50,
+                        "src": f"data:image/png;base64,{b64}",
+                        "scaleX": scale_factor, "scaleY": scale_factor,
+                        "selectable": True, "hasControls": True,
+                    })
+                    st.session_state["canvas_json"]["objects"] = current_objects
+                    show_success("Overlay added — switch to ↔️ Move to drag it into position.")
+                    st.rerun()
+                except Exception as e:
+                    show_error(str(e))
+            st.caption("After adding, switch to Move mode to drag the overlay into position")
+
+        # ── Move controls ─────────────────────────────────────────────────────
+        elif _mode == "move":
+            st.caption("Click any object to select it, then drag to move or use handles to resize/rotate")
+
+        st.divider()
+
+        # ── Download / Reset ──────────────────────────────────────────────────
+        if canvas_result.image_data is not None:
+            import numpy as np
+            flat_img = Image.fromarray(canvas_result.image_data.astype("uint8"), "RGBA")
+            buf = io.BytesIO()
+            flat_img.save(buf, format="PNG")
+        else:
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
         st.download_button(
             "⬇️ Download PNG",
             data=buf.getvalue(),
@@ -66,139 +270,10 @@ def _render_image_editor(img_bytes: bytes) -> None:
             mime="image/png",
             use_container_width=True,
         )
-
-        if st.button("↩️ Reset Image", use_container_width=True):
-            st.session_state["editor_image"] = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
+        if st.button("↩️ Reset Canvas", use_container_width=True):
+            st.session_state["canvas_json"] = {"version": "5.3.0", "objects": []}
             st.rerun()
 
-    with col_controls:
-        tab_text, tab_shapes, tab_overlay, tab_draw = st.tabs(["✏️ Text", "🔷 Shapes", "🖼️ Overlay", "🎨 Draw"])
-
-        # ── Text tab ──────────────────────────────────────────────────────────
-        with tab_text:
-            text_input = st.text_input("Text", value="Hello!")
-            font_size = st.slider("Font size", 10, 200, 40, key="txt_size")
-            text_color = st.color_picker("Color", "#FFFFFF", key="txt_color")
-            x_pct = st.slider("X position (%)", 0, 100, 10, key="txt_x")
-            y_pct = st.slider("Y position (%)", 0, 100, 10, key="txt_y")
-
-            if st.button("Add Text", key="btn_text", use_container_width=True):
-                try:
-                    draw = ImageDraw.Draw(img.copy() if False else img)
-                    working = img.copy()
-                    draw2 = ImageDraw.Draw(working)
-                    x = int(w * x_pct / 100)
-                    y = int(h * y_pct / 100)
-                    # Parse hex color → RGBA
-                    r = int(text_color[1:3], 16)
-                    g = int(text_color[3:5], 16)
-                    b = int(text_color[5:7], 16)
-                    draw2.text((x, y), text_input, fill=(r, g, b, 255))
-                    st.session_state["editor_image"] = working
-                    show_success("Text added.")
-                    st.rerun()
-                except Exception as e:
-                    show_error(str(e))
-
-        # ── Shapes tab ────────────────────────────────────────────────────────
-        with tab_shapes:
-            shape = st.selectbox("Shape", ["Rectangle", "Ellipse", "Line"], key="shape_type")
-            shape_color = st.color_picker("Color", "#FF0000", key="shape_color")
-            shape_width = st.slider("Line width (px)", 1, 20, 3, key="shape_lw")
-            x1_pct = st.slider("X1 (%)", 0, 100, 20, key="sx1")
-            y1_pct = st.slider("Y1 (%)", 0, 100, 20, key="sy1")
-            x2_pct = st.slider("X2 (%)", 0, 100, 80, key="sx2")
-            y2_pct = st.slider("Y2 (%)", 0, 100, 80, key="sy2")
-
-            if st.button("Add Shape", key="btn_shape", use_container_width=True):
-                try:
-                    working = img.copy()
-                    draw = ImageDraw.Draw(working)
-                    x1 = int(w * x1_pct / 100)
-                    y1 = int(h * y1_pct / 100)
-                    x2 = int(w * x2_pct / 100)
-                    y2 = int(h * y2_pct / 100)
-                    r = int(shape_color[1:3], 16)
-                    g = int(shape_color[3:5], 16)
-                    b = int(shape_color[5:7], 16)
-                    fill_color = (r, g, b, 255)
-                    if shape == "Rectangle":
-                        draw.rectangle([x1, y1, x2, y2], outline=fill_color, width=shape_width)
-                    elif shape == "Ellipse":
-                        draw.ellipse([x1, y1, x2, y2], outline=fill_color, width=shape_width)
-                    else:
-                        draw.line([x1, y1, x2, y2], fill=fill_color, width=shape_width)
-                    st.session_state["editor_image"] = working
-                    show_success("Shape added.")
-                    st.rerun()
-                except Exception as e:
-                    show_error(str(e))
-
-        # ── Overlay tab ───────────────────────────────────────────────────────
-        with tab_overlay:
-            overlay_file = st.file_uploader("Overlay image", type=["png", "jpg", "jpeg", "webp"], key="overlay_file")
-            if overlay_file:
-                overlay_scale = st.slider("Overlay size (%)", 5, 100, 30, key="ov_scale")
-                ox_pct = st.slider("X position (%)", 0, 100, 50, key="ov_x")
-                oy_pct = st.slider("Y position (%)", 0, 100, 50, key="ov_y")
-
-                if st.button("Apply Overlay", key="btn_overlay", use_container_width=True):
-                    try:
-                        overlay = Image.open(overlay_file).convert("RGBA")
-                        new_w = max(1, int(w * overlay_scale / 100))
-                        new_h = max(1, int(overlay.height * new_w / overlay.width))
-                        overlay = overlay.resize((new_w, new_h), Image.LANCZOS)
-                        ox = int(w * ox_pct / 100)
-                        oy = int(h * oy_pct / 100)
-                        working = img.copy()
-                        working.paste(overlay, (ox, oy), overlay)
-                        st.session_state["editor_image"] = working
-                        show_success("Overlay applied.")
-                        st.rerun()
-                    except Exception as e:
-                        show_error(str(e))
-            else:
-                show_info("Upload an overlay image above.")
-
-        # ── Draw tab ──────────────────────────────────────────────────────────
-        with tab_draw:
-            try:
-                from streamlit_drawable_canvas import st_canvas
-
-                draw_color = st.color_picker("Brush color", "#FF0000", key="draw_color")
-                draw_width = st.slider("Brush size", 1, 50, 5, key="draw_width")
-
-                canvas_result = st_canvas(
-                    fill_color="rgba(0,0,0,0)",
-                    stroke_width=draw_width,
-                    stroke_color=draw_color,
-                    background_image=img.convert("RGB"),
-                    height=min(h, 500),
-                    width=min(w, 700),
-                    drawing_mode="freedraw",
-                    key="canvas",
-                )
-
-                if st.button("Apply Drawing", key="btn_draw", use_container_width=True):
-                    if canvas_result.image_data is not None:
-                        try:
-                            import numpy as np
-                            canvas_arr = canvas_result.image_data  # RGBA numpy array
-                            canvas_img = Image.fromarray(canvas_arr.astype("uint8"), "RGBA")
-                            # Scale canvas back to original image size if needed
-                            if canvas_img.size != (w, h):
-                                canvas_img = canvas_img.resize((w, h), Image.LANCZOS)
-                            working = img.copy()
-                            working.paste(canvas_img, (0, 0), canvas_img)
-                            st.session_state["editor_image"] = working
-                            show_success("Drawing applied.")
-                            st.rerun()
-                        except Exception as e:
-                            show_error(str(e))
-                    else:
-                        show_warning("Draw something on the canvas first.")
-            except ImportError:
-                show_warning("streamlit-drawable-canvas is not installed. Rebuild the Docker image to enable this feature.")
 
 
 # ══════════════════════════════════════════════════════════════════════════════

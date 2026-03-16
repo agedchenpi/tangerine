@@ -1,5 +1,5 @@
 # Streamlit web framework (includes pandas, numpy)
-streamlit==1.39.0
+streamlit==1.49.1
 
 # Optional UI enhancements
 streamlit-aggrid==0.3.4.post3  # Advanced data grids
@@ -12,5 +12,5 @@ psutil>=5.9.0                   # System resource monitoring
 
 # Media editor
 Pillow>=10.0.0                  # Image manipulation
-streamlit-drawable-canvas==0.9.3  # Freehand drawing component
+streamlit-drawable-canvas-fix==0.9.8  # Freehand drawing component (maintained fork)
 moviepy==1.0.3                  # Video trimming and compositing

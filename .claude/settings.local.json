@@ -111,7 +111,17 @@
       "WebFetch(domain:programminghistorian.org)",
       "WebFetch(domain:mapping-manuscript-migrations.github.io)",
       "WebFetch(domain:linked.art)",
-      "Bash(streamlit:*)"
+      "Bash(streamlit:*)",
+      "WebFetch(domain:pypi.org)",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:fabricjs.com)",
+      "Bash(pip index:*)",
+      "Bash(pip list:*)",
+      "Bash(git -C /opt/tangerine diff requirements/)",
+      "Bash(pip download:*)",
+      "Read(//tmp/**)",
+      "Bash(cd /tmp/canvas-fix && unzip -l streamlit_drawable_canvas_fix-0.9.8-py3-none-any.whl | head -30)",
+      "Bash(docker run:*)"
     ]
   }
 }

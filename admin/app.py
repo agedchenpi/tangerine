@@ -38,14 +38,15 @@ st.markdown("""
         const urlParams = new URLSearchParams(window.location.search);
         const currentTheme = urlParams.get('theme');
 
-        // If localStorage has a theme and it differs from URL, update URL
+        // If localStorage has a theme and it differs from URL, update URL silently.
+        // Do NOT reload — window.location.reload() kills the Streamlit WebSocket
+        // session mid-flight and causes file uploads to fail with 400.
+        // Python picks up the updated query param on the next natural rerun.
         if (savedTheme && savedTheme !== currentTheme) {
             console.log('[Theme Sync] Syncing localStorage theme:', savedTheme);
             urlParams.set('theme', savedTheme);
             const newUrl = window.location.pathname + '?' + urlParams.toString();
             window.history.replaceState({}, '', newUrl);
-            // Trigger Streamlit rerun to pick up the query param
-            window.location.reload();
         }
 
         // If no localStorage theme exists, save current theme from URL
