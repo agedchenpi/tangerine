@@ -121,7 +121,8 @@
       "Bash(pip download:*)",
       "Read(//tmp/**)",
       "Bash(cd /tmp/canvas-fix && unzip -l streamlit_drawable_canvas_fix-0.9.8-py3-none-any.whl | head -30)",
-      "Bash(docker run:*)"
+      "Bash(docker run:*)",
+      "Bash(python3.11 -c \"import streamlit_drawable_canvas; print\\(streamlit_drawable_canvas.__file__\\)\")"
     ]
   }
 }

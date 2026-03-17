@@ -102,17 +102,26 @@ def _render_image_editor(img_bytes: bytes) -> None:
     col_canvas, col_controls = st.columns([3, 2], gap="large")
 
     # ── Resolve canvas drawing_mode and stroke from session state ──────────────
-    _tool = st.session_state.get("drawing_tool", "paint")
+    ss = st.session_state
+    _tool = ss.get("drawing_tool", "move")
     _draw_mode_map = {
-        "paint":  ("freedraw",
-                   st.session_state.get("paint_size", 5),
-                   st.session_state.get("paint_color", "#FF0000")),
-        "shapes": (st.session_state.get("shape_type", "rect"),
-                   st.session_state.get("shape_lw", 3),
-                   st.session_state.get("shape_color", "#FF0000")),
         "move":   ("transform", 3, "#000000"),
+        "paint":  ("freedraw",
+                   ss.get("paint_size", 5),
+                   ss.get("paint_color", "#FF0000")),
+        "rect":   ("rect",
+                   ss.get("shape_lw", 3),
+                   ss.get("shape_color", "#FF0000")),
+        "circle": ("circle",
+                   ss.get("shape_lw", 3),
+                   ss.get("shape_color", "#FF0000")),
+        "line":   ("line",
+                   ss.get("shape_lw", 3),
+                   ss.get("shape_color", "#FF0000")),
+        "text":   ("transform", 3, "#000000"),
+        "image":  ("transform", 3, "#000000"),
     }
-    _draw_mode, _stroke_w, _stroke_c = _draw_mode_map.get(_tool, _draw_mode_map["paint"])
+    _draw_mode, _stroke_w, _stroke_c = _draw_mode_map.get(_tool, _draw_mode_map["move"])
 
     # ── Canvas — rendered first so canvas_result is available to controls ──────
     # Build FabricJS JSON with backgroundImage (base64 data URL) to avoid
@@ -142,6 +151,7 @@ def _render_image_editor(img_bytes: bytes) -> None:
             height=canvas_h,
             width=canvas_w,
             drawing_mode=_draw_mode,
+            display_toolbar=True,
             update_streamlit=True,
             key="canvas",
         )
@@ -152,39 +162,52 @@ def _render_image_editor(img_bytes: bytes) -> None:
             return list(canvas_result.json_data.get("objects", []))
         return list(st.session_state["canvas_json"].get("objects", []))
 
-    # ── Controls — unified toolbar ─────────────────────────────────────────────
+    # ── Track canvas history for undo/redo ───────────────────────────────────
+    if "_canvas_history" not in ss:
+        ss["_canvas_history"] = [[]]
+        ss["_history_idx"] = 0
+
+    if canvas_result.json_data is not None:
+        current_objs = canvas_result.json_data.get("objects", [])
+        history = ss["_canvas_history"]
+        idx = ss["_history_idx"]
+        last = history[idx] if history else []
+        if len(current_objs) != len(last) or current_objs != last:
+            ss["_canvas_history"] = history[: idx + 1] + [list(current_objs)]
+            ss["_history_idx"] = idx + 1
+
+    # ── Controls — per-tool settings ──────────────────────────────────────────
     with col_controls:
-        # ── Drawing Tool selector ──────────────────────────────────────────
+        # ── Tool selector (7 tools, Move default) ─────────────────────────
         tool = st.segmented_control(
-            "Drawing Tool",
-            options=["paint", "shapes", "move"],
-            format_func={"paint": "🎨 Paint", "shapes": "🔷 Shapes", "move": "↔️ Move"}.get,
-            default="paint",
+            "Tool",
+            options=["move", "paint", "rect", "circle", "line", "text", "image"],
+            format_func={
+                "move": "↔️ Move", "paint": "🎨 Paint", "rect": "▭ Rect",
+                "circle": "⬭ Circle", "line": "╱ Line",
+                "text": "📝 Text", "image": "🖼️ Image",
+            }.get,
+            default="move",
             key="drawing_tool",
         )
 
-        # Tool-specific settings (inline)
-        if tool == "paint":
+        # ── Per-tool inline settings ──────────────────────────────────────
+        if tool == "move":
+            st.caption("Click to select, drag to move, handles to resize/rotate")
+        elif tool == "paint":
             st.color_picker("Brush color", "#FF0000", key="paint_color")
             st.slider("Brush size", 1, 50, 5, key="paint_size")
-        elif tool == "shapes":
-            st.selectbox(
-                "Shape", ["rect", "circle", "line"], key="shape_type",
-                format_func=lambda x: {"rect": "Rectangle", "circle": "Circle", "line": "Line"}[x],
-            )
-            st.color_picker("Color", "#FF0000", key="shape_color")
+        elif tool in ("rect", "circle", "line"):
+            st.color_picker("Shape color", "#FF0000", key="shape_color")
             st.slider("Line width", 1, 20, 3, key="shape_lw")
-        elif tool == "move":
-            st.caption("Click any object to select, drag to move, use handles to resize/rotate")
-
-        st.divider()
-
-        # ── Add Elements ───────────────────────────────────────────────────
-        with st.expander("📝 Add Text"):
+        elif tool == "text":
             text_input = st.text_input("Text", value="Hello!", key="txt_input")
             font_size = st.slider("Font size", 10, 120, 40, key="txt_size")
-            text_color = st.color_picker("Text color", "#FFFFFF", key="txt_color")
-            bg_color = st.color_picker("Background color", "#000000", key="txt_bg")
+            tcol1, tcol2 = st.columns(2)
+            with tcol1:
+                text_color = st.color_picker("Text color", "#FFFFFF", key="txt_color")
+            with tcol2:
+                bg_color = st.color_picker("Background", "#000000", key="txt_bg")
             if st.button("Add Text", key="btn_text", use_container_width=True):
                 current_objects = _live_objects()
                 current_objects.append({
@@ -198,12 +221,14 @@ def _render_image_editor(img_bytes: bytes) -> None:
                     "selectable": True,
                     "hasControls": True,
                 })
-                st.session_state["canvas_json"]["objects"] = current_objects
+                ss["canvas_json"]["objects"] = current_objects
                 show_success("Text added!")
+                ss["drawing_tool"] = "move"
                 st.rerun()
-
-        with st.expander("🖼️ Add Overlay"):
-            overlay_file = st.file_uploader("Overlay image", type=["png", "jpg", "jpeg", "webp"], key="overlay_file")
+        elif tool == "image":
+            overlay_file = st.file_uploader(
+                "Overlay image", type=["png", "jpg", "jpeg", "webp"], key="overlay_file",
+            )
             overlay_scale = st.slider("Scale (% of canvas width)", 5, 100, 30, key="ov_scale")
             if st.button("Add Overlay", key="btn_overlay", use_container_width=True, disabled=overlay_file is None):
                 try:
@@ -220,13 +245,32 @@ def _render_image_editor(img_bytes: bytes) -> None:
                         "scaleX": scale_factor, "scaleY": scale_factor,
                         "selectable": True, "hasControls": True,
                     })
-                    st.session_state["canvas_json"]["objects"] = current_objects
+                    ss["canvas_json"]["objects"] = current_objects
                     show_success("Overlay added!")
+                    ss["drawing_tool"] = "move"
                     st.rerun()
                 except Exception as e:
                     show_error(str(e))
 
         st.divider()
+
+        # ── Undo / Redo ───────────────────────────────────────────────────
+        ucol1, ucol2 = st.columns(2)
+        with ucol1:
+            if st.button("⟲ Undo", use_container_width=True, key="btn_undo"):
+                idx = ss.get("_history_idx", 0)
+                if idx > 0:
+                    ss["_history_idx"] = idx - 1
+                    ss["canvas_json"]["objects"] = list(ss["_canvas_history"][idx - 1])
+                    st.rerun()
+        with ucol2:
+            if st.button("⟳ Redo", use_container_width=True, key="btn_redo"):
+                idx = ss.get("_history_idx", 0)
+                history = ss.get("_canvas_history", [])
+                if idx < len(history) - 1:
+                    ss["_history_idx"] = idx + 1
+                    ss["canvas_json"]["objects"] = list(history[idx + 1])
+                    st.rerun()
 
         # ── Download / Reset ──────────────────────────────────────────────
         if canvas_result.image_data is not None:
@@ -245,7 +289,9 @@ def _render_image_editor(img_bytes: bytes) -> None:
             use_container_width=True,
         )
         if st.button("↩️ Reset Canvas", use_container_width=True):
-            st.session_state["canvas_json"] = {"version": "5.3.0", "objects": []}
+            ss["canvas_json"] = {"version": "5.3.0", "objects": []}
+            ss["_canvas_history"] = [[]]
+            ss["_history_idx"] = 0
             st.rerun()
 
 
