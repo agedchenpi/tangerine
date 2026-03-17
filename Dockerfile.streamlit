@@ -13,9 +13,10 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Install curl for healthcheck
+# Install curl, ffmpeg, and ImageMagick for healthcheck + video editing
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl ffmpeg && \
+    apt-get install -y --no-install-recommends curl ffmpeg imagemagick fonts-liberation && \
+    sed -i 's/rights="none" pattern="@\*"/rights="read|write" pattern="@*"/' /etc/ImageMagick-6/policy.xml || true && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -25,7 +26,9 @@ COPY requirements/admin.txt /app/requirements/admin.txt
 COPY requirements/test.txt /app/requirements/test.txt
 RUN pip install --no-cache-dir -r requirements/base.txt && \
     pip install --no-cache-dir -r requirements/admin.txt && \
-    pip install --no-cache-dir -r requirements/test.txt
+    pip install --no-cache-dir -r requirements/test.txt && \
+    sed -i 's/Image\.ANTIALIAS/Image.LANCZOS/g' \
+        $(python3 -c "import moviepy.video.fx.resize; print(moviepy.video.fx.resize.__file__)")
 
 # Copy application code
 COPY common/ /app/common/

@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow: hidden; }
+  canvas { display: block; outline: none; }
+</style>
+</head>
+<body>
+<canvas id="tl" tabindex="0"></canvas>
+<script>
+(function() {
+  // ── Streamlit iframe protocol ──────────────────────────────────────────────
+  const LABEL_W = 50;
+  const RULER_H = 24;
+  const ROW_H = 40;
+  const PLAYHEAD_W = 16;
+  const EDGE_HIT = 6;
+  const MIN_DUR = 0.1;
+
+  let args = {};
+  let theme = {};
+  let canvas, ctx;
+  let dpr = window.devicePixelRatio || 1;
+  let canvasW = 600, canvasH = RULER_H + ROW_H * 4 + 8;
+
+  // Drag state
+  let dragMode = null;  // null | "scrub" | "resize" | "move"
+  let dragTrack = null;
+  let dragId = null;
+  let dragEdge = null;  // "start" | "end"
+  let dragStartX = 0;
+  let dragOrigStart = 0;
+  let dragOrigEnd = 0;
+  let hoverCursor = "default";
+
+  // Colors
+  const SEG_COLOR = "#4A90D9";
+  const VOV_COLOR = "#E67E22";
+  const TXT_COLOR = "#50C878";
+  const IMG_COLOR = "#9B59B6";
+  const PLAYHEAD_COLOR = "#E74C3C";
+
+  function sendMessage(type, data) {
+    window.parent.postMessage({isStreamlitMessage: true, type: type, ...data}, "*");
+  }
+
+  function setComponentValue(val) {
+    sendMessage("streamlit:setComponentValue", {value: val});
+  }
+
+  function setFrameHeight(h) {
+    sendMessage("streamlit:setFrameHeight", {height: h});
+  }
+
+  // ── Coordinate helpers ─────────────────────────────────────────────────────
+  function timeToX(t) {
+    var dur = args.total_duration || 1;
+    return LABEL_W + (t / dur) * (canvasW - LABEL_W);
+  }
+
+  function xToTime(x) {
+    var dur = args.total_duration || 1;
+    var frac = (x - LABEL_W) / (canvasW - LABEL_W);
+    return Math.max(0, Math.min(dur, frac * dur));
+  }
+
+  function rowY(rowIdx) {
+    return RULER_H + rowIdx * ROW_H;
+  }
+
+  // ── Hit testing ────────────────────────────────────────────────────────────
+  function hitTest(mx, my) {
+    // Check playhead handle first
+    var phX = timeToX(args.playhead || 0);
+    if (Math.abs(mx - phX) < PLAYHEAD_W && my < RULER_H + 4) {
+      return {type: "playhead"};
+    }
+
+    var rows = [
+      {track: "segment", items: buildSegmentRects()},
+      {track: "video_overlay", items: buildOverlayRects(args.video_overlays || [])},
+      {track: "text", items: buildOverlayRects(args.texts || [])},
+      {track: "image", items: buildOverlayRects(args.images || [])},
+    ];
+
+    for (var ri = 0; ri < rows.length; ri++) {
+      var ry = rowY(ri);
+      if (my >= ry && my < ry + ROW_H) {
+        var items = rows[ri].items;
+        for (var i = 0; i < items.length; i++) {
+          var it = items[i];
+          if (mx >= it.x && mx <= it.x + it.w) {
+            var nearStart = Math.abs(mx - it.x) <= EDGE_HIT;
+            var nearEnd = Math.abs(mx - (it.x + it.w)) <= EDGE_HIT;
+            return {
+              type: "clip",
+              track: rows[ri].track,
+              id: it.id,
+              start: it.start,
+              end: it.end,
+              edge: nearStart ? "start" : (nearEnd ? "end" : null),
+            };
+          }
+        }
+        // Clicked in row but not on clip
+        return {type: "empty", track: rows[ri].track};
+      }
+    }
+
+    // Clicked on ruler area — treat as scrub
+    if (my < RULER_H) {
+      return {type: "ruler"};
+    }
+    return {type: "empty", track: null};
+  }
+
+  function buildSegmentRects() {
+    var segs = args.segments || [];
+    var rects = [];
+    var offset = 0;
+    for (var i = 0; i < segs.length; i++) {
+      var dur = segs[i].src_end - segs[i].src_start;
+      rects.push({
+        id: segs[i].id,
+        x: timeToX(offset),
+        w: timeToX(offset + dur) - timeToX(offset),
+        start: offset,
+        end: offset + dur,
+      });
+      offset += dur;
+    }
+    return rects;
+  }
+
+  function buildOverlayRects(items) {
+    var rects = [];
+    for (var i = 0; i < items.length; i++) {
+      rects.push({
+        id: items[i].id,
+        x: timeToX(items[i].start),
+        w: timeToX(items[i].end) - timeToX(items[i].start),
+        start: items[i].start,
+        end: items[i].end,
+      });
+    }
+    return rects;
+  }
+
+  // ── Drawing ────────────────────────────────────────────────────────────────
+  function draw() {
+    if (!ctx) return;
+    var tc = args.theme_colors || {};
+    var bgColor = tc.card_bg || "#1E1E2E";
+    var borderColor = tc.border || "#2D2D3D";
+    var textColor = tc.text_secondary || "#D0D0D0";
+    var accentColor = tc.accent || "#FFA05C";
+    var totalDur = args.total_duration || 1;
+    var selected = args.selected;
+
+    ctx.save();
+    ctx.scale(dpr, dpr);
+
+    // Background
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, canvasW, canvasH);
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(0.5, 0.5, canvasW - 1, canvasH - 1);
+
+    // ── Time ruler ───────────────────────────────────────────────────────
+    ctx.fillStyle = textColor;
+    ctx.font = "10px monospace";
+    ctx.textBaseline = "middle";
+
+    var step = totalDur <= 5 ? 1 : totalDur <= 20 ? 2 : totalDur <= 60 ? 5 : 10;
+    for (var t = 0; t <= totalDur; t += step) {
+      var x = timeToX(t);
+      ctx.beginPath();
+      ctx.moveTo(x, 2);
+      ctx.lineTo(x, RULER_H - 2);
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = textColor;
+      ctx.fillText(t.toFixed(0) + "s", x + 2, RULER_H / 2);
+    }
+
+    // Track label column
+    var labels = ["V1", "V2", "T1", "I1"];
+    ctx.font = "bold 11px monospace";
+    for (var r = 0; r < 4; r++) {
+      var ry = rowY(r);
+      ctx.fillStyle = textColor;
+      ctx.fillText(labels[r], 8, ry + ROW_H / 2);
+      // Row separator
+      ctx.beginPath();
+      ctx.moveTo(LABEL_W, ry);
+      ctx.lineTo(canvasW, ry);
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+
+    // ── V1 segments ──────────────────────────────────────────────────────
+    var segRects = buildSegmentRects();
+    for (var i = 0; i < segRects.length; i++) {
+      var sr = segRects[i];
+      var isSel = selected && selected.track === "segment" && selected.id === sr.id;
+      drawBlock(sr.x, rowY(0) + 2, sr.w, ROW_H - 4, SEG_COLOR, isSel, accentColor, borderColor);
+      // Label — show source name if available, otherwise time range
+      var seg = (args.segments || [])[i];
+      if (seg && sr.w > 40) {
+        ctx.fillStyle = "#fff";
+        ctx.font = "10px monospace";
+        var segLabel = seg.source_name
+          ? seg.source_name.substring(0, 15)
+          : seg.src_start.toFixed(1) + "-" + seg.src_end.toFixed(1) + "s";
+        ctx.fillText(segLabel, sr.x + 4, rowY(0) + ROW_H / 2 + 1);
+      }
+    }
+
+    // ── V2 video overlays ────────────────────────────────────────────────
+    var vovRects = buildOverlayRects(args.video_overlays || []);
+    for (var i = 0; i < vovRects.length; i++) {
+      var vr = vovRects[i];
+      var isSel = selected && selected.track === "video_overlay" && selected.id === vr.id;
+      drawBlock(vr.x, rowY(1) + 2, vr.w, ROW_H - 4, VOV_COLOR, isSel, accentColor, borderColor);
+      var vov = (args.video_overlays || [])[i];
+      if (vov && vr.w > 40) {
+        ctx.fillStyle = "#fff";
+        ctx.font = "10px monospace";
+        var vLabel = vov.source_name ? vov.source_name.substring(0, 15) : "V2";
+        ctx.fillText(vLabel, vr.x + 4, rowY(1) + ROW_H / 2 + 1);
+      }
+    }
+
+    // ── T1 texts ─────────────────────────────────────────────────────────
+    var txtRects = buildOverlayRects(args.texts || []);
+    for (var i = 0; i < txtRects.length; i++) {
+      var tr = txtRects[i];
+      var isSel = selected && selected.track === "text" && selected.id === tr.id;
+      drawBlock(tr.x, rowY(2) + 2, tr.w, ROW_H - 4, TXT_COLOR, isSel, accentColor, borderColor);
+      var txt = (args.texts || [])[i];
+      if (txt && tr.w > 20) {
+        ctx.fillStyle = "#fff";
+        ctx.font = "10px monospace";
+        var label = '"' + (txt.text || "").substring(0, 12) + '"';
+        ctx.fillText(label, tr.x + 4, rowY(2) + ROW_H / 2 + 1);
+      }
+    }
+
+    // ── I1 images ────────────────────────────────────────────────────────
+    var imgRects = buildOverlayRects(args.images || []);
+    for (var i = 0; i < imgRects.length; i++) {
+      var ir = imgRects[i];
+      var isSel = selected && selected.track === "image" && selected.id === ir.id;
+      drawBlock(ir.x, rowY(3) + 2, ir.w, ROW_H - 4, IMG_COLOR, isSel, accentColor, borderColor);
+      if (ir.w > 20) {
+        ctx.fillStyle = "#fff";
+        ctx.font = "10px monospace";
+        ctx.fillText("IMG", ir.x + 4, rowY(3) + ROW_H / 2 + 1);
+      }
+    }
+
+    // ── Playhead ─────────────────────────────────────────────────────────
+    var phX = timeToX(args.playhead || 0);
+    ctx.beginPath();
+    ctx.moveTo(phX, 0);
+    ctx.lineTo(phX, canvasH);
+    ctx.strokeStyle = PLAYHEAD_COLOR;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Playhead handle (triangle) — larger for easier grabbing
+    ctx.beginPath();
+    ctx.moveTo(phX - 8, 0);
+    ctx.lineTo(phX + 8, 0);
+    ctx.lineTo(phX, 12);
+    ctx.closePath();
+    ctx.fillStyle = PLAYHEAD_COLOR;
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawBlock(x, y, w, h, color, isSelected, accentColor, borderColor) {
+    ctx.fillStyle = color;
+    roundRect(ctx, x, y, w, h, 3);
+    ctx.fill();
+    if (isSelected) {
+      ctx.strokeStyle = accentColor;
+      ctx.lineWidth = 2;
+    } else {
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = 1;
+    }
+    roundRect(ctx, x, y, w, h, 3);
+    ctx.stroke();
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  // ── Mouse events ───────────────────────────────────────────────────────────
+  function getMousePos(e) {
+    var rect = canvas.getBoundingClientRect();
+    return {x: e.clientX - rect.left, y: e.clientY - rect.top};
+  }
+
+  canvas = document.getElementById("tl");
+
+  canvas.addEventListener("mousedown", function(e) {
+    var pos = getMousePos(e);
+    var hit = hitTest(pos.x, pos.y);
+
+    if (hit.type === "playhead" || hit.type === "ruler") {
+      dragMode = "scrub";
+      var t = xToTime(pos.x);
+      setComponentValue({action: "scrub", time: Math.round(t * 10) / 10});
+      return;
+    }
+
+    if (hit.type === "clip") {
+      if (hit.edge) {
+        // Start resize drag
+        dragMode = "resize";
+        dragTrack = hit.track;
+        dragId = hit.id;
+        dragEdge = hit.edge;
+        dragStartX = pos.x;
+        dragOrigStart = hit.start;
+        dragOrigEnd = hit.end;
+      } else if (hit.track !== "segment") {
+        // Start move drag (overlays including V2)
+        dragMode = "move";
+        dragTrack = hit.track;
+        dragId = hit.id;
+        dragStartX = pos.x;
+        dragOrigStart = hit.start;
+        dragOrigEnd = hit.end;
+      } else {
+        // Click on segment body = select
+        setComponentValue({action: "select", track: hit.track, id: hit.id});
+      }
+      return;
+    }
+
+    // Click empty area = deselect
+    setComponentValue({action: "select", track: null, id: null});
+  });
+
+  canvas.addEventListener("mousemove", function(e) {
+    var pos = getMousePos(e);
+    var totalDur = args.total_duration || 1;
+
+    if (dragMode === "scrub") {
+      var t = xToTime(pos.x);
+      setComponentValue({action: "scrub", time: Math.round(t * 10) / 10});
+      return;
+    }
+
+    if (dragMode === "resize") {
+      var t = xToTime(pos.x);
+      var newStart = dragOrigStart;
+      var newEnd = dragOrigEnd;
+      if (dragEdge === "start") {
+        newStart = Math.max(0, Math.min(t, dragOrigEnd - MIN_DUR));
+      } else {
+        newEnd = Math.min(totalDur, Math.max(t, dragOrigStart + MIN_DUR));
+      }
+      // Don't send on every pixel — round to 0.1s
+      newStart = Math.round(newStart * 10) / 10;
+      newEnd = Math.round(newEnd * 10) / 10;
+      setComponentValue({
+        action: "resize", track: dragTrack, id: dragId,
+        start: newStart, end: newEnd,
+      });
+      return;
+    }
+
+    if (dragMode === "move") {
+      var dx = pos.x - dragStartX;
+      var dt = dx / (canvasW - LABEL_W) * totalDur;
+      var dur = dragOrigEnd - dragOrigStart;
+      var newStart = Math.max(0, Math.min(totalDur - dur, dragOrigStart + dt));
+      newStart = Math.round(newStart * 10) / 10;
+      var newEnd = Math.round((newStart + dur) * 10) / 10;
+      setComponentValue({
+        action: "move", track: dragTrack, id: dragId,
+        start: newStart, end: newEnd,
+      });
+      return;
+    }
+
+    // Hover cursor
+    var hit = hitTest(pos.x, pos.y);
+    if (hit.type === "playhead") {
+      canvas.style.cursor = "ew-resize";
+    } else if (hit.type === "clip" && hit.edge) {
+      canvas.style.cursor = "col-resize";
+    } else if (hit.type === "clip" && hit.track !== "segment") {
+      canvas.style.cursor = "grab";
+    } else if (hit.type === "ruler") {
+      canvas.style.cursor = "pointer";
+    } else {
+      canvas.style.cursor = "default";
+    }
+  });
+
+  canvas.addEventListener("mouseup", function(e) {
+    if (dragMode === "resize" || dragMode === "move") {
+      // Final value already sent during mousemove
+    }
+    if (!dragMode || dragMode === null) {
+      // Already handled in mousedown
+    }
+    // If it was a click (no movement) on a non-segment clip, send select
+    if ((dragMode === "move" || dragMode === "resize") && Math.abs(getMousePos(e).x - dragStartX) < 3) {
+      setComponentValue({action: "select", track: dragTrack, id: dragId});
+    }
+    dragMode = null;
+    dragTrack = null;
+    dragId = null;
+    dragEdge = null;
+  });
+
+  canvas.addEventListener("mouseleave", function() {
+    dragMode = null;
+    canvas.style.cursor = "default";
+  });
+
+  // ── Keyboard shortcuts (when canvas has focus) ────────────────────────────
+  canvas.addEventListener("keydown", function(e) {
+    var totalDur = args.total_duration || 1;
+    var handled = true;
+
+    switch (e.key) {
+      case " ":
+        setComponentValue({action: "play_toggle"});
+        break;
+      case "ArrowLeft":
+        setComponentValue({action: "step_back", total_duration: totalDur});
+        break;
+      case "ArrowRight":
+        setComponentValue({action: "step_forward", total_duration: totalDur});
+        break;
+      case "Home":
+        setComponentValue({action: "goto_start"});
+        break;
+      case "End":
+        setComponentValue({action: "goto_end", total_duration: totalDur});
+        break;
+      default:
+        handled = false;
+    }
+
+    if (handled) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  });
+
+  // Focus canvas on click so keyboard shortcuts work
+  canvas.addEventListener("click", function() {
+    canvas.focus();
+  });
+
+  // ── Streamlit render handler ───────────────────────────────────────────────
+  function onRender(event) {
+    if (!event.detail) return;
+    args = event.detail.args || {};
+    theme = event.detail.theme || {};
+
+    // Size canvas to container width
+    var containerW = document.body.clientWidth || 600;
+    canvasW = Math.max(400, containerW - 4);
+    canvasH = RULER_H + ROW_H * 4 + 8;
+
+    canvas.style.width = canvasW + "px";
+    canvas.style.height = canvasH + "px";
+    canvas.width = canvasW * dpr;
+    canvas.height = canvasH * dpr;
+    ctx = canvas.getContext("2d");
+
+    draw();
+    setFrameHeight(canvasH + 4);
+  }
+
+  // Listen for Streamlit render events
+  window.addEventListener("message", function(event) {
+    if (event.data && event.data.type === "streamlit:render") {
+      onRender({detail: event.data});
+    }
+  });
+
+  // Signal ready
+  sendMessage("streamlit:componentReady", {apiVersion: 1});
+})();
+</script>
+</body>
+</html>
