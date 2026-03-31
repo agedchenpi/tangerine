@@ -18,3 +18,5 @@ moviepy==1.0.3                  # Video trimming and compositing
 # Music visualizer
 librosa>=0.10.0                 # Audio feature extraction (STFT, beat tracking)
 scipy>=1.11.0                   # Signal processing (gaussian_filter for glow)
+matplotlib>=3.7.0               # Waveform / spectral energy preview charts
+pilmoji>=2.0                    # Emoji rendering in title overlay
