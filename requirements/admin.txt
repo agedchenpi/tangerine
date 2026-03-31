@@ -14,3 +14,7 @@ psutil>=5.9.0                   # System resource monitoring
 Pillow>=10.0.0                  # Image manipulation
 streamlit-drawable-canvas-fix==0.9.8  # Freehand drawing component (maintained fork)
 moviepy==1.0.3                  # Video trimming and compositing
+
+# Music visualizer
+librosa>=0.10.0                 # Audio feature extraction (STFT, beat tracking)
+scipy>=1.11.0                   # Signal processing (gaussian_filter for glow)

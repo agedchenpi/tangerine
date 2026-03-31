@@ -343,6 +343,46 @@ def _tl_split_segment(segments: list, seg_id: int, split_time: float, ss) -> lis
     return segments
 
 
+def _tl_reorder_segment(ss, seg_id: int, direction: int) -> None:
+    """Swap a segment with its neighbor. direction: -1 = earlier, +1 = later."""
+    segs = ss["_tl_segments"]
+    for i, seg in enumerate(segs):
+        if seg["id"] == seg_id:
+            j = i + direction
+            if 0 <= j < len(segs):
+                segs[i], segs[j] = segs[j], segs[i]
+                ss["_video_rendered_bytes"] = None
+                ss["_frame_cache_key"] = None
+            return
+
+
+def _apply_layout_preset(ss, preset: str, vw: int, vh: int) -> None:
+    """Set x, y, scale on the first V2 overlay based on a layout preset name."""
+    overlays = ss.get("_tl_video_overlays", [])
+    if not overlays:
+        return
+    sel = ss.get("_tl_selected")
+    ov = None
+    if sel and sel.get("track") == "video_overlay":
+        ov = next((v for v in overlays if v["id"] == sel["id"]), None)
+    if ov is None:
+        ov = overlays[0]
+    presets = {
+        "pip_top_left":     (0.3, int(vw * 0.02), int(vh * 0.02)),
+        "pip_top_right":    (0.3, int(vw * 0.68), int(vh * 0.02)),
+        "pip_bottom_left":  (0.3, int(vw * 0.02), int(vh * 0.68)),
+        "pip_bottom_right": (0.3, int(vw * 0.68), int(vh * 0.68)),
+        "pip_center":       (0.5, int(vw * 0.25), int(vh * 0.25)),
+        "full_overlay":     (1.0, 0, 0),
+    }
+    scale, x, y = presets.get(preset, (1.0, 0, 0))
+    ov["scale"] = scale
+    ov["x"] = x
+    ov["y"] = y
+    ss["_video_rendered_bytes"] = None
+    ss["_frame_cache_key"] = None
+
+
 def _tl_delete_clip(ss, track: str, clip_id: int) -> None:
     """Delete a clip from the timeline; prevent deleting the last segment."""
     logger.info("Delete clip: track=%s id=%d", track, clip_id)
@@ -526,6 +566,19 @@ def _render_clip_properties(ss, track, clip, total_dur, vw, vh) -> None:
             "Source end (s)", min_value=0.1, value=clip["src_end"],
             max_value=max_end, step=0.1, key="prop_seg_end",
         )
+        # Reorder buttons
+        seg_idx = next((i for i, s in enumerate(ss["_tl_segments"]) if s["id"] == clip["id"]), 0)
+        rc1, rc2 = st.columns(2)
+        with rc1:
+            if st.button("◀ Move Earlier", key="btn_seg_earlier", use_container_width=True,
+                         disabled=seg_idx == 0):
+                _tl_reorder_segment(ss, clip["id"], -1)
+                st.rerun()
+        with rc2:
+            if st.button("Move Later ▶", key="btn_seg_later", use_container_width=True,
+                         disabled=seg_idx >= len(ss["_tl_segments"]) - 1):
+                _tl_reorder_segment(ss, clip["id"], +1)
+                st.rerun()
         pc1, pc2 = st.columns(2)
         with pc1:
             if st.button("Update", key="btn_seg_update", use_container_width=True):
@@ -587,6 +640,34 @@ def _render_clip_properties(ss, track, clip, total_dur, vw, vh) -> None:
         with vc2:
             new_y = st.number_input("Y", 0, vh, clip["y"], key="prop_vov_y")
         new_scale = st.slider("Scale", 0.1, 3.0, clip.get("scale", 1.0), 0.1, key="prop_vov_scale")
+        # PiP layout presets
+        st.caption("Layout Presets")
+        lp1, lp2, lp3 = st.columns(3)
+        with lp1:
+            if st.button("PiP ↗", key="btn_pip_tr", use_container_width=True):
+                _apply_layout_preset(ss, "pip_top_right", vw, vh)
+                st.rerun()
+        with lp2:
+            if st.button("PiP ↙", key="btn_pip_bl", use_container_width=True):
+                _apply_layout_preset(ss, "pip_bottom_left", vw, vh)
+                st.rerun()
+        with lp3:
+            if st.button("PiP ↘", key="btn_pip_br", use_container_width=True):
+                _apply_layout_preset(ss, "pip_bottom_right", vw, vh)
+                st.rerun()
+        lp4, lp5, lp6 = st.columns(3)
+        with lp4:
+            if st.button("PiP ↖", key="btn_pip_tl", use_container_width=True):
+                _apply_layout_preset(ss, "pip_top_left", vw, vh)
+                st.rerun()
+        with lp5:
+            if st.button("Center", key="btn_pip_center", use_container_width=True):
+                _apply_layout_preset(ss, "pip_center", vw, vh)
+                st.rerun()
+        with lp6:
+            if st.button("Full", key="btn_pip_full", use_container_width=True):
+                _apply_layout_preset(ss, "full_overlay", vw, vh)
+                st.rerun()
         pc1, pc2 = st.columns(2)
         with pc1:
             if st.button("Update", key="btn_vov_update", use_container_width=True):
