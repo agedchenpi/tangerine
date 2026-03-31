@@ -84,11 +84,10 @@ def _analyze_audio(audio_path: str, fps: int, n_bars: int,
 
     # RMS energy per frame, normalized to 0-1
     frame_len = max(1, sr // fps)
-    raw_energy = np.array(
-        [np.sqrt(np.mean(y[i * frame_len:(i + 1) * frame_len] ** 2))
-         for i in range(n_frames)],
-        dtype=np.float32,
-    )
+    n_samples = n_frames * frame_len
+    y_padded = np.pad(y, (0, max(0, n_samples - len(y))))[:n_samples]
+    _frames = y_padded.reshape(n_frames, frame_len).astype(np.float32)
+    raw_energy = np.sqrt((_frames ** 2).mean(axis=1))
     e_max = raw_energy.max()
     energy = raw_energy / e_max if e_max > 0 else raw_energy
 
@@ -325,7 +324,7 @@ def _make_frame_factory(
     - EMA-smoothed spectrum + power curve + energy scaling give smooth, full visuals
     - Beat flash accumulator lerps bars toward white over ~5 frames
     """
-    from scipy.ndimage import gaussian_filter
+    import cv2
 
     gap = max(1, width // (n_bars * 8))
     total_gap = gap * (n_bars - 1)
@@ -337,6 +336,14 @@ def _make_frame_factory(
     max_bar_h = int(height * 0.42)
 
     bg_float = np.full((height, width, 3), bg_rgb, dtype=np.float32)
+
+    # Pre-allocated buffers — avoids ~25MB allocation every frame
+    bar_layer = np.zeros((height, width, 3), dtype=np.float32)
+    composite_f = np.empty((height, width, 3), dtype=np.float32)
+    result_u8 = np.empty((height, width, 3), dtype=np.uint8)
+
+    # Pre-compute glow kernel size from sigma (must be odd, ≥ 3)
+    _ksize = max(3, int(glow_sigma * 2) | 1)
 
     # Pre-compute title alpha for bounding-box blend
     if title_overlay is not None:
@@ -379,7 +386,7 @@ def _make_frame_factory(
         bar_heights = (magnitudes ** 0.6 * energy_scale * max_bar_h).astype(int)
 
         # ── Draw bars into float32 bar_layer (never blurred) ──────
-        bar_layer = np.zeros((height, width, 3), dtype=np.float32)
+        bar_layer.fill(0.0)
         for b in range(n_bars):
             bh = bar_heights[b]
             if bh < 1:
@@ -393,13 +400,14 @@ def _make_frame_factory(
         # ── Composite: bg + glow_halo + sharp bars ────────────────
         if use_glow and glow_sigma > 0:
             small = bar_layer[::4, ::4]
-            blurred = gaussian_filter(small, sigma=(glow_sigma * 0.5, glow_sigma * 0.5, 0))
-            glow_layer = np.repeat(np.repeat(blurred, 4, axis=0), 4, axis=1)[:height, :width]
-            result = np.clip(
-                bg_float + glow_layer * GLOW_STRENGTH + bar_layer, 0, 255
-            ).astype(np.uint8)
+            blurred = cv2.GaussianBlur(small, (_ksize, _ksize), glow_sigma * 0.5)
+            glow_layer = cv2.resize(blurred, (width, height), interpolation=cv2.INTER_LINEAR)
+            np.add(bg_float, glow_layer * GLOW_STRENGTH, out=composite_f)
+            np.add(composite_f, bar_layer, out=composite_f)
         else:
-            result = np.clip(bg_float + bar_layer, 0, 255).astype(np.uint8)
+            np.add(bg_float, bar_layer, out=composite_f)
+        np.clip(composite_f, 0, 255, out=composite_f)
+        result = composite_f.astype(np.uint8)
 
         # ── Center line subtle brightening ────────────────────────
         result[center_y] = np.clip(result[center_y].astype(np.float32) + 46, 0, 255).astype(np.uint8)
@@ -496,6 +504,8 @@ def _render_video(
         *audio_input_args,
         # Video encoding — veryfast is 3-4x faster than medium, negligible quality diff
         "-c:v", "libx264", "-preset", "veryfast", "-crf", crf,
+        "-tune", "animation",   # optimized for flat-color content (large solid bars)
+        "-threads", "0",        # use all logical CPU cores for slice-parallel encoding
         "-pix_fmt", "yuv420p",
         # Audio encoding
         "-c:a", "aac", "-b:a", "192k",
