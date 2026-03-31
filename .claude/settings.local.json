@@ -125,7 +125,10 @@
       "Bash(python3.11 -c \"import streamlit_drawable_canvas; print\\(streamlit_drawable_canvas.__file__\\)\")",
       "Bash(pip show:*)",
       "WebFetch(domain:mmas.github.io)",
-      "WebFetch(domain:ffmpeg.party)"
+      "WebFetch(domain:ffmpeg.party)",
+      "Bash(docker system:*)",
+      "Bash(du -sh /opt/tangerine/*)",
+      "Bash(docker images:*)"
     ]
   }
 }

@@ -7,15 +7,17 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from components.notifications import show_error
+from components.notifications import show_error, show_success, show_warning
 from services.server_monitor_service import (
     _health_color,
     get_cpu_info,
     get_disk_info,
     get_docker_containers,
+    get_docker_disk_usage,
     get_memory_info,
     get_network_info,
     get_system_info,
+    run_docker_cleanup,
 )
 from utils.ui_helpers import (
     add_page_header,
@@ -145,8 +147,8 @@ def _gauge(label: str, pct: float, key: str = None):
 # ---------------------------------------------------------------------------
 # Tabs
 # ---------------------------------------------------------------------------
-tab_overview, tab_cpu, tab_mem, tab_disk, tab_net, tab_docker = st.tabs([
-    "📊 Overview", "🖥️ CPU", "🧠 Memory", "💾 Disk", "🌐 Network", "🐳 Docker"
+tab_overview, tab_cpu, tab_mem, tab_disk, tab_net, tab_docker, tab_cleanup = st.tabs([
+    "📊 Overview", "🖥️ CPU", "🧠 Memory", "💾 Disk", "🌐 Network", "🐳 Docker", "🧹 Cleanup"
 ])
 
 # ── Overview ────────────────────────────────────────────────────────────────
@@ -331,6 +333,110 @@ with tab_docker:
                 "Ports": c.get("Ports", ""),
             })
         st.dataframe(pd.DataFrame(docker_rows), hide_index=True, use_container_width=True)
+
+# ── Cleanup ─────────────────────────────────────────────────────────────────
+with tab_cleanup:
+    st.subheader("Docker Disk Usage")
+    st.caption("Docker build cache and unused images are the primary disk consumers on this server.")
+
+    docker_df_rows = get_docker_disk_usage()
+    if docker_df_rows:
+        st.dataframe(
+            pd.DataFrame(docker_df_rows).rename(columns={
+                "type": "Type", "total": "Total", "active": "Active",
+                "size": "Size", "reclaimable": "Reclaimable",
+            }),
+            hide_index=True,
+            use_container_width=True,
+        )
+    else:
+        st.info("Docker disk usage unavailable.")
+
+    st.divider()
+    st.subheader("Cleanup Actions")
+
+    # ── Build cache ──────────────────────────────────────────────────────────
+    col_info, col_btn = st.columns([4, 1])
+    with col_info:
+        st.markdown("**🗂️ Clear Build Cache**")
+        st.caption("Removes cached build layers from `docker build`. Safe — only slows the next build slightly.")
+    with col_btn:
+        if st.button("Clear", key="cleanup_build_cache", use_container_width=True):
+            with st.spinner("Clearing build cache…"):
+                r = run_docker_cleanup("build_cache")
+            if r["success"]:
+                show_success("Build cache cleared.")
+            else:
+                show_error(f"Failed: {r['error'][:300]}")
+
+    st.divider()
+
+    # ── Dangling images ──────────────────────────────────────────────────────
+    col_info, col_btn = st.columns([4, 1])
+    with col_info:
+        st.markdown("**🖼️ Prune Dangling Images**")
+        st.caption("Removes untagged images no longer referenced by any container. Images can be re-pulled.")
+    with col_btn:
+        if st.button("Prune", key="cleanup_images", use_container_width=True):
+            with st.spinner("Pruning images…"):
+                r = run_docker_cleanup("images")
+            if r["success"]:
+                show_success("Dangling images removed.")
+            else:
+                show_error(f"Failed: {r['error'][:300]}")
+
+    st.divider()
+
+    # ── Stopped containers ───────────────────────────────────────────────────
+    col_info, col_btn = st.columns([4, 1])
+    with col_info:
+        st.markdown("**📦 Prune Stopped Containers**")
+        st.caption("Removes exited/stopped containers. Running containers are unaffected.")
+    with col_btn:
+        if st.button("Prune", key="cleanup_containers", use_container_width=True):
+            with st.spinner("Pruning containers…"):
+                r = run_docker_cleanup("containers")
+            if r["success"]:
+                show_success("Stopped containers removed.")
+            else:
+                show_error(f"Failed: {r['error'][:300]}")
+
+    st.divider()
+
+    # ── Unused volumes ───────────────────────────────────────────────────────
+    col_info, col_btn = st.columns([4, 1])
+    with col_info:
+        st.markdown("**🗄️ Prune Unused Volumes**")
+        st.caption("⚠️ Removes volumes not attached to any container. Data stored in those volumes will be lost.")
+    with col_btn:
+        confirm_vol = st.checkbox("Confirm", key="confirm_volumes")
+        btn_disabled = not confirm_vol
+        if st.button("Prune", key="cleanup_volumes", use_container_width=True, disabled=btn_disabled):
+            with st.spinner("Pruning volumes…"):
+                r = run_docker_cleanup("volumes")
+            if r["success"]:
+                show_success("Unused volumes removed.")
+            else:
+                show_error(f"Failed: {r['error'][:300]}")
+
+    st.divider()
+
+    # ── Full system prune ────────────────────────────────────────────────────
+    with st.expander("☢️ Full System Prune (images + containers + build cache)"):
+        st.warning(
+            "Removes **all** unused images, stopped containers, and build cache in one shot. "
+            "Running containers and named volumes are preserved, but all untagged/unreferenced "
+            "images will need to be re-pulled on next use."
+        )
+        confirm_sys = st.checkbox("I understand — run full system prune", key="confirm_system")
+        if st.button("🗑️ Run System Prune", key="cleanup_system",
+                     type="primary", disabled=not confirm_sys):
+            with st.spinner("Running system prune…"):
+                r = run_docker_cleanup("system")
+            if r["success"]:
+                show_success("System prune complete.")
+            else:
+                show_error(f"Failed: {r['error'][:300]}")
 
 # ---------------------------------------------------------------------------
 # Auto-refresh loop (must be last)

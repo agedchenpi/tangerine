@@ -144,30 +144,115 @@ def get_system_info() -> dict:
     }
 
 
-def get_docker_containers() -> list[dict]:
-    """Return running Docker containers via `docker ps --format json`. Returns [] on error."""
-    try:
-        result = subprocess.run(
-            ["docker", "ps", "--format", "{{json .}}"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if result.returncode != 0:
-            return []
+def _docker_client():
+    """Return a docker.DockerClient connected via the Unix socket."""
+    import docker
+    return docker.from_env()
 
+
+def get_docker_containers() -> list[dict]:
+    """Return running Docker containers via the Docker SDK. Returns [] on error."""
+    try:
+        client = _docker_client()
         containers = []
-        for line in result.stdout.strip().splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                containers.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
+        for c in client.containers.list():
+            attrs = c.attrs
+            containers.append({
+                "Names": c.name,
+                "Image": c.image.tags[0] if c.image.tags else c.image.short_id,
+                "State": attrs.get("State", {}).get("Status", ""),
+                "Status": attrs.get("State", {}).get("Status", ""),
+                "Ports": ", ".join(
+                    f"{v[0]['HostPort']}->{k}" for k, v in (attrs.get("NetworkSettings", {}).get("Ports") or {}).items() if v
+                ),
+            })
         return containers
     except Exception:
         return []
+
+
+def get_docker_disk_usage() -> list[dict] | None:
+    """Return Docker disk usage via the SDK (GET /system/df).
+
+    Returns a list of dicts with keys: type, total, active, size, reclaimable.
+    Returns None if Docker is unavailable.
+    """
+    def _fmt(n: int) -> str:
+        for unit in ("B", "KB", "MB", "GB", "TB"):
+            if n < 1024:
+                return f"{n:.2f} {unit}" if unit != "B" else f"{n} B"
+            n /= 1024
+        return f"{n:.2f} PB"
+
+    try:
+        client = _docker_client()
+        df = client.df()
+
+        images      = df.get("Images") or []
+        containers  = df.get("Containers") or []
+        volumes     = df.get("Volumes") or []
+        build_cache = df.get("BuildCache") or []
+
+        img_size   = sum(i.get("Size", 0) for i in images)
+        img_shared = sum(i.get("SharedSize", 0) for i in images)
+        img_reclaimable = sum(i.get("Size", 0) for i in images if not i.get("Containers"))
+
+        cnt_size = sum(c.get("SizeRw", 0) or 0 for c in containers)
+        cnt_reclaimable = sum(c.get("SizeRw", 0) or 0 for c in containers if c.get("State") != "running")
+
+        vol_size = sum(v.get("UsageData", {}).get("Size", 0) or 0 for v in volumes)
+        vol_reclaimable = sum(v.get("UsageData", {}).get("Size", 0) or 0 for v in volumes if v.get("UsageData", {}).get("RefCount", 1) == 0)
+
+        cache_size = sum(b.get("Size", 0) for b in build_cache)
+        cache_reclaimable = sum(b.get("Size", 0) for b in build_cache if not b.get("InUse"))
+
+        return [
+            {"type": "Images",        "total": str(len(images)),      "active": str(sum(1 for i in images if i.get("Containers"))),      "size": _fmt(img_size),   "reclaimable": _fmt(img_reclaimable)},
+            {"type": "Containers",    "total": str(len(containers)),   "active": str(sum(1 for c in containers if c.get("State") == "running")), "size": _fmt(cnt_size),   "reclaimable": _fmt(cnt_reclaimable)},
+            {"type": "Local Volumes", "total": str(len(volumes)),      "active": str(sum(1 for v in volumes if (v.get("UsageData") or {}).get("RefCount", 0) > 0)), "size": _fmt(vol_size),   "reclaimable": _fmt(vol_reclaimable)},
+            {"type": "Build Cache",   "total": str(len(build_cache)),  "active": str(sum(1 for b in build_cache if b.get("InUse"))),      "size": _fmt(cache_size), "reclaimable": _fmt(cache_reclaimable)},
+        ]
+    except Exception:
+        return None
+
+
+def run_docker_cleanup(action: str) -> dict:
+    """Run a Docker cleanup via the SDK. Returns {success, output, error}.
+
+    action: one of build_cache | images | containers | volumes | system
+    """
+    if action not in ("build_cache", "images", "containers", "volumes", "system"):
+        return {"success": False, "output": "", "error": f"Unknown action: {action}"}
+    try:
+        client = _docker_client()
+        parts = []
+
+        if action in ("build_cache", "system"):
+            result = client.api.prune_builds()
+            reclaimed = result.get("SpaceReclaimed", 0)
+            parts.append(f"Build cache: {reclaimed // 1024 // 1024} MB reclaimed")
+
+        if action in ("containers", "system"):
+            result = client.containers.prune()
+            reclaimed = result.get("SpaceReclaimed", 0)
+            removed = result.get("ContainersDeleted") or []
+            parts.append(f"Containers: {len(removed)} removed, {reclaimed // 1024 // 1024} MB reclaimed")
+
+        if action in ("images", "system"):
+            result = client.images.prune()
+            reclaimed = result.get("SpaceReclaimed", 0)
+            removed = result.get("ImagesDeleted") or []
+            parts.append(f"Images: {len(removed)} removed, {reclaimed // 1024 // 1024} MB reclaimed")
+
+        if action == "volumes":
+            result = client.volumes.prune()
+            reclaimed = result.get("SpaceReclaimed", 0)
+            removed = result.get("VolumesDeleted") or []
+            parts.append(f"Volumes: {len(removed)} removed, {reclaimed // 1024 // 1024} MB reclaimed")
+
+        return {"success": True, "output": " | ".join(parts) if parts else "Done.", "error": ""}
+    except Exception as exc:
+        return {"success": False, "output": "", "error": str(exc)}
 
 
 def _health_color(pct: float) -> str:
