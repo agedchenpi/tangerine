@@ -4,14 +4,10 @@ import logging
 import os
 import subprocess
 import tempfile
+import time
 
 import numpy as np
 import streamlit as st
-from PIL import Image
-
-# moviepy 1.0.3 uses Image.ANTIALIAS, removed in Pillow 10+
-if not hasattr(Image, "ANTIALIAS"):
-    Image.ANTIALIAS = Image.LANCZOS
 
 from utils.ui_helpers import load_custom_css, add_page_header
 from components.notifications import show_success, show_error, show_warning, show_info
@@ -108,7 +104,7 @@ def _make_title_overlay(width: int, height: int, settings: dict) -> np.ndarray |
     if not lines:
         return None
 
-    from PIL import ImageDraw, ImageFont
+    from PIL import Image, ImageDraw, ImageFont
 
     font_size = settings.get("title_fontsize", 36)
     title_color_hex = settings.get("title_color", "#FFFFFF")
@@ -153,16 +149,14 @@ def _make_title_overlay(width: int, height: int, settings: dict) -> np.ndarray |
     else:  # bottom-right
         px, py = width - tw - pad, height - th - pad
 
-    # Bake into a full-frame RGBA array
-    overlay = np.zeros((height, width, 4), dtype=np.uint8)
-    # Clamp to frame bounds
+    # Return cropped overlay + its position (bounding-box blend only)
     y1, y2 = max(0, py), min(height, py + th)
     x1, x2 = max(0, px), min(width, px + tw)
     sy1, sy2 = y1 - py, y2 - py
     sx1, sx2 = x1 - px, x2 - px
-    overlay[y1:y2, x1:x2] = txt_arr[sy1:sy2, sx1:sx2]
+    cropped = txt_arr[sy1:sy2, sx1:sx2]  # (h, w, 4) RGBA
 
-    return overlay
+    return {"rgba": cropped, "y1": y1, "y2": y2, "x1": x1, "x2": x2}
 
 
 def _make_frame_factory(
@@ -170,10 +164,17 @@ def _make_frame_factory(
     spectrum: np.ndarray, beat_mask: np.ndarray,
     bg_rgb: tuple, bar_colors: np.ndarray, glow_rgb: tuple,
     use_glow: bool, glow_sigma: float, fps: int,
-    title_overlay: np.ndarray | None = None,
+    title_overlay: dict | None = None,
     title_end_frame: int | None = None,
 ):
-    """Return a make_frame(t) closure with pre-computed geometry."""
+    """Return a render_frame(fi) closure with pre-computed geometry.
+
+    Optimisations vs. original:
+    - Vectorized bar heights (no per-bar Python loop for arithmetic)
+    - Quarter-resolution glow (4x fewer pixels to blur)
+    - Bounding-box title blend (~400x60 region, not full frame)
+    - No .copy() when glow+title are both off
+    """
     from scipy.ndimage import gaussian_filter
 
     gap = max(1, width // (n_bars * 8))
@@ -188,77 +189,90 @@ def _make_frame_factory(
 
     frame_buf = np.zeros((height, width, 3), dtype=np.uint8)
 
-    # Pre-compute title alpha for blending
+    # Pre-compute title alpha for bounding-box blend
     if title_overlay is not None:
-        title_alpha = title_overlay[:, :, 3:4].astype(np.float32) / 255.0
-        title_rgb = title_overlay[:, :, :3].astype(np.float32)
-        title_mask = title_alpha > 0  # any pixel with alpha
-        # Squeeze mask for indexing
-        title_mask_2d = title_mask[:, :, 0]
+        t_rgba = title_overlay["rgba"]
+        ty1, ty2 = title_overlay["y1"], title_overlay["y2"]
+        tx1, tx2 = title_overlay["x1"], title_overlay["x2"]
+        t_alpha = t_rgba[:, :, 3:4].astype(np.float32) / 255.0
+        t_rgb = t_rgba[:, :, :3].astype(np.float32)
     else:
-        title_alpha = title_rgb = title_mask_2d = None
+        t_alpha = t_rgb = None
+        ty1 = ty2 = tx1 = tx2 = 0
 
-    def make_frame(t):
-        fi = min(int(t * fps), n_frames - 1)
+    # Pre-compute bar_colors as float for beat brightness
+    bar_colors_f = bar_colors.astype(np.float32)
+
+    def render_frame(fi: int) -> bytes:
         magnitudes = spectrum[fi]
         beat = beat_mask[fi]
 
         frame_buf[:] = bg_rgb
 
+        # ── Vectorized bar computation ────────────────────────────
+        boosted = np.minimum(1.0, magnitudes + beat * 0.25)
+        bar_heights = (boosted * max_bar_h).astype(int)
+
+        # Beat brightness: apply to all bars at once
+        if beat > 0.3:
+            brightness = 1.0 + beat * 0.4
+            colors = np.clip(bar_colors_f * brightness, 0, 255).astype(np.uint8)
+        else:
+            colors = bar_colors
+
+        # Draw bars (loop is minimal: just two slice assignments)
         for b in range(n_bars):
-            mag = magnitudes[b]
-            # Beat boost
-            boosted = min(1.0, mag + beat * 0.25)
-            bar_h = int(boosted * max_bar_h)
-            if bar_h < 1:
+            bh = bar_heights[b]
+            if bh < 1:
                 continue
-
-            color = bar_colors[b]
-            # Brightness boost on beat
-            if beat > 0.3:
-                brightness = 1.0 + beat * 0.4
-                color = np.clip(color * brightness, 0, 255).astype(np.uint8)
-
             xs, xe = x_starts[b], x_ends[b]
-            # Symmetric bars (up and down from center)
-            y_top = center_y - bar_h
-            y_bot = center_y + bar_h
-            frame_buf[max(0, y_top):center_y, xs:xe] = color
-            frame_buf[center_y:min(height, y_bot), xs:xe] = color
+            y_top = max(0, center_y - bh)
+            y_bot = min(height, center_y + bh)
+            frame_buf[y_top:center_y, xs:xe] = colors[b]
+            frame_buf[center_y:y_bot, xs:xe] = colors[b]
+
+        needs_copy = False
 
         if use_glow and glow_sigma > 0:
-            # Glow at half resolution for performance
-            small = frame_buf[::2, ::2].astype(np.float32)
-            blurred = gaussian_filter(small, sigma=(glow_sigma, glow_sigma, 0))
-            # Upscale back
-            glow_layer = np.repeat(np.repeat(blurred, 2, axis=0), 2, axis=1)[:height, :width]
-            # Additive blend
+            # Glow at quarter resolution (4x speedup over half-res)
+            small = frame_buf[::4, ::4].astype(np.float32)
+            blurred = gaussian_filter(small, sigma=(glow_sigma * 0.5, glow_sigma * 0.5, 0))
+            glow_layer = np.repeat(np.repeat(blurred, 4, axis=0), 4, axis=1)[:height, :width]
             result = np.clip(frame_buf.astype(np.float32) + glow_layer * 0.5, 0, 255).astype(np.uint8)
+            needs_copy = False  # result is already a new array
         else:
-            result = frame_buf.copy()
+            result = frame_buf
+            needs_copy = True  # frame_buf is reused; callers reading it need a copy
 
-        # Title overlay (Pillow-rendered, no ImageMagick)
-        if title_alpha is not None:
-            show_title = True
-            if title_end_frame is not None and fi > title_end_frame:
-                show_title = False
+        # Title overlay — bounding-box blend only
+        if t_alpha is not None:
+            show_title = title_end_frame is None or fi <= title_end_frame
             if show_title:
-                bg_f = result.astype(np.float32)
-                blended = bg_f * (1 - title_alpha) + title_rgb * title_alpha
-                result = blended.astype(np.uint8)
+                roi = result[ty1:ty2, tx1:tx2].astype(np.float32)
+                blended = roi * (1 - t_alpha) + t_rgb * t_alpha
+                if needs_copy:
+                    result = result.copy()
+                    needs_copy = False
+                result[ty1:ty2, tx1:tx2] = blended.astype(np.uint8)
 
-        return result
+        if needs_copy:
+            return result.tobytes()
+        return result.tobytes()
 
-    return make_frame
+    return render_frame
 
 
 # ── Rendering pipeline ───────────────────────────────────────────────────────
 def _render_video(
     audio_path: str, settings: dict, progress_status
 ) -> bytes | None:
-    """Full render pipeline: analyze → build frames → composite → encode."""
-    import moviepy.editor as mpe
+    """Full render pipeline: analyze → render frames via ffmpeg pipe → encode.
 
+    Uses direct ffmpeg subprocess instead of moviepy for:
+    - Per-frame progress bar with ETA
+    - veryfast preset (3-4x faster encoding)
+    - Direct audio muxing (no AudioFileClip)
+    """
     width = settings["width"]
     height = settings["height"]
     fps = settings["fps"]
@@ -285,36 +299,84 @@ def _render_video(
             title_dur = min(settings.get("title_duration", 5), duration)
             title_end_frame = int(title_dur * fps)
 
-    # 4. Build frame factory
+    # 4. Build frame renderer
     progress_status.update(label="Building frame renderer...", state="running")
-    make_frame = _make_frame_factory(
+    render_frame = _make_frame_factory(
         width, height, n_bars, spectrum, beat_mask,
         bg_rgb, bar_colors, glow_rgb,
         settings["use_glow"], settings["glow_sigma"], fps,
         title_overlay=title_overlay, title_end_frame=title_end_frame,
     )
 
-    # 5. Create video clip
-    progress_status.update(label="Rendering video frames...", state="running")
-    video = mpe.VideoClip(make_frame, duration=duration)
-    audio = mpe.AudioFileClip(audio_path)
-    video = video.set_audio(audio)
-
-    # 6. Write to temp file
-    progress_status.update(label="Encoding MP4...", state="running")
+    # 5. Pipe frames to ffmpeg
+    total_frames = spectrum.shape[0]
     with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as out_f:
         out_path = out_f.name
 
+    ffmpeg_cmd = [
+        "ffmpeg", "-y",
+        # Raw video input from stdin
+        "-f", "rawvideo", "-pix_fmt", "rgb24",
+        "-s", f"{width}x{height}", "-r", str(fps),
+        "-i", "pipe:0",
+        # Audio input
+        "-i", audio_path,
+        # Video encoding — veryfast is 3-4x faster than medium, negligible quality diff
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "18",
+        "-pix_fmt", "yuv420p",
+        # Audio encoding
+        "-c:a", "aac", "-b:a", "192k",
+        # Trim to shortest stream
+        "-shortest",
+        out_path,
+    ]
+
+    progress_status.update(label="Rendering frames...", state="running")
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+
+    proc = subprocess.Popen(
+        ffmpeg_cmd,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+
     try:
-        video.write_videofile(
-            out_path, fps=fps, codec="libx264", audio_codec="aac",
-            logger=None, preset="medium",
-        )
+        t_start = time.monotonic()
+        for fi in range(total_frames):
+            frame_bytes = render_frame(fi)
+            proc.stdin.write(frame_bytes)
+
+            # Update progress every 10 frames
+            if fi % 10 == 0 or fi == total_frames - 1:
+                pct = (fi + 1) / total_frames
+                progress_bar.progress(pct)
+                elapsed = time.monotonic() - t_start
+                if fi > 0:
+                    fps_actual = (fi + 1) / elapsed
+                    eta = (total_frames - fi - 1) / fps_actual
+                    status_text.text(
+                        f"Frame {fi + 1}/{total_frames} | {fps_actual:.1f} fps | ETA {eta:.0f}s"
+                    )
+
+        proc.stdin.close()
+        proc.stdin = None  # prevent communicate() from flushing closed stdin
+        _, stderr = proc.communicate(timeout=120)
+
+        if proc.returncode != 0:
+            raise RuntimeError(f"ffmpeg failed (rc={proc.returncode}): {stderr.decode(errors='replace')[-500:]}")
+
         with open(out_path, "rb") as f:
             result_bytes = f.read()
+
+    except Exception:
+        proc.kill()
+        proc.wait()
+        raise
     finally:
-        audio.close()
-        video.close()
+        progress_bar.empty()
+        status_text.empty()
         try:
             os.unlink(out_path)
         except OSError:
