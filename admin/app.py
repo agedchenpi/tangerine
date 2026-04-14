@@ -88,6 +88,7 @@ pages = {
     "Tools": [
         st.Page("pages/media_editor.py", title="Media Editor", icon="🎨"),
         st.Page("pages/music_visualizer.py", title="Music Visualizer", icon="🎵"),
+        st.Page("pages/youtube_downloader.py", title="YouTube Downloader", icon="📥"),
     ],
     "System": [
         st.Page("pages/server_monitor.py", title="Server Health", icon="🖥️"),

@@ -18,6 +18,9 @@ moviepy==1.0.3                  # Video trimming and compositing
 # Docker SDK (server monitor — disk cleanup via /var/run/docker.sock)
 docker>=7.0.0
 
+# YouTube Downloader
+yt-dlp>=2025.1.0               # YouTube/video download engine (ffmpeg already present)
+
 # Music visualizer
 librosa>=0.10.0                 # Audio feature extraction (STFT, beat tracking)
 scipy>=1.11.0                   # Signal processing (used by librosa)

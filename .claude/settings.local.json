@@ -128,7 +128,12 @@
       "WebFetch(domain:ffmpeg.party)",
       "Bash(docker system:*)",
       "Bash(du -sh /opt/tangerine/*)",
-      "Bash(docker images:*)"
+      "Bash(docker images:*)",
+      "WebFetch(domain:yt-dlp.eknerd.com)",
+      "WebFetch(domain:mintlify.wiki)",
+      "WebFetch(domain:devhub-slw.pages.dev)",
+      "WebFetch(domain:dev.to)",
+      "WebFetch(domain:typevar.dev)"
     ]
   }
 }
