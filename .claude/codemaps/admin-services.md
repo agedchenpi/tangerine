@@ -43,6 +43,13 @@ Service layer for the Streamlit admin interface. Implements business logic and d
 | `report_manager_service.py` | Email reports | list_reports, create_report, update_report |
 | `scheduler_service.py` | Cron job configs | list_scheduled_jobs, create_scheduled_job |
 | `pubsub_service.py` | Event queue | list_events, create_event, list_subscribers |
+| `holiday_service.py` | Holiday management | get_holidays, create_holiday, bulk_upload, delete_holiday |
+| `farside_service.py` | Far Side comics | get_comics, get_comic_count, get_date_range, scrape_date, scrape_range |
+| `artwork_service.py` | IIIF artwork | get_artworks, get_artwork_count, get_artwork_by_id |
+| `collection_explorer_service.py` | Collection search | search_collections, get_collection_stats |
+| `server_monitor_service.py` | Server health | get_docker_containers, get_docker_disk_usage, run_docker_cleanup |
+| `youtube_downloader_service.py` | YouTube downloads | get_video_info, download_media |
+| `pipeline_monitor_service.py` | Pipeline monitoring | get_pipeline_status, get_job_history |
 
 ## CRUD Pattern
 
@@ -123,7 +130,7 @@ def create_item(data: Dict) -> int:
 ## Integration with Pages
 
 ```python
-# In admin/pages/1_Import_Configs.py
+# In admin/pages/imports.py
 from admin.services import import_config_service as service
 from admin.components.notifications import show_success, show_error
 

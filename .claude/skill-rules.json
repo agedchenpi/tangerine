@@ -117,5 +117,33 @@
         "session_state"
       ]
     }
+  },
+  "streamlit-design": {
+    "type": "domain",
+    "priority": "medium",
+    "description": "Production-grade Streamlit interface design patterns",
+    "promptTriggers": {
+      "keywords": [
+        "design", "beautiful", "distinctive", "custom styling",
+        "look better", "improve ui", "dashboard design",
+        "css", "theme", "gradient", "animation", "micro-interaction"
+      ],
+      "intentPatterns": [
+        "(make|create|build).*?(beautiful|distinctive|polished)",
+        "(improve|enhance|upgrade).*?(ui|design|look|appearance)",
+        "(custom|branded).*?(dashboard|interface|styling)"
+      ]
+    },
+    "fileTriggers": {
+      "pathPatterns": [
+        "admin/styles/*.css",
+        "admin/components/*.py"
+      ],
+      "contentPatterns": [
+        "unsafe_allow_html",
+        "gradient",
+        "@keyframes"
+      ]
+    }
   }
 }

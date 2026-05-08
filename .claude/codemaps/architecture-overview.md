@@ -19,8 +19,12 @@ Tangerine is an AI-integrated ETL pipeline for importing, transforming, and mana
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Streamlit Admin Interface                     │
 │  (admin/pages/*.py)                                              │
-│  - Import Configs, Reference Data, Run Jobs, Monitoring          │
-│  - Inbox Configs, Report Manager, Scheduler, Event System        │
+│  - Configuration: Import Configs, Inbox Rules, Reference Data,   │
+│    Scheduler                                                     │
+│  - Operations: Run Jobs, Pipeline Monitor, Monitoring, Reports   │
+│  - Collections: Artwork Gallery, Collection Explorer, Far Side   │
+│  - Tools: Media Editor, Music Visualizer, YouTube Downloader     │
+│  - System: Server Health, Event System, SQL Runner               │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                                 ▼
@@ -83,7 +87,8 @@ Tangerine is an AI-integrated ETL pipeline for importing, transforming, and mana
 | `admin/components/` | Reusable UI components |
 | `common/` | Shared utilities |
 | `etl/` | ETL jobs and framework |
-| `etl/jobs/` | Runnable ETL jobs |
+| `etl/jobs/` | Runnable ETL jobs (30 scripts) |
+| `etl/clients/` | API clients extending BaseAPIClient (6 clients) |
 | `pubsub/` | Event system daemon |
 | `schema/` | Database DDL |
 | `tests/` | pytest test suite |
@@ -111,3 +116,5 @@ Tangerine is an AI-integrated ETL pipeline for importing, transforming, and mana
 - **Database**: Connection pool via common/db_utils.py
 - **File System**: Volume mount .data/etl ↔ /app/data
 - **Pub/Sub**: Event queue in dba.tpubsub_events
+- **External APIs**: 6 clients in etl/clients/ (Fed, BoE, YFinance, CoinGecko, IIIF, Far Side)
+- **Docker Socket**: Admin container has read-write access for cleanup operations

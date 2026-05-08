@@ -12,7 +12,7 @@ This file includes the full CLAUDE.md content plus additional architectural cont
 
 ### Reduce
 - Load only context needed for the current task
-- Use `CLAUDE.concise.md` for quick tasks
+- Use `CLAUDE.md` for quick tasks
 - Clear unnecessary context before starting new work
 - Monitor usage with `/context`
 
@@ -54,7 +54,7 @@ Never speculate about unread code. Read files BEFORE answering.
 Each feature is self-contained:
 ```
 Feature: Import Configuration
-├── UI: admin/pages/1_Import_Configs.py
+├── UI: admin/pages/imports.py
 ├── Logic: admin/services/import_config_service.py
 ├── Data: schema/dba/tables/timportconfig.sql
 └── Tests: tests/integration/test_import_config_service.py
@@ -120,6 +120,7 @@ Load relevant codemap for deep architectural context:
 | `service-developer` | service, crud | Service CRUD |
 | `database-operations` | schema, table, sql | **GUARDRAIL** |
 | `streamlit-admin` | streamlit, page, ui | UI patterns |
+| `streamlit-design` | design, css, gradient | Design patterns |
 
 ---
 
@@ -130,8 +131,7 @@ Load relevant codemap for deep architectural context:
 | `skill-activator.py` | Before prompt | Injects skill reminders |
 | `dangerous-command-blocker.py` | Before Bash | **BLOCKS** dangerous commands |
 | `file-validator.py` | After Edit/Write | Validates syntax |
-| `spec-generator.py` | After ExitPlanMode | Generates specs |
-| `build-checker.py` | After response | Linting reminders |
+| `build-checker.py` | After response | Linting reminders + spec generation |
 
 ---
 
@@ -214,7 +214,7 @@ Load `claude.large.md` when:
 - Working on integration between systems
 - Debugging cross-cutting issues
 
-For simpler tasks, use `claude.concise.md` to save context.
+For simpler tasks, use `CLAUDE.md` to save context.
 
 ---
 *A focused agent is a performant agent.*

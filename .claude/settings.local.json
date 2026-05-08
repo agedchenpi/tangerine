@@ -137,7 +137,8 @@
       "WebFetch(domain:www.thefarside.com)",
       "Bash(sudo mkdir:*)",
       "Bash(docker builder:*)",
-      "Bash(docker image:*)"
+      "Bash(docker image:*)",
+      "Bash(git:*)"
     ]
   }
 }

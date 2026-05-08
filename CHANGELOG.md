@@ -81,6 +81,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Expandable sidebar section for clean interface
 - **Auto Dark Mode Detection**: CSS media query respects OS theme preference (`prefers-color-scheme: dark`)
 - **Form UX Improvements**: 54 helpful tooltips across admin interface for complex fields
+- **Far Side Gallery**: Browse daily Far Side comics with date filtering, caption search, and 3-column grid layout
+  - Sidebar scrape triggers for single-date and date-range backfill with progress tracking
+  - Far Side daily scraper (`run_farside_daily.py`) and backfill script (`run_farside_backfill.py`)
+  - Web scraper client (`farside_client.py`) using BeautifulSoup for HTML parsing
+  - `feeds.tfarside` table with UNIQUE constraint on (comic_date, position)
+- **YouTube Downloader**: Download MP4 video or MP3 audio from YouTube URLs
+  - Quality selection, progress bar, and metadata preview
+  - Uses yt-dlp with FFmpeg postprocessors
+- **Music Visualizer**: Audio-reactive video generation from uploaded audio files
+  - OpenCV-optimized rendering (cv2.GaussianBlur, cv2.resize replacing scipy)
+  - Pre-allocated buffers and FFmpeg `-tune animation -threads 0` for performance
+- **Media Editor**: Image and video editing with timeline, effects, and canvas tools
+- **Artwork Gallery**: Browse IIIF artwork collections with filtering and local image fallback
+- **Collection Explorer**: Cross-collection search and exploration interface
+- **Server Monitor**: Docker disk cleanup buttons (build cache, unused images/volumes)
+  - Uses Python Docker SDK instead of CLI subprocess
+  - Docker socket with write access for cleanup operations
+- **SQL Runner**: Execute ad-hoc SQL queries against the database
+- **Pipeline Monitor**: Real-time pipeline status with retry and manual override capabilities
+- **New York Fed ETL Suite**: 12 endpoint scrapers for Federal Reserve data
+  - Reference rates, SOMA holdings, repo/reverse repo operations, agency MBS, FX swaps
+  - Counterparties, securities lending, guide sheets, treasury operations
+  - PD statistics and market share (passthrough mode)
+- **Bank of England SONIA Rates**: Daily SONIA rate imports (`run_bankofengland_sonia_rates.py`)
+- **YFinance Market Data**: 4 scrapers covering 39 tickers
+  - Commodities: 13 futures (energy, metals, agriculture, livestock, softs)
+  - US Indexes: 8 tickers (S&P 500, NASDAQ, Dow, Russell, VIX, treasuries)
+  - Global Indexes: 7 tickers (FTSE, DAX, CAC, STOXX, Nikkei, Hang Seng, ASX)
+  - Sector ETFs: 11 SPDR sector funds
+- **CoinGecko Crypto**: Daily OHLC for BTC, ETH, BNB, SOL, XRP
+  - Aggregates 48 × 30-min candles into daily records
+- **IIIF Artwork Scrapers**: Freer Gallery, Getty Museum, Asian Art collections
+  - Atomic image downloads with `.tmp` rename pattern
+- **Database Backup Job**: Automated PostgreSQL backups (`run_database_backup.py`)
+- **Hourly Smoketest**: Health check job for production monitoring
+- **API Client Framework**: `BaseAPIClient` base class with retry, rate limiting, session management
+  - 6 clients: newyorkfed, bankofengland, yfinance, coingecko, iiif, farside
+- **Job Run Tracking**: `JobRunLogger` with `dba.tjobrun` and `dba.tjobstep` tables
+  - Per-execution tracking with step-level metrics (records_in/out, duration)
 
 ### Changed
 - Updated CLAUDE.md with skills, hooks, and documentation sections
