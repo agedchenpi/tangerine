@@ -5,8 +5,10 @@ from pathlib import Path
 
 import streamlit as st
 
-from components.notifications import show_info
-from services.farside_service import get_comic_count, get_comics, get_date_range
+from components.notifications import show_error, show_info, show_success
+from services.farside_service import (
+    get_comic_count, get_comics, get_date_range, scrape_date, scrape_range,
+)
 from utils.ui_helpers import add_page_header, load_custom_css
 
 load_custom_css()
@@ -50,6 +52,68 @@ with st.sidebar:
         help="Searches comic captions and visible text (signs, labels, speech bubbles)",
     )
     search = search.strip() or None
+
+    # ── Scrape controls ─────────────────────────────────────────────────────
+    st.divider()
+    st.markdown("### Scrape Comics")
+
+    with st.expander("Single Date", expanded=False):
+        scrape_single = st.text_input(
+            "Date to scrape", value=str(date.today()),
+            key="fs_scrape_single", help="YYYY-MM-DD — pulls or re-pulls comics for this date",
+        )
+        if st.button("Scrape Date", key="fs_btn_scrape_single", use_container_width=True):
+            with st.spinner(f"Scraping {scrape_single}..."):
+                result = scrape_date(scrape_single.strip())
+            if result["success"]:
+                show_success(result["message"])
+                st.rerun()
+            else:
+                show_error(result["message"])
+
+    with st.expander("Date Range (Backfill)", expanded=False):
+        scrape_start = st.text_input(
+            "Start date", key="fs_scrape_start", help="YYYY-MM-DD",
+        )
+        scrape_end = st.text_input(
+            "End date", value=str(date.today()),
+            key="fs_scrape_end", help="YYYY-MM-DD",
+        )
+        sleep_secs = st.number_input(
+            "Delay between dates (seconds)", value=2.0, min_value=0.5,
+            max_value=10.0, step=0.5, key="fs_sleep",
+        )
+        if st.button("Start Backfill", key="fs_btn_backfill", use_container_width=True):
+            start_val = (scrape_start or "").strip()
+            end_val = (scrape_end or "").strip()
+            if not start_val:
+                show_error("Start date is required.")
+            else:
+                progress_bar = st.progress(0, text="Starting backfill...")
+                status_text = st.empty()
+
+                def _progress(idx, total, ds, res):
+                    pct = idx / total
+                    label = f"{idx}/{total} — {ds}"
+                    if res.get("skipped"):
+                        label += " (skipped)"
+                    elif res.get("success"):
+                        label += f" — {res.get('comics_added', 0)} comics"
+                    else:
+                        label += " — FAILED"
+                    progress_bar.progress(pct, text=label)
+
+                result = scrape_range(start_val, end_val, sleep_secs, _progress)
+                progress_bar.empty()
+
+                msg = (f"Done: {result['scraped']} scraped, "
+                       f"{result['skipped']} skipped, {result['failed']} failed "
+                       f"(out of {result['total']} dates)")
+                if result["success"]:
+                    show_success(msg)
+                else:
+                    show_error(msg)
+                st.rerun()
 
 # ── Pagination state ─────────────────────────────────────────────────────────
 if "fs_page" not in st.session_state:
