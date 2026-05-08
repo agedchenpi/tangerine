@@ -20,17 +20,35 @@ PAGE_SIZE = 30
 with st.sidebar:
     st.markdown("### Filters")
 
-    date_range = get_date_range()
-    min_date = date_range["min_date"] or date(2020, 1, 1)
-    max_date = date_range["max_date"] or date.today()
+    db_range = get_date_range()
+    min_date = db_range["min_date"] or date(2020, 1, 1)
+    max_date = db_range["max_date"] or date.today()
 
-    date_from = st.date_input("From", value=min_date, min_value=min_date,
-                              max_value=max_date, key="fs_date_from")
-    date_to = st.date_input("To", value=max_date, min_value=min_date,
-                            max_value=max_date, key="fs_date_to")
+    st.markdown("**Date Range**")
+    date_from = st.text_input("Start date", value=str(min_date),
+                              key="fs_date_from", help="YYYY-MM-DD")
+    date_to = st.text_input("End date", value=str(max_date),
+                            key="fs_date_to", help="YYYY-MM-DD")
 
-    search = st.text_input("Search captions", placeholder="e.g. cow, scientist",
-                           key="fs_search")
+    # Validate date strings
+    from datetime import datetime as _dt
+    try:
+        date_from = _dt.strptime(date_from.strip(), "%Y-%m-%d").date()
+    except (ValueError, AttributeError):
+        date_from = min_date
+    try:
+        date_to = _dt.strptime(date_to.strip(), "%Y-%m-%d").date()
+    except (ValueError, AttributeError):
+        date_to = max_date
+
+    st.markdown("**Search**")
+    search = st.text_input(
+        "Search",
+        placeholder="e.g. cow, scientist, bugs, dog",
+        key="fs_search",
+        label_visibility="collapsed",
+        help="Searches comic captions and visible text (signs, labels, speech bubbles)",
+    )
     search = search.strip() or None
 
 # ── Pagination state ─────────────────────────────────────────────────────────
