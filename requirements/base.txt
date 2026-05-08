@@ -25,3 +25,6 @@ croniter==2.0.1
 
 # Commodity futures price data
 yfinance>=0.2.40
+
+# HTML parsing for web scraping (Far Side)
+beautifulsoup4>=4.12.0

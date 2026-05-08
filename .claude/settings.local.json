@@ -133,7 +133,11 @@
       "WebFetch(domain:mintlify.wiki)",
       "WebFetch(domain:devhub-slw.pages.dev)",
       "WebFetch(domain:dev.to)",
-      "WebFetch(domain:typevar.dev)"
+      "WebFetch(domain:typevar.dev)",
+      "WebFetch(domain:www.thefarside.com)",
+      "Bash(sudo mkdir:*)",
+      "Bash(docker builder:*)",
+      "Bash(docker image:*)"
     ]
   }
 }

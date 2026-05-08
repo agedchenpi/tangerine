@@ -59,12 +59,17 @@ regression_output.log
 # Spec directory
 spec/
 
-# ETL archived files
+# ETL data files (intermediate JSON staging files and archives)
 .data/etl/archive/
 .data/etl/*/archive/
+.data/etl/source/
+.data/etl/*/source/
 
 # IIIF images
 .data/etl/images/iiif/
+
+# Far Side images
+.data/etl/images/farside/
 
 # Test data artifacts
 .data/etl/regression/archive/
