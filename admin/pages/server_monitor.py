@@ -31,7 +31,7 @@ from utils.ui_helpers import (
 # Setup
 # ---------------------------------------------------------------------------
 load_custom_css()
-add_page_header("Server Health", icon="🖥️", subtitle="Real-time infrastructure vitals")
+add_page_header("Server Health", icon="🖥️")
 
 st.markdown("""
 <style>

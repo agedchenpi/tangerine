@@ -7,7 +7,7 @@ from services.youtube_downloader_service import download_media, get_video_info
 from utils.ui_helpers import add_page_header, load_custom_css
 
 load_custom_css()
-add_page_header("YouTube Downloader", icon="📥", subtitle="Save video or audio from YouTube")
+add_page_header("YouTube Downloader", icon="📥")
 
 
 def _fmt_duration(seconds: int) -> str:

@@ -9,7 +9,7 @@ from components.notifications import show_error, show_info
 from common.db_utils import fetch_dict
 
 load_custom_css()
-add_page_header("SQL Query Runner", icon="🔍", subtitle="Execute read-only SQL queries against the database")
+add_page_header("SQL Query Runner", icon="🔍")
 
 query = st.text_area(
     "SQL Query",

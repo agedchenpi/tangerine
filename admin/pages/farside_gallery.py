@@ -12,7 +12,7 @@ from services.farside_service import (
 from utils.ui_helpers import add_page_header, load_custom_css
 
 load_custom_css()
-add_page_header("The Far Side", icon="🐄", subtitle="Daily comics by Gary Larson")
+add_page_header("The Far Side", icon="🐄")
 
 IMAGE_DIR = Path("/app/data/images/farside")
 COLS = 3
