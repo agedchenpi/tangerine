@@ -550,6 +550,57 @@ def _add_video_source(ss, file_bytes: bytes, filename: str) -> str:
     return src_id
 
 
+def _time_number_input(
+    label: str,
+    value_sec: float,
+    min_sec: float,
+    unit: str,
+    key: str,
+    *,
+    max_sec: float | None = None,
+    step_sec: float = 0.1,
+) -> float:
+    """Render a time input in either Seconds or Minutes; always return seconds.
+
+    The widget key is suffixed with the unit so toggling the radio resets the
+    widget cleanly rather than reinterpreting a stale value in the new unit.
+    """
+    if unit == "Minutes":
+        init_min = int(value_sec // 60)
+        init_sec = min(59.9, round(value_sec - init_min * 60, 2))
+        col_m, col_s = st.columns(2)
+        with col_m:
+            m_kwargs = {
+                "min_value": 0,
+                "value": init_min,
+                "step": 1,
+                "key": f"{key}_mm",
+            }
+            if max_sec is not None:
+                m_kwargs["max_value"] = int(max_sec // 60) + 1
+            new_min = st.number_input(f"{label} (min)", **m_kwargs)
+        with col_s:
+            new_sec = st.number_input(
+                f"{label} (sec)", min_value=0.0, max_value=59.9,
+                value=init_sec, step=0.1, key=f"{key}_ss",
+            )
+        total = new_min * 60 + new_sec
+        total = max(min_sec, total)
+        if max_sec is not None:
+            total = min(max_sec, total)
+        return total
+
+    kwargs = {
+        "min_value": min_sec,
+        "value": value_sec,
+        "step": step_sec,
+        "key": f"{key}_sec",
+    }
+    if max_sec is not None:
+        kwargs["max_value"] = max_sec
+    return st.number_input(f"{label} (s)", **kwargs)
+
+
 def _render_clip_properties(ss, track, clip, total_dur, vw, vh) -> None:
     """Render context-dependent properties panel for the selected clip."""
     if track == "segment":
@@ -557,14 +608,17 @@ def _render_clip_properties(ss, track, clip, total_dur, vw, vh) -> None:
         src_id = clip.get("source_id", "source_0")
         src = ss["_video_sources"].get(src_id, {})
         st.caption(f"Source: {src.get('name', 'unknown')}")
-        new_start = st.number_input(
-            "Source start (s)", min_value=0.0, value=clip["src_start"],
-            step=0.1, key="prop_seg_start",
+        unit_seg = st.radio(
+            "Time unit", ["Seconds", "Minutes"], horizontal=True, key="prop_seg_unit",
+        )
+        new_start = _time_number_input(
+            "Source start", value_sec=clip["src_start"], min_sec=0.0,
+            unit=unit_seg, key="prop_seg_start",
         )
         max_end = src.get("duration", clip["src_end"] + 60.0)
-        new_end = st.number_input(
-            "Source end (s)", min_value=0.1, value=clip["src_end"],
-            max_value=max_end, step=0.1, key="prop_seg_end",
+        new_end = _time_number_input(
+            "Source end", value_sec=clip["src_end"], min_sec=0.1, max_sec=max_end,
+            unit=unit_seg, key="prop_seg_end",
         )
         # Reorder buttons
         seg_idx = next((i for i, s in enumerate(ss["_tl_segments"]) if s["id"] == clip["id"]), 0)
@@ -605,11 +659,16 @@ def _render_clip_properties(ss, track, clip, total_dur, vw, vh) -> None:
         with tc2:
             new_x = st.number_input("X", 0, vw, clip["x"], key="prop_txt_x")
         new_y = st.number_input("Y", 0, vh, clip["y"], key="prop_txt_y")
-        new_start = st.number_input(
-            "Start (s)", 0.0, total_dur - 0.1, clip["start"], 0.1, key="prop_txt_start",
+        unit_txt = st.radio(
+            "Time unit", ["Seconds", "Minutes"], horizontal=True, key="prop_txt_unit",
         )
-        new_end = st.number_input(
-            "End (s)", 0.1, total_dur, clip["end"], 0.1, key="prop_txt_end",
+        new_start = _time_number_input(
+            "Start", value_sec=clip["start"], min_sec=0.0, max_sec=total_dur - 0.1,
+            unit=unit_txt, key="prop_txt_start",
+        )
+        new_end = _time_number_input(
+            "End", value_sec=clip["end"], min_sec=0.1, max_sec=total_dur,
+            unit=unit_txt, key="prop_txt_end",
         )
         pc1, pc2 = st.columns(2)
         with pc1:
@@ -628,11 +687,16 @@ def _render_clip_properties(ss, track, clip, total_dur, vw, vh) -> None:
         src_id = clip.get("source_id", "source_0")
         src = ss["_video_sources"].get(src_id, {})
         st.caption(f"Source: {src.get('name', 'unknown')}")
-        new_start = st.number_input(
-            "Start (s)", 0.0, total_dur - 0.1, clip["start"], 0.1, key="prop_vov_start",
+        unit_vov = st.radio(
+            "Time unit", ["Seconds", "Minutes"], horizontal=True, key="prop_vov_unit",
         )
-        new_end = st.number_input(
-            "End (s)", 0.1, total_dur, clip["end"], 0.1, key="prop_vov_end",
+        new_start = _time_number_input(
+            "Start", value_sec=clip["start"], min_sec=0.0, max_sec=total_dur - 0.1,
+            unit=unit_vov, key="prop_vov_start",
+        )
+        new_end = _time_number_input(
+            "End", value_sec=clip["end"], min_sec=0.1, max_sec=total_dur,
+            unit=unit_vov, key="prop_vov_end",
         )
         vc1, vc2 = st.columns(2)
         with vc1:
@@ -681,11 +745,16 @@ def _render_clip_properties(ss, track, clip, total_dur, vw, vh) -> None:
 
     elif track == "image":
         st.markdown("**Image Overlay Properties**")
-        new_start = st.number_input(
-            "Start (s)", 0.0, total_dur - 0.1, clip["start"], 0.1, key="prop_img_start",
+        unit_img = st.radio(
+            "Time unit", ["Seconds", "Minutes"], horizontal=True, key="prop_img_unit",
         )
-        new_end = st.number_input(
-            "End (s)", 0.1, total_dur, clip["end"], 0.1, key="prop_img_end",
+        new_start = _time_number_input(
+            "Start", value_sec=clip["start"], min_sec=0.0, max_sec=total_dur - 0.1,
+            unit=unit_img, key="prop_img_start",
+        )
+        new_end = _time_number_input(
+            "End", value_sec=clip["end"], min_sec=0.1, max_sec=total_dur,
+            unit=unit_img, key="prop_img_end",
         )
         ic1, ic2 = st.columns(2)
         with ic1:
@@ -1336,11 +1405,16 @@ def _render_video_editor(video_bytes: bytes, filename: str) -> None:
             with tc2:
                 vt_x = st.number_input("X", 0, vw, vw // 2, key="v_txt_x")
             vt_y = st.number_input("Y", 0, vh, vh // 2, key="v_txt_y")
-            vt_start = st.number_input(
-                "Start (s)", 0.0, max(total_dur - 0.1, 0.0), 0.0, 0.1, key="v_txt_start",
+            v_txt_unit = st.radio(
+                "Time unit", ["Seconds", "Minutes"], horizontal=True, key="v_txt_unit",
             )
-            vt_end = st.number_input(
-                "End (s)", 0.1, total_dur, min(total_dur, 5.0), 0.1, key="v_txt_end",
+            vt_start = _time_number_input(
+                "Start", value_sec=0.0, min_sec=0.0, max_sec=max(total_dur - 0.1, 0.0),
+                unit=v_txt_unit, key="v_txt_start",
+            )
+            vt_end = _time_number_input(
+                "End", value_sec=min(total_dur, 5.0), min_sec=0.1, max_sec=total_dur,
+                unit=v_txt_unit, key="v_txt_end",
             )
             if st.button("Add Text", key="btn_add_text", use_container_width=True):
                 ss["_tl_texts"].append({
@@ -1356,11 +1430,16 @@ def _render_video_editor(video_bytes: bytes, filename: str) -> None:
             ov_file = st.file_uploader(
                 "Overlay image", type=["png", "jpg", "jpeg", "webp"], key="v_ov_file",
             )
-            ov_start = st.number_input(
-                "Start (s)", 0.0, max(total_dur - 0.1, 0.0), 0.0, 0.1, key="v_ov_start",
+            v_ov_unit = st.radio(
+                "Time unit", ["Seconds", "Minutes"], horizontal=True, key="v_ov_unit",
             )
-            ov_end = st.number_input(
-                "End (s)", 0.1, total_dur, min(total_dur, 5.0), 0.1, key="v_ov_end",
+            ov_start = _time_number_input(
+                "Start", value_sec=0.0, min_sec=0.0, max_sec=max(total_dur - 0.1, 0.0),
+                unit=v_ov_unit, key="v_ov_start",
+            )
+            ov_end = _time_number_input(
+                "End", value_sec=min(total_dur, 5.0), min_sec=0.1, max_sec=total_dur,
+                unit=v_ov_unit, key="v_ov_end",
             )
             ic1, ic2 = st.columns(2)
             with ic1:
