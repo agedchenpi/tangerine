@@ -138,7 +138,8 @@
       "Bash(sudo mkdir:*)",
       "Bash(docker builder:*)",
       "Bash(docker image:*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(docker stop *)"
     ]
   }
 }

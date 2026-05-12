@@ -255,6 +255,67 @@ def run_docker_cleanup(action: str) -> dict:
         return {"success": False, "output": "", "error": str(exc)}
 
 
+COMPOSE_PROJECT = "tangerine"
+COMPOSE_SERVICES = ["db", "tangerine", "pubsub", "admin"]
+
+
+def get_compose_services() -> list[dict]:
+    """Return one row per tangerine-* container: service, name, state, health, started_at."""
+    try:
+        client = _docker_client()
+        rows = []
+        for c in client.containers.list(
+            all=True,
+            filters={"label": f"com.docker.compose.project={COMPOSE_PROJECT}"},
+        ):
+            state = c.attrs.get("State", {})
+            rows.append({
+                "service": c.labels.get("com.docker.compose.service", c.name),
+                "name": c.name,
+                "state": state.get("Status", ""),
+                "health": (state.get("Health") or {}).get("Status", "—"),
+                "started_at": state.get("StartedAt", ""),
+            })
+        rows.sort(key=lambda r: COMPOSE_SERVICES.index(r["service"])
+                  if r["service"] in COMPOSE_SERVICES else 99)
+        return rows
+    except Exception:
+        return []
+
+
+def start_compose_service(service: str) -> dict:
+    """Start a single stopped compose service by its short name (e.g. 'db')."""
+    try:
+        client = _docker_client()
+        name = f"{COMPOSE_PROJECT}-{service}-1"
+        container = client.containers.get(name)
+        container.start()
+        return {"success": True, "output": f"Started {name}", "error": ""}
+    except Exception as exc:
+        return {"success": False, "output": "", "error": str(exc)}
+
+
+def compose_up_all() -> dict:
+    """Equivalent of `docker compose up -d` — start every stopped tangerine-* container."""
+    started, failed = [], []
+    try:
+        client = _docker_client()
+    except Exception as exc:
+        return {"success": False, "output": "", "error": f"Docker unavailable: {exc}"}
+
+    for svc in COMPOSE_SERVICES:
+        try:
+            container = client.containers.get(f"{COMPOSE_PROJECT}-{svc}-1")
+            if container.status != "running":
+                container.start()
+                started.append(svc)
+        except Exception as exc:
+            failed.append(f"{svc}: {exc}")
+    if failed:
+        return {"success": False, "output": f"Started: {started}", "error": "; ".join(failed)}
+    return {"success": True, "output": f"Started: {started or 'all already running'}", "error": ""}
+
+
 def _health_color(pct: float) -> str:
     """Map a usage percentage to a traffic-light color."""
     if pct >= 80:

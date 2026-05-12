@@ -7,9 +7,12 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from common.db_utils import test_connection
 from components.notifications import show_error, show_success, show_warning
 from services.server_monitor_service import (
     _health_color,
+    compose_up_all,
+    get_compose_services,
     get_cpu_info,
     get_disk_info,
     get_docker_containers,
@@ -18,6 +21,7 @@ from services.server_monitor_service import (
     get_network_info,
     get_system_info,
     run_docker_cleanup,
+    start_compose_service,
 )
 from utils.ui_helpers import (
     add_page_header,
@@ -147,8 +151,8 @@ def _gauge(label: str, pct: float, key: str = None):
 # ---------------------------------------------------------------------------
 # Tabs
 # ---------------------------------------------------------------------------
-tab_overview, tab_cpu, tab_mem, tab_disk, tab_net, tab_docker, tab_cleanup = st.tabs([
-    "📊 Overview", "🖥️ CPU", "🧠 Memory", "💾 Disk", "🌐 Network", "🐳 Docker", "🧹 Cleanup"
+tab_overview, tab_cpu, tab_mem, tab_disk, tab_net, tab_docker, tab_services, tab_cleanup = st.tabs([
+    "📊 Overview", "🖥️ CPU", "🧠 Memory", "💾 Disk", "🌐 Network", "🐳 Docker", "🔌 Services", "🧹 Cleanup"
 ])
 
 # ── Overview ────────────────────────────────────────────────────────────────
@@ -333,6 +337,67 @@ with tab_docker:
                 "Ports": c.get("Ports", ""),
             })
         st.dataframe(pd.DataFrame(docker_rows), hide_index=True, use_container_width=True)
+
+# ── Services ────────────────────────────────────────────────────────────────
+with tab_services:
+    st.subheader("Tangerine Stack Services")
+
+    try:
+        db_ok = test_connection()
+    except Exception:
+        db_ok = False
+    if db_ok:
+        show_success("Database connection: OK")
+    else:
+        show_error("Database connection: **disconnected** — start the `db` service below.")
+
+    rows = get_compose_services()
+
+    if not rows:
+        render_info_box(
+            "No services found",
+            "Could not list tangerine-* containers via Docker.",
+            box_type="warning",
+        )
+    else:
+        db_row = next((r for r in rows if r["service"] == "db"), None)
+        if db_row and db_row["state"] != "running":
+            st.warning(f"`{db_row['name']}` is **{db_row['state']}**.")
+            if st.button("🔌 Start Database", type="primary", key="start_db"):
+                with st.spinner("Starting database…"):
+                    r = start_compose_service("db")
+                if r["success"]:
+                    show_success(r["output"])
+                    st.rerun()
+                else:
+                    show_error(f"Failed: {r['error'][:300]}")
+
+        st.divider()
+        st.markdown(
+            "**↻ Full Stack Recovery** — start every stopped tangerine-* container "
+            "(equivalent to `docker compose up -d`)."
+        )
+        if st.button("Bring Up Stack", key="compose_up_all"):
+            with st.spinner("Starting services…"):
+                r = compose_up_all()
+            if r["success"]:
+                show_success(r["output"])
+                st.rerun()
+            else:
+                show_error(f"Partial: {r['output']} | {r['error'][:300]}")
+
+        st.divider()
+        st.dataframe(
+            pd.DataFrame(rows).rename(columns={
+                "service": "Service",
+                "name": "Container",
+                "state": "State",
+                "health": "Health",
+                "started_at": "Started",
+            }),
+            hide_index=True,
+            use_container_width=True,
+        )
 
 # ── Cleanup ─────────────────────────────────────────────────────────────────
 with tab_cleanup:
